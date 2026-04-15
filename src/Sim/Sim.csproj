@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>CreaturesReborn.Sim</RootNamespace>
+    <AssemblyName>CreaturesReborn.Sim</AssemblyName>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Pure C# library. No Godot dependency. Must remain testable in isolation. -->
+  </PropertyGroup>
+</Project>

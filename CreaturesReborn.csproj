@@ -1,0 +1,21 @@
+<Project Sdk="Godot.NET.Sdk/4.4.0">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>CreaturesReborn</RootNamespace>
+    <AssemblyName>CreaturesReborn</AssemblyName>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="src\Sim\Sim.csproj" />
+  </ItemGroup>
+
+  <!-- The Sim project owns its own sources; exclude them from the Godot project glob. -->
+  <ItemGroup>
+    <Compile Remove="src\Sim\**\*.cs" />
+    <Compile Remove="tests\**\*.cs" />
+  </ItemGroup>
+</Project>
