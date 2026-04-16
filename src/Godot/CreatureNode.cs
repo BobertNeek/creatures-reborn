@@ -63,9 +63,13 @@ public partial class CreatureNode : Node3D
         _sprite = GetNodeOrNull<NornBillboardSprite>("Sprite");
 
         // Give the sprite a room-bounds clamper so it respects walls
+        // Supports both old MetaroomNode and new ColonyMetaroomNode
         var mm = GetParent()?.GetNodeOrNull<MetaroomNode>("Metaroom");
+        var colony = GetParent()?.GetNodeOrNull<ColonyMetaroomNode>("Metaroom");
         if (mm != null && _sprite != null)
             _sprite.SetClampX(x => mm.Sim.ClampX(x));
+        else if (colony != null && _sprite != null)
+            _sprite.SetClampX(x => colony.MetaRoom.ClampX(x));
 
         GD.Print($"[CreatureNode] Loaded creature. Lobes={_creature.Brain.LobeCount}, Tracts={_creature.Brain.TractCount}");
     }
@@ -104,11 +108,11 @@ public partial class CreatureNode : Node3D
 
         // ── Wall aversion ───────────────────────────────────────────────────
         // Inject Fear when the norn is within 1.5 units of either boundary.
-        var mm = GetParent().GetNodeOrNull<MetaroomNode>("Metaroom");
-        if (mm != null)
+        var bounds = GetRoomBounds();
+        if (bounds is var (lb, rb))
         {
-            float distL  = Position.X - mm.Sim.LeftBound;
-            float distR  = mm.Sim.RightBound - Position.X;
+            float distL  = Position.X - lb;
+            float distR  = rb - Position.X;
             float nearest = MathF.Min(distL, distR);
             if (nearest < 1.5f)
             {
@@ -195,10 +199,10 @@ public partial class CreatureNode : Node3D
                 _creature!.AddDriveInput(DriveId.Fear, 1.0f);
                 _creature!.AddDriveInput(DriveId.Pain, 0.3f);
                 // Bounce: reverse walk direction briefly
-                var wallMm = GetParent()?.GetNodeOrNull<MetaroomNode>("Metaroom");
-                if (wallMm != null)
+                var wallBounds = GetRoomBounds();
+                if (wallBounds is var (wlb, wrb))
                 {
-                    float cx = (wallMm.Sim.LeftBound + wallMm.Sim.RightBound) * 0.5f;
+                    float cx = (wlb + wrb) * 0.5f;
                     _sprite?.SetWalkDirection(cx > Position.X ? 1 : -1);
                 }
                 _stuckTime = 0;
@@ -222,10 +226,10 @@ public partial class CreatureNode : Node3D
     {
         float newX = Position.X + dx;
 
-        // Clamp to room bounds if we can find the MetaroomNode sibling
-        var mm = GetParent()?.GetNodeOrNull<MetaroomNode>("Metaroom");
-        if (mm != null)
-            newX = mm.Sim.ClampX(newX);
+        // Clamp to room bounds (works with either metaroom type)
+        var b = GetRoomBounds();
+        if (b is var (l, r))
+            newX = Math.Clamp(newX, l, r);
 
         Position = new Vector3(newX, Position.Y, Position.Z);
     }
@@ -239,9 +243,9 @@ public partial class CreatureNode : Node3D
 
     private int RetreatDirection()
     {
-        var mm  = GetParent()?.GetNodeOrNull<MetaroomNode>("Metaroom");
-        float cx = mm != null
-            ? (mm.Sim.LeftBound + mm.Sim.RightBound) * 0.5f
+        var rb  = GetRoomBounds();
+        float cx = rb is var (rl, rr)
+            ? (rl + rr) * 0.5f
             : 0f;
         float dir = cx - Position.X;
         if (MathF.Abs(dir) < 0.1f) return 0;
@@ -340,6 +344,17 @@ public partial class CreatureNode : Node3D
     // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
+
+    /// <summary>Get room bounds from whichever metaroom type is in the scene.</summary>
+    private (float left, float right)? GetRoomBounds()
+    {
+        var mm = GetParent()?.GetNodeOrNull<MetaroomNode>("Metaroom");
+        if (mm != null) return (mm.Sim.LeftBound, mm.Sim.RightBound);
+        var colony = GetParent()?.GetNodeOrNull<ColonyMetaroomNode>("Metaroom");
+        if (colony != null) return (colony.MetaRoom.LeftBound, colony.MetaRoom.RightBound);
+        return null;
+    }
+
     private FoodNode? FindNearestFood(float maxDist)
     {
         FoodNode? nearest     = null;
