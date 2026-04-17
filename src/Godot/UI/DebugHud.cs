@@ -117,7 +117,8 @@ public partial class DebugHud : Control
             // Try both old and new scene structures
             var sceneRoot = GetTree().Root.GetNodeOrNull<Node>("VerticalSlice")
                          ?? GetTree().Root.GetNodeOrNull<Node>("NornColony")
-                         ?? GetTree().Root.GetNodeOrNull<Node>("Colony");
+                         ?? GetTree().Root.GetNodeOrNull<Node>("Colony")
+                         ?? GetTree().Root.GetNodeOrNull<Node>("Treehouse");
             var cn = sceneRoot?.GetNodeOrNull<CreatureNode>("Norn");
             if (cn?.Creature != null) _target = cn.Creature;
             return;

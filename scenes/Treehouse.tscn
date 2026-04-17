@@ -1,0 +1,95 @@
+[gd_scene load_steps=11 format=3 uid="uid://ctreehousescene1"]
+
+[ext_resource type="Script" uid="uid://clgg5bo3yi1ua" path="res://src/Godot/WorldNode.cs" id="1_world"]
+[ext_resource type="Script" uid="uid://vcboqmvkc341" path="res://src/Godot/TreehouseMetaroomNode.cs" id="2_tree"]
+[ext_resource type="PackedScene" path="res://scenes/Norn.tscn" id="3_norn"]
+[ext_resource type="Script" uid="uid://cr7rwj4j8r4hj" path="res://src/Godot/FoodNode.cs" id="4_food"]
+[ext_resource type="Script" uid="uid://ctsofm2l22uwh" path="res://src/Godot/UI/GameGui.cs" id="5_gui"]
+[ext_resource type="Script" uid="uid://cb7k6tt78ljop" path="res://src/Godot/HomeNode.cs" id="6_home"]
+[ext_resource type="Script" uid="uid://cgns1ix775bww" path="res://src/Godot/FoodRespawnManager.cs" id="7_respawn"]
+[ext_resource type="Script" uid="uid://d4j1uc5k143v5" path="res://src/Godot/PointerAgent.cs" id="8_pointer"]
+[ext_resource type="Script" uid="uid://drwchngx7xrd7" path="res://src/Godot/ElevatorNode.cs" id="9_lift"]
+[ext_resource type="Script" uid="uid://52j344eloamx" path="res://src/Godot/Agents/IncubatorNode.cs" id="10_incubator"]
+
+[node name="Treehouse" type="Node3D"]
+script = ExtResource("1_world")
+
+[node name="Metaroom" type="Node3D" parent="."]
+script = ExtResource("2_tree")
+
+[node name="Home" type="Node3D" parent="."]
+script = ExtResource("6_home")
+Radius = 8.0
+
+[node name="Pointer" type="Node3D" parent="."]
+script = ExtResource("8_pointer")
+
+[node name="LiftLeft" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 0)
+script = ExtResource("9_lift")
+StartFloor = 2
+
+[node name="LiftRight" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, 0)
+script = ExtResource("9_lift")
+StartFloor = 2
+DwellTime = 5.0
+
+[node name="Norn" parent="." instance=ExtResource("3_norn")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 0)
+
+[node name="Norn2" parent="." instance=ExtResource("3_norn")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+
+[node name="Incubator" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -0.5)
+script = ExtResource("10_incubator")
+
+[node name="FoodTop1" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 9.18, 0)
+script = ExtResource("4_food")
+
+[node name="FoodTop2" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 9.18, 0)
+script = ExtResource("4_food")
+
+[node name="FoodMid1" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 4.68, 0)
+script = ExtResource("4_food")
+
+[node name="FoodMid2" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 4.68, 0)
+script = ExtResource("4_food")
+
+[node name="FoodBot1" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0.18, 0)
+script = ExtResource("4_food")
+
+[node name="FoodBot2" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.18, 0)
+script = ExtResource("4_food")
+
+[node name="FoodBot3" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0.18, 0)
+script = ExtResource("4_food")
+
+[node name="FoodRespawnManager" type="Node3D" parent="."]
+script = ExtResource("7_respawn")
+RespawnDelay = 25.0
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.998, 0.063, 0, -0.063, 0.998, 0, 5.0, 20)
+projection = 1
+current = true
+size = 22.0
+
+[node name="GuiLayer" type="CanvasLayer" parent="."]
+
+[node name="GameGui" type="Control" parent="GuiLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("5_gui")

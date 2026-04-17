@@ -82,6 +82,8 @@ public partial class WorldNode : Node3D
         if (mm != null) return (mm.Sim.LeftBound, mm.Sim.RightBound);
         var colony = GetNodeOrNull<ColonyMetaroomNode>("Metaroom");
         if (colony != null) return (colony.MetaRoom.LeftBound, colony.MetaRoom.RightBound);
+        var treehouse = GetNodeOrNull<TreehouseMetaroomNode>("Metaroom");
+        if (treehouse != null) return (treehouse.MetaRoom.LeftBound, treehouse.MetaRoom.RightBound);
         return null;
     }
 

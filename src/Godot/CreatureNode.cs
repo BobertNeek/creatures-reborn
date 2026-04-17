@@ -63,13 +63,16 @@ public partial class CreatureNode : Node3D
         _sprite = GetNodeOrNull<NornBillboardSprite>("Sprite");
 
         // Give the sprite a room-bounds clamper so it respects walls
-        // Supports both old MetaroomNode and new ColonyMetaroomNode
-        var mm = GetParent()?.GetNodeOrNull<MetaroomNode>("Metaroom");
-        var colony = GetParent()?.GetNodeOrNull<ColonyMetaroomNode>("Metaroom");
+        // Supports old MetaroomNode, ColonyMetaroomNode, and TreehouseMetaroomNode
+        var mm       = GetParent()?.GetNodeOrNull<MetaroomNode>("Metaroom");
+        var colony   = GetParent()?.GetNodeOrNull<ColonyMetaroomNode>("Metaroom");
+        var treehouse = GetParent()?.GetNodeOrNull<TreehouseMetaroomNode>("Metaroom");
         if (mm != null && _sprite != null)
             _sprite.SetClampX(x => mm.Sim.ClampX(x));
         else if (colony != null && _sprite != null)
             _sprite.SetClampX(x => colony.MetaRoom.ClampX(x));
+        else if (treehouse != null && _sprite != null)
+            _sprite.SetClampX(x => treehouse.MetaRoom.ClampX(x));
 
         GD.Print($"[CreatureNode] Loaded creature. Lobes={_creature.Brain.LobeCount}, Tracts={_creature.Brain.TractCount}");
     }
@@ -375,6 +378,8 @@ public partial class CreatureNode : Node3D
         if (mm != null) return (mm.Sim.LeftBound, mm.Sim.RightBound);
         var colony = GetParent()?.GetNodeOrNull<ColonyMetaroomNode>("Metaroom");
         if (colony != null) return (colony.MetaRoom.LeftBound, colony.MetaRoom.RightBound);
+        var treehouse = GetParent()?.GetNodeOrNull<TreehouseMetaroomNode>("Metaroom");
+        if (treehouse != null) return (treehouse.MetaRoom.LeftBound, treehouse.MetaRoom.RightBound);
         return null;
     }
 
