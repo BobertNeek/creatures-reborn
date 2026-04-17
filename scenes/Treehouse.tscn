@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://ctreehousescene1"]
+[gd_scene load_steps=11 format=3 uid="uid://6mf4hrw425m5"]
 
 [ext_resource type="Script" uid="uid://clgg5bo3yi1ua" path="res://src/Godot/WorldNode.cs" id="1_world"]
 [ext_resource type="Script" uid="uid://vcboqmvkc341" path="res://src/Godot/TreehouseMetaroomNode.cs" id="2_tree"]
@@ -33,7 +33,6 @@ StartFloor = 2
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, 0)
 script = ExtResource("9_lift")
 StartFloor = 2
-DwellTime = 5.0
 
 [node name="Norn" parent="." instance=ExtResource("3_norn")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 0)

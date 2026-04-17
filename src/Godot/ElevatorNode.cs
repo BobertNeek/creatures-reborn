@@ -24,15 +24,13 @@ namespace CreaturesReborn.Godot;
 public partial class ElevatorNode : Node3D
 {
     [Export] public float CaptureRadius = 0.9f;   // horizontal capture zone
-    [Export] public float DwellTime     = 4.0f;   // seconds to wait at each floor
     [Export] public float TravelSpeed   = 3.0f;   // world units per second
     [Export] public int   StartFloor    = 2;      // 2 = bottom
 
-    // Internal state
+    // Internal state — call-driven, not auto-cycling. Stays at its last
+    // commanded floor until the player clicks it again via PointerAgent.
     private int   _currentFloor;
     private int   _targetFloor;
-    private int   _direction = -1;   // -1 = going up (lower index), +1 = going down
-    private float _dwell;
     private float _currentY;
 
     // Visuals
@@ -44,7 +42,6 @@ public partial class ElevatorNode : Node3D
     {
         _currentFloor = _targetFloor = Mathf.Clamp(StartFloor, 0, 2);
         _currentY     = TreehouseMetaroomNode.GetFloorY(_currentFloor);
-        _dwell        = DwellTime;
 
         BuildVisual();
         UpdatePlatformPosition();
@@ -55,7 +52,7 @@ public partial class ElevatorNode : Node3D
         float dt = (float)delta;
         float targetY = TreehouseMetaroomNode.GetFloorY(_targetFloor);
 
-        // Move toward target
+        // Move toward target if we're not there yet
         if (!Mathf.IsEqualApprox(_currentY, targetY))
         {
             _currentY = Mathf.MoveToward(_currentY, targetY, TravelSpeed * dt);
@@ -63,20 +60,11 @@ public partial class ElevatorNode : Node3D
         }
         else
         {
-            // Dwell at floor, then advance
             _currentFloor = _targetFloor;
-            _dwell -= dt;
-            if (_dwell <= 0)
-            {
-                AdvanceFloor();
-                _dwell = DwellTime;
-            }
         }
 
-        // Carry any creatures within capture radius
         CarryCreatures(dt);
 
-        // Pulse the light
         if (_light != null)
         {
             float pulse = 0.7f + MathF.Sin((float)Time.GetTicksMsec() * 0.002f) * 0.3f;
@@ -88,32 +76,36 @@ public partial class ElevatorNode : Node3D
     public void GoToFloor(int floor)
     {
         _targetFloor = Mathf.Clamp(floor, 0, 2);
-        _dwell       = DwellTime;
-    }
-
-    private void AdvanceFloor()
-    {
-        int next = _currentFloor + _direction;
-        if (next < 0) { next = 1; _direction = +1; }
-        if (next > 2) { next = 1; _direction = -1; }
-        _targetFloor = next;
     }
 
     // ── Carry creatures ──────────────────────────────────────────────────────
+    // Only adjust Y, never X — clamping X to the lift trapped norns into
+    // vertical totem-poles because they could never walk off the platform.
+    // And only carry while the lift is actually in transit (Y still moving
+    // toward target). Once it arrives, leave the rider alone so they can
+    // wander off normally.
     private void CarryCreatures(float dt)
     {
         var parent = GetParent();
         if (parent == null) return;
 
+        float targetY = TreehouseMetaroomNode.GetFloorY(_targetFloor);
+        bool  inTransit = !Mathf.IsEqualApprox(_currentY, targetY);
+        if (!inTransit) return;
+
         foreach (Node n in parent.GetChildren())
         {
             if (n is not CreatureNode cn) continue;
-            float dx = MathF.Abs(cn.Position.X - Position.X);
-            if (dx > CaptureRadius) continue;
 
-            // Snap creature X to lift X (so they don't drift off), lerp Y to platform
+            // Capture only if standing on (or just above) the platform: must be
+            // close in X AND already near the platform Y, so a norn on a
+            // different floor isn't yanked through the floor above.
+            float dx = MathF.Abs(cn.Position.X - Position.X);
+            float dy = MathF.Abs(cn.Position.Y - _currentY);
+            if (dx > CaptureRadius || dy > 0.6f) continue;
+
             float newY = Mathf.MoveToward(cn.Position.Y, _currentY, TravelSpeed * dt);
-            cn.Position = new Vector3(Position.X, newY, cn.Position.Z);
+            cn.Position = new Vector3(cn.Position.X, newY, cn.Position.Z);
         }
     }
 

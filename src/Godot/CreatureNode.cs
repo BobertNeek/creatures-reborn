@@ -350,16 +350,15 @@ public partial class CreatureNode : Node3D
         byte[] bytes = CreaturesReborn.Sim.Formats.GenomeWriter.Serialize(childGenome);
         System.IO.File.WriteAllBytes(tmpPath, bytes);
 
-        // Spawn egg as a new CreatureNode
-        var nornScene = GD.Load<PackedScene>("res://scenes/Norn.tscn");
-        if (nornScene != null)
+        // Spawn an EggNode that will warm + hatch into a Norn after HatchTime
+        var egg = new Agents.EggNode
         {
-            var egg = (CreatureNode)nornScene.Instantiate();
-            egg.GenomePath = tmpPath;
-            egg.Position   = (Position + mate.Position) * 0.5f;
-            GetParent()!.AddChild(egg);
-            GD.Print($"[CreatureNode] Egg laid at {egg.Position}!");
-        }
+            GenomePath = tmpPath,
+            HatchTime  = 12.0f,
+            Position   = (Position + mate.Position) * 0.5f,
+        };
+        GetParent()!.AddChild(egg);
+        GD.Print($"[CreatureNode] Egg laid at {egg.Position}, will hatch in {egg.HatchTime}s.");
 
         // Consume progesterone on both parents + 30 s cooldown on mother
         _creature.InjectChemical(ChemID.Progesterone, -0.8f);

@@ -141,10 +141,33 @@ public partial class TreehouseMetaroomNode : Node3D
     // ─────────────────────────────────────────────────────────────────────────
     private void BuildBackdrop()
     {
-        // Try the assigned texture first, then the conventional path, then fallback
-        var tex = Backdrop ?? GD.Load<Texture2D>(BackdropPath);
-        StandardMaterial3D mat;
+        // 3-step fallback to maximise the chance the user's PNG is found:
+        //   1. Honour the [Export] Backdrop assigned in the editor
+        //   2. ResourceLoader on the res:// path (needs Godot import .import file)
+        //   3. Raw Image.LoadFromFile on the globalised filesystem path
+        //      (works even if Godot hasn't imported the asset yet)
+        // Only after all three fail do we paint the procedural placeholder.
+        var tex = Backdrop;
 
+        if (tex == null && ResourceLoader.Exists(BackdropPath))
+            tex = GD.Load<Texture2D>(BackdropPath);
+
+        if (tex == null)
+        {
+            string absPath = ProjectSettings.GlobalizePath(BackdropPath);
+            if (System.IO.File.Exists(absPath))
+            {
+                var img = Image.LoadFromFile(absPath);
+                if (img != null)
+                {
+                    tex = ImageTexture.CreateFromImage(img);
+                    GD.Print($"[TreehouseMetaroom] Loaded backdrop directly from {absPath} " +
+                             "(no Godot .import file — open the editor once to import properly).");
+                }
+            }
+        }
+
+        StandardMaterial3D mat;
         if (tex != null)
         {
             mat = new StandardMaterial3D
@@ -157,7 +180,8 @@ public partial class TreehouseMetaroomNode : Node3D
         }
         else
         {
-            GD.PrintErr($"[TreehouseMetaroom] Backdrop not found at {BackdropPath} — using placeholder.");
+            GD.PrintErr($"[TreehouseMetaroom] Backdrop not found at {BackdropPath} " +
+                        $"(also tried {ProjectSettings.GlobalizePath(BackdropPath)}) — using placeholder.");
             mat = BuildPlaceholderMaterial();
         }
 
