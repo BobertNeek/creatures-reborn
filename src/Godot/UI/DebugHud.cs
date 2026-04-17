@@ -114,7 +114,10 @@ public partial class DebugHud : Control
         // Auto-discover target from scene on first frame
         if (_target == null)
         {
-            var sceneRoot = GetTree().Root.GetNodeOrNull<Node>("VerticalSlice");
+            // Try both old and new scene structures
+            var sceneRoot = GetTree().Root.GetNodeOrNull<Node>("VerticalSlice")
+                         ?? GetTree().Root.GetNodeOrNull<Node>("NornColony")
+                         ?? GetTree().Root.GetNodeOrNull<Node>("Colony");
             var cn = sceneRoot?.GetNodeOrNull<CreatureNode>("Norn");
             if (cn?.Creature != null) _target = cn.Creature;
             return;

@@ -42,15 +42,38 @@ public static class ChemID
 {
     public const int None            = 0;
     public const int Glycogen        = 4;
+    public const int Starch          = 5;
+    public const int Glucose         = 6;
+    public const int Adipose         = 7;
+    public const int Muscle          = 8;
+    public const int Reward          = 32;
+    public const int Punishment      = 33;
+    public const int ReinforcementBase = 34;
     public const int ATP             = 35;
     public const int ADP             = 36;
+    public const int Endorphin       = 43;
     public const int Progesterone    = 48;
+
+    // Drive chemicals (written by receptor genes from drive loci)
+    public const int Pain            = 50;
+    public const int HungerForProtein = 51;
+    public const int HungerForCarb   = 52;
+    public const int HungerForFat    = 53;
+    public const int Coldness        = 54;
+    public const int Hotness         = 55;
+    public const int Fear            = 62;
+    public const int Boredom         = 63;
+    public const int Anger           = 64;
+    public const int SexDrive        = 65;
+    public const int Loneliness      = 60;
+    public const int Crowdedness     = 61;
+
+    public const int FirstAntigen    = 82;
+    public const int LastAntigen     = 89;
     public const int Injury          = 127;
     public const int Tiredness       = 154;
     public const int Sleepiness      = 155;
     public const int FirstSmell      = 165;
-    public const int FirstAntigen    = 82;
-    public const int LastAntigen     = 89;
 }
 
 // -------------------------------------------------------------------------

@@ -1,11 +1,11 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=7 format=3 uid="uid://b48rus31mvler"]
 
-[ext_resource type="Script" path="res://src/Godot/ColonyMetaroomNode.cs" id="1_colony"]
+[ext_resource type="Script" uid="uid://bmsrj3kv5xes4" path="res://src/Godot/ColonyMetaroomNode.cs" id="1_colony"]
 [ext_resource type="PackedScene" path="res://scenes/Norn.tscn" id="2_norn"]
-[ext_resource type="Script" path="res://src/Godot/FoodNode.cs" id="3_food"]
-[ext_resource type="Script" path="res://src/Godot/UI/DebugHud.cs" id="4_hud"]
-[ext_resource type="Script" path="res://src/Godot/HomeNode.cs" id="5_home"]
-[ext_resource type="Script" path="res://src/Godot/FoodRespawnManager.cs" id="6_respawn"]
+[ext_resource type="Script" uid="uid://cr7rwj4j8r4hj" path="res://src/Godot/FoodNode.cs" id="3_food"]
+[ext_resource type="Script" uid="uid://dcukcwop12lfj" path="res://src/Godot/UI/DebugHud.cs" id="4_hud"]
+[ext_resource type="Script" uid="uid://cb7k6tt78ljop" path="res://src/Godot/HomeNode.cs" id="5_home"]
+[ext_resource type="Script" uid="uid://cgns1ix775bww" path="res://src/Godot/FoodRespawnManager.cs" id="6_respawn"]
 
 [node name="Colony" type="Node3D"]
 
