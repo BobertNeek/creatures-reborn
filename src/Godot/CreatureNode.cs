@@ -298,26 +298,49 @@ public partial class CreatureNode : Node3D
 
     private void TryLayEgg()
     {
-        // Find a mate (another CreatureNode in the scene)
+        // Find the nearest mate within 3m whose progesterone is also elevated.
+        // Proximity gate: without it, a norn across the map qualifies and the
+        // egg spawns at the midpoint out in empty space.
+        const float MateRadius = 3.0f;
+
         CreatureNode? mate = null;
+        float nearest = MateRadius;
         foreach (Node n in GetParent()!.GetChildren())
         {
             if (n is CreatureNode other && other != this
                 && other.Creature != null
                 && other.Creature.GetChemical(ChemID.Progesterone) > 0.5f)
             {
-                mate = other;
-                break;
+                float d = Position.DistanceTo(other.Position);
+                if (d < nearest) { nearest = d; mate = other; }
             }
         }
 
         if (mate == null) return;
+        LayEggWith(mate);
+    }
 
-        // Cross genomes
+    /// <summary>
+    /// Force-lay an egg with an explicit mate, bypassing progesterone / proximity
+    /// gates. Used by the GUI Breed button, where the player has already said
+    /// "these two should breed now." Runs Genome.Cross, writes the child .gen
+    /// to user://, instantiates a new CreatureNode at the midpoint, and applies
+    /// the normal cooldown + progesterone burn-off.
+    /// </summary>
+    public void LayEggWith(CreatureNode mate)
+    {
+        if (_creature == null || mate.Creature == null) return;
+        if (_layEggCooldown > 0)
+        {
+            GD.Print("[CreatureNode] Breed refused — still on cooldown.");
+            return;
+        }
+
+        // Cross genomes (real c2e CrossLoop with LINKAGE=50, MUTATIONRATE=4800)
         var childGenome = new CreaturesReborn.Sim.Genome.Genome(new Rng((int)GD.Randi()));
-        childGenome.Cross("child", _creature!.Genome, mate.Creature!.Genome, 4, 4, 4, 4);
+        childGenome.Cross("child", _creature.Genome, mate.Creature.Genome, 4, 4, 4, 4);
 
-        // Serialize child genome to a temp file in user:// and spawn a new norn
+        // Serialize child genome to user:// so the new CreatureNode can load it
         string tmpPath = System.IO.Path.Combine(
             ProjectSettings.GlobalizePath("user://"),
             $"egg_{(ulong)Time.GetTicksMsec()}.gen");
@@ -332,13 +355,13 @@ public partial class CreatureNode : Node3D
             egg.GenomePath = tmpPath;
             egg.Position   = (Position + mate.Position) * 0.5f;
             GetParent()!.AddChild(egg);
-            GD.Print("[CreatureNode] Egg laid!");
+            GD.Print($"[CreatureNode] Egg laid at {egg.Position}!");
         }
 
-        // Consume progesterone
-        _creature!.InjectChemical(ChemID.Progesterone, -0.8f);
-
-        _layEggCooldown = 30.0f;   // 30 s before she can lay again
+        // Consume progesterone on both parents + 30 s cooldown on mother
+        _creature.InjectChemical(ChemID.Progesterone, -0.8f);
+        mate.Creature.InjectChemical(ChemID.Progesterone, -0.4f);
+        _layEggCooldown = 30.0f;
     }
 
     // -------------------------------------------------------------------------

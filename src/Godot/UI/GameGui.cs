@@ -205,6 +205,7 @@ public partial class GameGui : Control
         hbox.AddChild(MakeButton("Slap", () => DoSlap()));
         hbox.AddChild(MakeButton("Hatch Egg", () => DoHatchEgg()));
         hbox.AddChild(MakeButton("Feed", () => DoFeed()));
+        hbox.AddChild(MakeButton("Breed", () => DoBreed()));
         hbox.AddChild(MakeButton("[Tab] Next", () => CycleCreature()));
     }
 
@@ -264,6 +265,53 @@ public partial class GameGui : Control
         food.Position = c.Position + new Vector3(0.5f, 0.18f, 0);
         c.GetParent()?.AddChild(food);
         GD.Print("[GUI] Dropped food near creature.");
+    }
+
+    /// <summary>
+    /// Force-breed: runs Genome.Cross between the selected creature and its
+    /// nearest peer immediately, bypassing the biochem Progesterone threshold
+    /// and proximity gate in TryLayEgg. Also applies ItMated stimulus to both
+    /// (Reward +0.5, SexDrive -0.8) so the biochem state reflects the event.
+    /// This is the test shortcut for the breeding pipeline — real mating will
+    /// eventually come from a decision-lobe verb + proximity script.
+    /// </summary>
+    private void DoBreed()
+    {
+        var a = GetSelectedCreatureNode();
+        if (a?.Creature == null)
+        {
+            GD.Print("[GUI] Breed: no creature selected.");
+            return;
+        }
+
+        // Find nearest other creature in the same parent
+        var parent = a.GetParent();
+        if (parent == null) return;
+
+        CreatureNode? b = null;
+        float nearest = float.MaxValue;
+        foreach (Node n in parent.GetChildren())
+        {
+            if (n is CreatureNode cn && cn != a && cn.Creature != null)
+            {
+                float d = a.Position.DistanceTo(cn.Position);
+                if (d < nearest) { nearest = d; b = cn; }
+            }
+        }
+
+        if (b?.Creature == null)
+        {
+            GD.Print("[GUI] Breed: need at least 2 creatures in the scene.");
+            return;
+        }
+
+        // Apply ItMated to both (Reward + SexDrive drop) so the stimulus record matches
+        StimulusTable.Apply(a.Creature, StimulusId.ItMated);
+        StimulusTable.Apply(b.Creature, StimulusId.ItMated);
+
+        // Directly invoke the egg-laying pipeline — skips Progesterone/proximity gates
+        a.LayEggWith(b);
+        GD.Print($"[GUI] Forced breed: {a.Name} x {b.Name} ({nearest:F1}m apart).");
     }
 
     private void CycleCreature()
