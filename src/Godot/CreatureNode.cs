@@ -389,11 +389,21 @@ public partial class CreatureNode : Node3D
         float     nearestDist = maxDist;
         if (GetParent() == null) return null;
 
+        // Same-floor filter: norns can only walk along their current Y, so
+        // food on other floors should be invisible to ApproachDirection.
+        // Without this, a hungry norn on the bottom floor sees fruit on the
+        // observatory and walks uselessly into the wall under it.
+        const float SameFloorTolerance = 1.0f;
+
         foreach (Node n in GetParent()!.GetChildren())
         {
             if (n is FoodNode food && !food.IsConsumed)
             {
-                float d = Position.DistanceTo(food.Position);
+                if (MathF.Abs(food.Position.Y - Position.Y) > SameFloorTolerance)
+                    continue;
+
+                // Use horizontal distance only (we already verified same floor)
+                float d = MathF.Abs(food.Position.X - Position.X);
                 if (d < nearestDist) { nearest = food; nearestDist = d; }
             }
         }

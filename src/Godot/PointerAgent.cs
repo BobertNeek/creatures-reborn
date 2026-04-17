@@ -48,19 +48,21 @@ public partial class PointerAgent : Node3D
     {
         if (_camera == null) return;
 
-        // Project mouse to world plane
+        // Project mouse onto the Z=0 vertical plane (the agent layer).
+        // For our side-on orthographic camera this gives the true (X, Y) the
+        // user is pointing at — so clicks on upper floors land on those floors
+        // instead of being collapsed onto a single ground plane.
         var mousePos = GetViewport().GetMousePosition();
         var from = _camera.ProjectRayOrigin(mousePos);
         var dir  = _camera.ProjectRayNormal(mousePos);
 
-        // Intersect with Y=FloorY plane
-        if (MathF.Abs(dir.Y) > 0.001f)
+        if (MathF.Abs(dir.Z) > 0.001f)
         {
-            float t = (_worldFloorY - from.Y) / dir.Y;
+            float t = (0f - from.Z) / dir.Z;
             if (t > 0)
             {
                 var worldPos = from + dir * t;
-                Position = worldPos;
+                Position = new Vector3(worldPos.X, worldPos.Y, 0f);
             }
         }
 
@@ -109,10 +111,10 @@ public partial class PointerAgent : Node3D
         }
     }
 
-    // ── Left click: select / pick up / drop / activate ──────────────────────
+    // ── Left click: select / pick up / drop / call elevator ─────────────────
     private void HandleLeftClick()
     {
-        // If carrying, drop
+        // If carrying, drop at cursor (preserves the floor Y you're hovering)
         if (_carriedCreature != null)
         {
             DropCreature();
@@ -124,6 +126,20 @@ public partial class PointerAgent : Node3D
             return;
         }
 
+        // Click on an elevator → cycle its target floor (top → mid → bottom → top)
+        var lift = FindNearestElevator(1.2f);
+        if (lift != null)
+        {
+            int next = (TreehouseMetaroomNode.GetFloorIndex(Position.Y) + 2) % 3;
+            // Heuristic: send the lift to the floor *above* the floor the user clicked on.
+            // (Clicking the lift while on the bottom calls it down; clicking near the top
+            //  sends it up.) Cycling 0→1→2 each call gives full coverage.
+            lift.GoToFloor(next);
+            FlashCursor(new Color(0.6f, 0.85f, 1.0f));
+            GD.Print($"[Hand] Called lift to floor {next}.");
+            return;
+        }
+
         // Try to find what we clicked on
         var creature = FindNearestCreature(1.5f);
         var food     = FindNearestFood(1.0f);
@@ -131,17 +147,31 @@ public partial class PointerAgent : Node3D
         if (creature != null)
         {
             _selectedCreature = creature;
-            // Double-click distance → pick up
             float dist = Position.DistanceTo(creature.Position);
-            if (dist < 0.8f)
-            {
-                PickUpCreature(creature);
-            }
+            if (dist < 0.8f) PickUpCreature(creature);
         }
         else if (food != null && !food.IsConsumed)
         {
             PickUpFood(food);
         }
+    }
+
+    private ElevatorNode? FindNearestElevator(float range)
+    {
+        var parent = GetParent();
+        if (parent == null) return null;
+        ElevatorNode? nearest = null;
+        float nearestDist = range;
+        foreach (Node n in parent.GetChildren())
+        {
+            if (n is ElevatorNode lift)
+            {
+                // Distance check on X only — the lift extends vertically through all floors
+                float d = MathF.Abs(Position.X - lift.Position.X);
+                if (d < nearestDist) { nearest = lift; nearestDist = d; }
+            }
+        }
+        return nearest;
     }
 
     // ── Right click: tickle selected creature ───────────────────────────────
@@ -186,18 +216,29 @@ public partial class PointerAgent : Node3D
     {
         if (_carriedCreature == null) return;
 
-        // Find the world node for bounds clamping
-        var world = GetParent() as WorldNode;
+        // Snap to the nearest treehouse floor Y so they don't hang in mid-air.
+        // Falls back to Y=0 in non-treehouse scenes.
+        var world  = GetParent() as WorldNode;
         float dropX = Position.X;
         if (world != null) dropX = world.ClampX(dropX);
+        float dropY = SnapToNearestFloorY(Position.Y);
 
-        _carriedCreature.Position = new Vector3(dropX, 0, _carriedCreature.Position.Z);
+        _carriedCreature.Position = new Vector3(dropX, dropY, _carriedCreature.Position.Z);
 
         if (_carriedCreature.Creature != null)
             StimulusTable.Apply(_carriedCreature.Creature, StimulusId.HandDroppedCreature);
 
-        GD.Print("[Hand] Dropped creature.");
+        GD.Print($"[Hand] Dropped creature at floor Y={dropY:F1}.");
         _carriedCreature = null;
+    }
+
+    /// <summary>If a treehouse metaroom exists, snap to its nearest floor Y;
+    /// otherwise return 0 (the conventional ground plane).</summary>
+    private float SnapToNearestFloorY(float y)
+    {
+        var treehouse = GetParent()?.GetNodeOrNull<TreehouseMetaroomNode>("Metaroom");
+        if (treehouse == null) return 0f;
+        return TreehouseMetaroomNode.GetFloorY(TreehouseMetaroomNode.GetFloorIndex(y));
     }
 
     // ── Pick up / drop food ─────────────────────────────────────────────────
@@ -211,9 +252,10 @@ public partial class PointerAgent : Node3D
     private void DropFood()
     {
         if (_carriedFood == null) return;
-        _carriedFood.Drop(new Vector3(Position.X, 0, 0));
+        float dropY = SnapToNearestFloorY(Position.Y) + 0.18f;
+        _carriedFood.Drop(new Vector3(Position.X, dropY, 0));
         _carriedFood = null;
-        GD.Print("[Hand] Dropped food.");
+        GD.Print($"[Hand] Dropped food at floor Y={dropY:F1}.");
     }
 
     // ── Queries ─────────────────────────────────────────────────────────────
