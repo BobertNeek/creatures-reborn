@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using CreaturesReborn.Sim.Agent;
 using CreaturesReborn.Sim.Creature;
 
 namespace CreaturesReborn.Godot.Agents;
@@ -29,6 +30,17 @@ public partial class GadgetNode : Node3D
     [Export] public GadgetType Type = GadgetType.EmpathicVendor;
     [Export] public float ScanRadius = 6.0f;
     [Export] public float TimerInterval = 10.0f;
+
+    public AgentArchetype AgentArchetype => Type switch
+    {
+        GadgetType.EmpathicVendor => AgentCatalog.EmpathicVendor,
+        GadgetType.TrainingDummy => AgentCatalog.Toy,
+        GadgetType.RobotToy => AgentCatalog.Toy,
+        _ => AgentCatalog.Machine,
+    };
+
+    public AgentClassifier Classifier => AgentArchetype.Classifier;
+    public int ObjectCategory => AgentArchetype.ObjectCategory;
 
     private float _timer;
     private float _animPhase;

@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using CreaturesReborn.Sim.Agent;
 using CreaturesReborn.Sim.Creature;
 
 namespace CreaturesReborn.Godot;
@@ -23,6 +24,9 @@ public partial class FoodNode : Node3D
     public FoodNutrition Nutrition => FoodNutrition.ForKind(FoodKind);
     public int EatStimulusId => Nutrition.StimulusId;
     public float ResolvedATPAmount => ATPAmount >= 0 ? ATPAmount : Nutrition.ATPAmount;
+    public AgentArchetype AgentArchetype => AgentCatalog.ForFood(FoodKind);
+    public AgentClassifier Classifier => AgentArchetype.Classifier;
+    public int ObjectCategory => AgentArchetype.ObjectCategory;
 
     private Node3D? _visual;      // parent of fruit + leaf + glow light
 

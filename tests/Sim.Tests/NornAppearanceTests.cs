@@ -22,6 +22,13 @@ public class NornAppearanceTests
             Path.GetFullPath(StarterGenomePath),
             sex: sex);
 
+    private static G LoadStarterAtAge(byte age, int sex = GeneConstants.MALE, int seed = 42)
+        => CreaturesReborn.Sim.Formats.GenomeReader.LoadNew(
+            new Rng(seed),
+            Path.GetFullPath(StarterGenomePath),
+            sex: sex,
+            age: age);
+
     [Fact]
     public void AppearanceFromGenome_IsDeterministicForSameGenomeAndSex()
     {
@@ -42,6 +49,22 @@ public class NornAppearanceTests
         Assert.True(male.BodyWidthScale > female.BodyWidthScale);
         Assert.True(female.HeadScale > male.HeadScale);
         Assert.NotEqual(male.Signature, female.Signature);
+    }
+
+    [Fact]
+    public void AppearanceFromGenome_ExpressesAgeStageProportions()
+    {
+        CreatureAppearance baby = CreatureAppearance.FromGenome(LoadStarterAtAge(0));
+        CreatureAppearance adult = CreatureAppearance.FromGenome(LoadStarterAtAge(128));
+        CreatureAppearance senior = CreatureAppearance.FromGenome(LoadStarterAtAge(220));
+
+        Assert.Equal(CreatureAgeStage.Baby, baby.AgeStage);
+        Assert.Equal(CreatureAgeStage.Adult, adult.AgeStage);
+        Assert.Equal(CreatureAgeStage.Senior, senior.AgeStage);
+        Assert.True(baby.StageScale < adult.StageScale);
+        Assert.True(baby.HeadScale > adult.HeadScale);
+        Assert.True(senior.StageScale < adult.StageScale);
+        Assert.NotEqual(baby.Signature, adult.Signature);
     }
 
     [Fact]

@@ -22,6 +22,7 @@ public partial class CreatureNode : Node3D
     [Export] public string GenomePath = "res://data/genomes/starter.gen";
     [Export] public float  WalkSpeed  = 1.0f;
     [Export] public int    Sex        = GeneConstants.MALE;
+    [Export(PropertyHint.Range, "0,255,1")] public int Age = 128;
     [Export] public int    Variant    = 0;
     [Export] public string Moniker    = "";
 
@@ -64,7 +65,8 @@ public partial class CreatureNode : Node3D
         string moniker = string.IsNullOrWhiteSpace(Moniker)
             ? Name.ToString()
             : Moniker;
-        _creature = C.LoadFromFile(absPath, rng, Sex, age: 0, Variant, moniker);
+        byte age = (byte)Math.Clamp(Age, 0, 255);
+        _creature = C.LoadFromFile(absPath, rng, Sex, age, Variant, moniker);
         _creature.SetChemical(ChemID.ATP, 1.0f);
 
         _sprite = GetNodeOrNull<NornBillboardSprite>("Sprite");
@@ -115,40 +117,8 @@ public partial class CreatureNode : Node3D
     // -------------------------------------------------------------------------
     private void FeedContextualDrives()
     {
-        if (_creature == null || GetParent() == null) return;
-
-        // ── Wall aversion ───────────────────────────────────────────────────
-        // Inject Fear when the norn is within 1.5 units of either boundary.
-        var bounds = GetRoomBounds();
-        if (bounds is var (lb, rb))
-        {
-            float distL  = Position.X - lb;
-            float distR  = rb - Position.X;
-            float nearest = MathF.Min(distL, distR);
-            if (nearest < 1.5f)
-            {
-                float fear = (1.0f - nearest / 1.5f) * 0.6f;
-                _creature.AddDriveInput(DriveId.Fear, fear);
-            }
-        }
-
-        // ── Social proximity ────────────────────────────────────────────────
-        // Reduce Loneliness when near another creature; let it rise naturally when alone.
-        bool foundFriend = false;
-        foreach (Node n in GetParent().GetChildren())
-        {
-            if (n is not CreatureNode other || other == this || other.Creature == null) continue;
-            float dist = Position.DistanceTo(other.Position);
-            if (dist < 4.0f)
-            {
-                float closeness = 1.0f - dist / 4.0f;
-                _creature.AddDriveInput(DriveId.Loneliness, -closeness * 0.4f);
-                foundFriend = true;
-            }
-        }
-        // When completely alone, nudge loneliness up slightly so the brain seeks company
-        if (!foundFriend)
-            _creature.AddDriveInput(DriveId.Loneliness, 0.05f);
+        if (_creature == null) return;
+        CreatureContextDrives.Apply(this, _creature);
     }
 
     // -------------------------------------------------------------------------
@@ -161,6 +131,7 @@ public partial class CreatureNode : Node3D
 
         // Determine walk direction for the sprite (-1/0/+1)
         int walkDir = 0;
+        NornActionPose pose = NornActionPose.Idle;
 
         switch (verb)
         {
@@ -171,30 +142,41 @@ public partial class CreatureNode : Node3D
                 walkDir = -1;
                 break;
             case VerbId.Rest:
+                pose = NornActionPose.Rest;
                 DoSleep();
                 break;
             case VerbId.Approach:
+                pose = NornActionPose.Approach;
                 walkDir = ApproachDirection();
                 break;
             case VerbId.Get:
+                pose = NornActionPose.Get;
                 if (!TryPickUp())
                     walkDir = ApproachDirection();
                 break;
             case VerbId.Eat:
+                pose = NornActionPose.Eat;
+                if (!TryEat())
+                    walkDir = ApproachDirection();
+                break;
             case VerbId.Activate1:
+                pose = NornActionPose.Activate;
                 if (!TryEat())
                     walkDir = ApproachDirection();
                 break;
             case VerbId.Retreat:
+                pose = NornActionPose.Retreat;
                 walkDir = RetreatDirection();
                 break;
             case VerbId.Drop:
+                pose = NornActionPose.Drop;
                 Drop();
                 break;
         }
 
         // Delegate walking to sprite (step-driven animation)
         _sprite?.SetWalkDirection(walkDir);
+        _sprite?.SetActionPose(walkDir != 0 ? NornActionPose.Walk : pose);
 
         // ── Physical wall-bounce guard ──────────────────────────────────────
         // If the norn hasn't moved horizontally for StuckThreshold seconds while
@@ -210,8 +192,9 @@ public partial class CreatureNode : Node3D
                 StimulusTable.Apply(_creature!, StimulusId.WallBump);
                 // Bounce: reverse walk direction briefly
                 var wallBounds = GetRoomBounds();
-                if (wallBounds is var (wlb, wrb))
+                if (wallBounds.HasValue)
                 {
+                    var (wlb, wrb) = wallBounds.Value;
                     float cx = (wlb + wrb) * 0.5f;
                     _sprite?.SetWalkDirection(cx > Position.X ? 1 : -1);
                 }
@@ -238,8 +221,11 @@ public partial class CreatureNode : Node3D
 
         // Clamp to room bounds (works with either metaroom type)
         var b = GetRoomBounds();
-        if (b is var (l, r))
+        if (b.HasValue)
+        {
+            var (l, r) = b.Value;
             newX = Math.Clamp(newX, l, r);
+        }
 
         Position = new Vector3(newX, Position.Y, Position.Z);
     }
@@ -253,10 +239,13 @@ public partial class CreatureNode : Node3D
 
     private int RetreatDirection()
     {
-        var rb  = GetRoomBounds();
-        float cx = rb is var (rl, rr)
-            ? (rl + rr) * 0.5f
-            : 0f;
+        var rb = GetRoomBounds();
+        float cx = 0f;
+        if (rb.HasValue)
+        {
+            var (rl, rr) = rb.Value;
+            cx = (rl + rr) * 0.5f;
+        }
         float dir = cx - Position.X;
         if (MathF.Abs(dir) < 0.1f) return 0;
         return dir > 0 ? 1 : -1;
@@ -306,6 +295,9 @@ public partial class CreatureNode : Node3D
 
     private void TryLayEgg()
     {
+        if (_creature == null || _creature.Genome.Sex != GeneConstants.FEMALE)
+            return;
+
         // Find the nearest mate within 3m whose progesterone is also elevated.
         // Proximity gate: without it, a norn across the map qualifies and the
         // egg spawns at the midpoint out in empty space.
@@ -320,7 +312,12 @@ public partial class CreatureNode : Node3D
                 && other.Creature.GetChemical(ChemID.Progesterone) > 0.5f)
             {
                 float d = Position.DistanceTo(other.Position);
-                if (d < nearest) { nearest = d; mate = other; }
+                if (d < nearest
+                    && NornReproductionRules.CanLayEgg(_creature, other.Creature, d, _layEggCooldown, MateRadius))
+                {
+                    nearest = d;
+                    mate = other;
+                }
             }
         }
 
@@ -338,15 +335,41 @@ public partial class CreatureNode : Node3D
     public void LayEggWith(CreatureNode mate)
     {
         if (_creature == null || mate.Creature == null) return;
-        if (_layEggCooldown > 0)
+
+        CreatureNode? motherNode = _creature.Genome.Sex == GeneConstants.FEMALE ? this
+            : mate.Creature.Genome.Sex == GeneConstants.FEMALE ? mate
+            : null;
+        CreatureNode? fatherNode = ReferenceEquals(motherNode, this) ? mate
+            : ReferenceEquals(motherNode, mate) ? this
+            : null;
+
+        if (motherNode == null || fatherNode?.Creature == null)
         {
-            GD.Print("[CreatureNode] Breed refused — still on cooldown.");
+            GD.Print("[CreatureNode] Breed refused — needs a female/male pair.");
             return;
         }
 
+        if (!NornReproductionRules.CanLayEgg(
+                motherNode.Creature!,
+                fatherNode.Creature,
+                distance: 0,
+                cooldownSeconds: motherNode._layEggCooldown,
+                mateRadius: float.MaxValue))
+        {
+            GD.Print("[CreatureNode] Breed refused — parents are not currently fertile.");
+            return;
+        }
+
+        motherNode.SpawnEggWithFather(fatherNode);
+    }
+
+    private void SpawnEggWithFather(CreatureNode fatherNode)
+    {
+        if (_creature == null || fatherNode.Creature == null) return;
+
         // Cross genomes (real c2e CrossLoop with LINKAGE=50, MUTATIONRATE=4800)
         var childGenome = new CreaturesReborn.Sim.Genome.Genome(new Rng((int)GD.Randi()));
-        childGenome.Cross("child", _creature.Genome, mate.Creature.Genome, 4, 4, 4, 4);
+        childGenome.Cross("child", _creature.Genome, fatherNode.Creature.Genome, 4, 4, 4, 4);
 
         // Serialize child genome to user:// so the new CreatureNode can load it
         string tmpPath = System.IO.Path.Combine(
@@ -361,7 +384,7 @@ public partial class CreatureNode : Node3D
             GenomePath = tmpPath,
             Sex = GD.Randf() < 0.5f ? GeneConstants.MALE : GeneConstants.FEMALE,
             HatchTime  = 12.0f,
-            Position   = (Position + mate.Position) * 0.5f,
+            Position   = (Position + fatherNode.Position) * 0.5f,
         };
         GetParent()!.AddChild(egg);
         GD.Print($"[CreatureNode] Egg laid at {egg.Position}, will hatch in {egg.HatchTime}s.");
@@ -369,7 +392,7 @@ public partial class CreatureNode : Node3D
         // Consume progesterone on both parents + 30 s cooldown on mother
         StimulusTable.Apply(_creature, StimulusId.LaidEgg);
         _creature.InjectChemical(ChemID.Progesterone, -0.3f);
-        mate.Creature.InjectChemical(ChemID.Progesterone, -0.4f);
+        fatherNode.Creature.InjectChemical(ChemID.Progesterone, -0.4f);
         _layEggCooldown = 30.0f;
     }
 
@@ -378,7 +401,7 @@ public partial class CreatureNode : Node3D
     // -------------------------------------------------------------------------
 
     /// <summary>Get room bounds from whichever metaroom type is in the scene.</summary>
-    private (float left, float right)? GetRoomBounds()
+    internal (float left, float right)? GetRoomBounds()
     {
         var mm = GetParent()?.GetNodeOrNull<MetaroomNode>("Metaroom");
         if (mm != null) return (mm.Sim.LeftBound, mm.Sim.RightBound);

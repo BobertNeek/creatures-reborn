@@ -241,13 +241,10 @@ public sealed class Biochemistry
 
         // Hidden body organ (always organ 0, created once at baby time).
         int iOrgan = 0;
-        if (genome.Age == BiochemConst.AGE_BABY)
-        {
-            iOrgan = _numOrgans;
-            _organs[iOrgan] = new Organ();
-            _organs[iOrgan].SetOwner(this);
-            _numOrgans++;
-        }
+        iOrgan = _numOrgans;
+        _organs[iOrgan] = new Organ();
+        _organs[iOrgan].SetOwner(this);
+        _numOrgans++;
         _organs[iOrgan].InitFromGenome(genome);
         _organs[iOrgan].BindToLoci();
         iOrgan++;
@@ -272,32 +269,19 @@ public sealed class Biochemistry
                 {
                     geneFound = true;
 
-                    if (genome.Age == BiochemConst.AGE_BABY)
-                    {
-                        float clockRate   = genome.GetFloat();
-                        float repairRate  = genome.GetFloat();
-                        float lifeForce   = genome.GetFloat();
-                        float initClock   = genome.GetFloat();
-                        float zeroDamage  = genome.GetFloat();
+                    float clockRate   = genome.GetFloat();
+                    float repairRate  = genome.GetFloat();
+                    float lifeForce   = genome.GetFloat();
+                    float initClock   = genome.GetFloat();
+                    float zeroDamage  = genome.GetFloat();
 
-                        _organs[iOrgan] = new Organ();
-                        _organs[iOrgan].Init(clockRate, repairRate, lifeForce, initClock, zeroDamage);
-                        _organs[iOrgan].SetOwner(this);
-                        _organs[iOrgan].InitFromGenome(genome);
-                        _organs[iOrgan].BindToLoci();
-                        iOrgan++;
-                        _numOrgans++;
-                    }
-                    else
-                    {
-                        // Re-bind a previously expressed organ.
-                        if (iOrgan < _numOrgans)
-                        {
-                            _organs[iOrgan].InitFromGenome(genome);
-                            _organs[iOrgan].BindToLoci();
-                            iOrgan++;
-                        }
-                    }
+                    _organs[iOrgan] = new Organ();
+                    _organs[iOrgan].Init(clockRate, repairRate, lifeForce, initClock, zeroDamage);
+                    _organs[iOrgan].SetOwner(this);
+                    _organs[iOrgan].InitFromGenome(genome);
+                    _organs[iOrgan].BindToLoci();
+                    iOrgan++;
+                    _numOrgans++;
                 }
             }
             iGen++;

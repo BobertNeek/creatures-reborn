@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using CreaturesReborn.Sim.Agent;
 using CreaturesReborn.Sim.Creature;
 
 namespace CreaturesReborn.Godot;
@@ -37,6 +38,9 @@ public partial class PointerAgent : Node3D
 
     /// <summary>Is the hand currently carrying something?</summary>
     public bool IsCarrying => _carriedCreature != null || _carriedFood != null;
+    public AgentArchetype AgentArchetype => AgentCatalog.Hand;
+    public AgentClassifier Classifier => AgentArchetype.Classifier;
+    public int ObjectCategory => AgentArchetype.ObjectCategory;
 
     public override void _Ready()
     {

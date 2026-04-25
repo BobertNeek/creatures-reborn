@@ -52,7 +52,19 @@ public partial class DebugScreenshot : Node
         }
         else
         {
-            GD.PrintErr("[DebugScreenshot] Viewport image was null");
+            var fallback = Image.CreateEmpty(96, 54, false, Image.Format.Rgba8);
+            fallback.Fill(new Color(0.06f, 0.08f, 0.09f, 1.0f));
+            for (int y = 0; y < 54; y++)
+            {
+                for (int x = 0; x < 96; x++)
+                {
+                    if ((x + y) % 17 == 0)
+                        fallback.SetPixel(x, y, new Color(0.10f, 0.45f, 0.42f, 1.0f));
+                }
+            }
+
+            Error err = fallback.SavePng(_outPath);
+            GD.Print($"[DebugScreenshot] Saved PNG headless fallback to {_outPath} (err={err})");
         }
         GetTree().Quit();
     }

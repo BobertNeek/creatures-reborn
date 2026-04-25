@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using CreaturesReborn.Sim.Agent;
 using CreaturesReborn.Sim.Creature;
 
 namespace CreaturesReborn.Godot.Agents;
@@ -27,6 +28,10 @@ public partial class FoodPlantNode : Node3D
     [Export] public float     FruitTimer   = 25.0f;   // seconds between fruit drops
     [Export] public int       MaxFruit     = 3;        // max fruit on ground nearby
     [Export] public float     Lifespan     = 300.0f;   // seconds before withering (0 = immortal)
+
+    public AgentArchetype AgentArchetype => AgentCatalog.Plant;
+    public AgentClassifier Classifier => AgentArchetype.Classifier;
+    public int ObjectCategory => AgentArchetype.ObjectCategory;
 
     // ── State ───────────────────────────────────────────────────────────────
     private float _age;

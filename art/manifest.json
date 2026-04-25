@@ -10,6 +10,8 @@
       "replacementTarget": "Nano Banana Treehouse backdrop with blocked walk paths",
       "sourceNotes": "Regenerated ultra-wide Treehouse backdrop with broad, unobstructed floor lanes and central elevator space.",
       "promptRef": "art/prompts/treehouse-metaroom-v1.md",
+      "expectedWidth": 1983,
+      "expectedHeight": 793,
       "status": "active"
     },
     {
@@ -19,6 +21,15 @@
       "replacementTarget": "Procedural v0 Norn texture set",
       "sourceNotes": "Runtime keeps the current 3D Norn model but uses regenerated warm/cream/teal texture maps; sex and mutation differences are applied by CreatureAppearance at runtime.",
       "promptRef": "art/prompts/norn-texture-set-v1.md",
+      "status": "active"
+    },
+    {
+      "id": "norn-procedural-model-v1",
+      "category": "creature-model",
+      "runtimePath": "res://src/Godot/NornModelFactory.cs",
+      "replacementTarget": "Legacy imported norn.glb as default runtime model",
+      "sourceNotes": "Default runtime now builds an original stylized 3D Norn from named Godot mesh parts. The old GLB remains as an opt-in fallback, while this model receives sex, age, mutation scale, and material tints at runtime.",
+      "promptRef": "art/prompts/norn-procedural-model-v1.md",
       "status": "active"
     },
     {

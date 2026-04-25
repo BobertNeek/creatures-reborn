@@ -23,37 +23,44 @@ public partial class NornBillboardSprite : Node3D
     const float StrideBob    = 0.025f;  // body bob amplitude
     const float StrideLength = 0.12f;   // world units per foot-plant
 
+    [Export] public bool UseProceduralModel = true;
+
     private Node3D? _model;
+    private Node3D? _body, _head, _earL, _earR;
     private Node3D? _thighL, _thighR, _shinL, _shinR;
     private Node3D? _footL, _footR;
     private Node3D? _humerusL, _humerusR, _radiusL, _radiusR;
     private Node3D? _tail, _tailTip;
     private Vector3 _basePos;
+    private Vector3 _baseModelScale = Vector3.One;
     private IReadOnlyDictionary<string, Vector3> _baseScales = new Dictionary<string, Vector3>();
     private uint? _appliedAppearanceSignature;
 
     private float _phase;        // walk cycle phase (radians, continuous)
     private float _targetY, _curY;
     private int   _walkDir;      // -1, 0, +1  set by CreatureNode
+    private NornActionPose _actionPose = NornActionPose.Idle;
     private Func<float, float>? _clampX;  // room bounds clamper
 
     public void SetWalkDirection(int dir) => _walkDir = dir;
+    public void SetActionPose(NornActionPose pose) => _actionPose = pose;
     public void SetClampX(Func<float, float> clamp) => _clampX = clamp;
 
     public override void _Ready()
     {
-        var scene = ResourceLoader.Load<PackedScene>("res://assets/models/norn.glb");
-        if (scene == null) { GD.PrintErr("norn.glb not found"); return; }
-
-        _model = scene.Instantiate<Node3D>();
-        _model.Scale = new Vector3(ModelScale, ModelScale, ModelScale);
-        _model.RotationDegrees = new Vector3(0, 90, 0);
-        _model.Position = new Vector3(0, FootOffset, 0);
+        _model = UseProceduralModel ? NornModelFactory.Create() : LoadLegacyGlbModel();
+        if (_model == null) return;
+        if (_model.GetParent() == null)
+            AddChild(_model);
         _basePos = _model.Position;
-        AddChild(_model);
+        _baseModelScale = _model.Scale;
 
         // Grab all limb nodes and save original model-space positions
         var orig = new Dictionary<string, Vector3>();
+        _body     = Grab("Body4", orig);
+        _head     = Grab("Head1_normal", orig);
+        _earL     = Grab("ear_4L_chichi", orig);
+        _earR     = Grab("ear_4R_chichi", orig);
         _thighL   = Grab("Thigh_L", orig);    _thighR   = Grab("Thigh_R", orig);
         _shinL    = Grab("Shin_L", orig);      _shinR    = Grab("Shin_R", orig);
         _footL    = Grab("Foot_4L", orig);     _footR    = Grab("Foot_4R", orig);
@@ -70,6 +77,20 @@ public partial class NornBillboardSprite : Node3D
 
         _baseScales = NornAppearanceApplier.CaptureBaseScales(_model);
         ApplyDefaultTextures();
+    }
+
+    private Node3D? LoadLegacyGlbModel()
+    {
+        var scene = ResourceLoader.Load<PackedScene>("res://assets/models/norn.glb");
+        if (scene == null) { GD.PrintErr("norn.glb not found"); return null; }
+
+        var model = scene.Instantiate<Node3D>();
+        model.Scale = new Vector3(ModelScale, ModelScale, ModelScale);
+        model.RotationDegrees = new Vector3(0, 90, 0);
+        model.Position = new Vector3(0, FootOffset, 0);
+        AddChild(model);
+        _basePos = model.Position;
+        return model;
     }
 
     private Node3D? Grab(string name, Dictionary<string, Vector3> orig)
@@ -132,6 +153,7 @@ public partial class NornBillboardSprite : Node3D
         if (_appliedAppearanceSignature == appearance.Signature)
             return;
 
+        _model.Scale = _baseModelScale * appearance.StageScale;
         NornAppearanceApplier.Apply(_model, appearance, _baseScales, LoadNornTexture);
         _appliedAppearanceSignature = appearance.Signature;
     }
@@ -167,6 +189,19 @@ public partial class NornBillboardSprite : Node3D
         // ── Tail ──
         if (_tail != null) _tail.Rotation = new Vector3(s * TailSwing, 0, 0);
         if (_tailTip != null) _tailTip.Rotation = new Vector3(s * TailSwing * 0.5f, 0, 0);
+
+        var rig = new NornPoseRig(
+            _body,
+            _head,
+            _humerusL,
+            _humerusR,
+            _radiusL,
+            _radiusR,
+            _tail,
+            _tailTip,
+            _earL,
+            _earR);
+        NornPoseAnimator.Apply(_walkDir != 0 ? NornActionPose.Walk : _actionPose, ph, rig);
     }
 
     private void ApplyDefaultTextures()

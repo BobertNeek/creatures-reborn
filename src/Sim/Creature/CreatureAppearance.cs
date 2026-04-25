@@ -38,6 +38,7 @@ public readonly record struct AppearanceColor(float R, float G, float B)
 /// </summary>
 public readonly record struct CreatureAppearance(
     CreatureSex Sex,
+    CreatureAgeStage AgeStage,
     uint Signature,
     AppearanceColor FurColor,
     AppearanceColor SkinColor,
@@ -51,6 +52,7 @@ public readonly record struct CreatureAppearance(
     float EarScale,
     float TailScale,
     float HairScale,
+    float StageScale,
     float MarkingStrength)
 {
     public static CreatureAppearance FromGenome(G genome)
@@ -59,9 +61,11 @@ public readonly record struct CreatureAppearance(
         uint signature = Mix(HashGenome(genome), genes.Signature);
         signature = Mix(signature, (uint)genome.Sex);
         signature = Mix(signature, (uint)genome.Variant);
+        signature = Mix(signature, genome.Age);
 
         var rng = new StableRng(signature);
         bool female = genome.Sex == GeneConstants.FEMALE;
+        CreatureAgeStage ageStage = CreatureAge.StageFromAge(genome.Age);
 
         float warmth = Clamp01(0.50f + (genes.PigmentWarmth - 0.5f) * 0.35f + rng.Range(-0.12f, 0.12f));
         float cream = Clamp01(0.45f + (genes.Body - 0.5f) * 0.20f + rng.Range(-0.10f, 0.12f));
@@ -116,24 +120,86 @@ public readonly record struct CreatureAppearance(
         }
 
         float markingsStrength = Clamp01(0.28f + genes.PigmentBleed * 0.40f + rng.Range(-0.08f, 0.10f));
+        ApplyAgeStage(ageStage, ref bodyWidth, ref bodyHeight, ref head, ref limb, ref ear, ref tail, ref hairScale);
+        float stageScale = StageScaleFor(ageStage);
 
         return new CreatureAppearance(
             female ? CreatureSex.Female : CreatureSex.Male,
+            ageStage,
             signature,
             fur,
             skin,
             markings,
             eyes,
             hair,
-            Clamp(bodyWidth, 0.88f, 1.14f),
-            Clamp(bodyHeight, 0.94f, 1.09f),
-            Clamp(head, 0.93f, 1.12f),
-            Clamp(limb, 0.93f, 1.11f),
-            Clamp(ear, 0.90f, 1.16f),
-            Clamp(tail, 0.88f, 1.18f),
-            Clamp(hairScale, 0.86f, 1.20f),
+            Clamp(bodyWidth, 0.65f, 1.14f),
+            Clamp(bodyHeight, 0.72f, 1.09f),
+            Clamp(head, 0.90f, 1.28f),
+            Clamp(limb, 0.65f, 1.11f),
+            Clamp(ear, 0.84f, 1.24f),
+            Clamp(tail, 0.55f, 1.18f),
+            Clamp(hairScale, 0.60f, 1.20f),
+            stageScale,
             markingsStrength);
     }
+
+    private static void ApplyAgeStage(
+        CreatureAgeStage stage,
+        ref float bodyWidth,
+        ref float bodyHeight,
+        ref float head,
+        ref float limb,
+        ref float ear,
+        ref float tail,
+        ref float hairScale)
+    {
+        switch (stage)
+        {
+            case CreatureAgeStage.Baby:
+                bodyWidth *= 0.78f;
+                bodyHeight *= 0.82f;
+                head *= 1.18f;
+                limb *= 0.78f;
+                ear *= 1.10f;
+                tail *= 0.68f;
+                hairScale *= 0.72f;
+                break;
+            case CreatureAgeStage.Child:
+                bodyWidth *= 0.88f;
+                bodyHeight *= 0.90f;
+                head *= 1.10f;
+                limb *= 0.88f;
+                ear *= 1.06f;
+                tail *= 0.82f;
+                hairScale *= 0.88f;
+                break;
+            case CreatureAgeStage.Adolescent:
+                bodyWidth *= 0.96f;
+                bodyHeight *= 0.97f;
+                head *= 1.04f;
+                limb *= 0.97f;
+                tail *= 0.95f;
+                break;
+            case CreatureAgeStage.Senior:
+                bodyWidth *= 0.98f;
+                bodyHeight *= 0.96f;
+                head *= 1.02f;
+                limb *= 0.96f;
+                ear *= 1.02f;
+                tail *= 0.96f;
+                hairScale *= 0.92f;
+                break;
+        }
+    }
+
+    private static float StageScaleFor(CreatureAgeStage stage) => stage switch
+    {
+        CreatureAgeStage.Baby => 0.64f,
+        CreatureAgeStage.Child => 0.78f,
+        CreatureAgeStage.Adolescent => 0.92f,
+        CreatureAgeStage.Senior => 0.96f,
+        _ => 1.0f,
+    };
 
     private static uint HashGenome(G genome)
     {

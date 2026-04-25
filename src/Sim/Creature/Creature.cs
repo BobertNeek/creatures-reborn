@@ -17,6 +17,8 @@ using BrainCls = CreaturesReborn.Sim.Brain.Brain;
 /// </summary>
 public sealed class Creature
 {
+    public const int TicksPerAgeStep = 20 * 45;
+
     // -------------------------------------------------------------------------
     // Subsystems
     // -------------------------------------------------------------------------
@@ -26,6 +28,7 @@ public sealed class Creature
     public  MotorFaculty Motor        { get; }
 
     private readonly IRng _rng;
+    private int _ageTickAccumulator;
 
     // Additional drive inputs contributed by the Godot layer (wall aversion, home smell,
     // social proximity, etc.).  Mixed into FeedDriveInputs each tick then reset to zero.
@@ -73,7 +76,16 @@ public sealed class Creature
         byte age = 0,
         int variant = 0,
         string moniker = "")
-        => new(GenomeReader.LoadNew(rng, genPath, sex, age, variant, moniker), rng);
+    {
+        // Boot structural brain/biochemistry from baby-safe genes, then apply
+        // the requested runtime age for visual phenotype and reproduction.
+        // The current readers do not yet rebuild late-switching organs/lobes
+        // incrementally, so direct adult boot can drop the starter brain.
+        var genome = GenomeReader.LoadNew(rng, genPath, sex, age: 0, variant, moniker);
+        var creature = new Creature(genome, rng);
+        creature.Genome.Age = age;
+        return creature;
+    }
 
     public static Creature CreateFromGenome(G genome, IRng rng)
         => new(genome, rng);
@@ -94,6 +106,7 @@ public sealed class Creature
         Biochemistry.Update();
         Brain.Update();
         Motor.Resolve();
+        AdvanceAge(1);
     }
 
     // -------------------------------------------------------------------------
@@ -113,6 +126,23 @@ public sealed class Creature
         Lobe? lobe = FindLobe(BrainCls.TokenFromString("driv"));
         if (lobe == null || driveId >= lobe.GetNoOfNeurons()) return 0.0f;
         return lobe.GetNeuronState(driveId, NeuronVar.State);
+    }
+
+    public CreatureAgeStage AgeStage => CreatureAge.StageFromAge(Genome.Age);
+
+    public void AdvanceAge(int tickCount)
+    {
+        if (tickCount <= 0 || Genome.Age == byte.MaxValue) return;
+
+        _ageTickAccumulator += tickCount;
+        while (_ageTickAccumulator >= TicksPerAgeStep && Genome.Age < byte.MaxValue)
+        {
+            _ageTickAccumulator -= TicksPerAgeStep;
+            Genome.Age++;
+        }
+
+        if (Genome.Age == byte.MaxValue)
+            _ageTickAccumulator = 0;
     }
 
     // -------------------------------------------------------------------------

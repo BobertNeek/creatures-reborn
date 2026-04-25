@@ -99,7 +99,11 @@ public partial class WorldNode : Node3D
     public float ClampX(float x)
     {
         var b = GetRoomBounds();
-        return b is var (l, r) ? Math.Clamp(x, l, r) : x;
+        if (!b.HasValue)
+            return x;
+
+        var (l, r) = b.Value;
+        return Math.Clamp(x, l, r);
     }
 
     public float SnapToWalkableY(float x, float y, float fallback = 0f)
