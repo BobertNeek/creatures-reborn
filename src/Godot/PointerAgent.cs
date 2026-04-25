@@ -26,6 +26,8 @@ public partial class PointerAgent : Node3D
     private CreatureNode? _selectedCreature;
     private CreatureNode? _carriedCreature;
     private FoodNode?     _carriedFood;
+    private Vector3       _carriedCreatureOffset;
+    private Vector3       _carriedFoodOffset;
     private Node3D?       _handVisual;
     private float         _worldFloorY;
 
@@ -81,11 +83,11 @@ public partial class PointerAgent : Node3D
         // Move carried items with the hand
         if (_carriedCreature != null)
         {
-            _carriedCreature.Position = Position + new Vector3(0, 1.2f, 0);
+            _carriedCreature.Position = Position + _carriedCreatureOffset;
         }
         if (_carriedFood != null)
         {
-            _carriedFood.Position = Position + new Vector3(0, 0.5f, 0);
+            _carriedFood.Position = Position + _carriedFoodOffset;
         }
     }
 
@@ -210,6 +212,7 @@ public partial class PointerAgent : Node3D
     private void PickUpCreature(CreatureNode creature)
     {
         _carriedCreature = creature;
+        _carriedCreatureOffset = creature.Position - Position;
         if (creature.Creature != null)
             StimulusTable.Apply(creature.Creature, StimulusId.HandHeldCreature);
         GD.Print("[Hand] Picked up creature.");
@@ -224,7 +227,7 @@ public partial class PointerAgent : Node3D
         var world  = GetParent() as WorldNode;
         float dropX = Position.X;
         if (world != null) dropX = world.ClampX(dropX);
-        float dropY = SnapToNearestFloorY(dropX, Position.Y);
+        float dropY = SnapToNearestFloorY(dropX, Position.Y + _carriedCreatureOffset.Y);
 
         _carriedCreature.Position = new Vector3(dropX, dropY, _carriedCreature.Position.Z);
 
@@ -252,6 +255,7 @@ public partial class PointerAgent : Node3D
     private void PickUpFood(FoodNode food)
     {
         _carriedFood = food;
+        _carriedFoodOffset = food.Position - Position;
         food.PickUp(this);
         GD.Print("[Hand] Picked up food.");
     }
@@ -261,7 +265,7 @@ public partial class PointerAgent : Node3D
         if (_carriedFood == null) return;
         var world = GetParent() as WorldNode;
         float dropX = world?.ClampX(Position.X) ?? Position.X;
-        float dropY = SnapToNearestFloorY(dropX, Position.Y) + 0.18f;
+        float dropY = SnapToNearestFloorY(dropX, Position.Y + _carriedFoodOffset.Y) + 0.18f;
         _carriedFood.Drop(new Vector3(dropX, dropY, 0));
         _carriedFood = null;
         GD.Print($"[Hand] Dropped food at floor Y={dropY:F1}.");

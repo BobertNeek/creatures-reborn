@@ -48,4 +48,17 @@ public class TreehouseSceneTests
         Assert.Contains(1, sexes);
         Assert.Contains(2, sexes);
     }
+
+    [Fact]
+    public void TreehouseScene_UsesBackdropAlignedFloorHeights()
+    {
+        string scene = File.ReadAllText(Path.GetFullPath(TreehouseScenePath));
+
+        Assert.Contains("YLeft = 11.25", scene);
+        Assert.Contains("YLeft = 7.3", scene);
+        Assert.Contains("YLeft = 3.35", scene);
+        Assert.DoesNotContain("YLeft = 10.32", scene);
+        Assert.DoesNotContain("YLeft = 5.80", scene);
+        Assert.DoesNotContain("YLeft = 2.55", scene);
+    }
 }

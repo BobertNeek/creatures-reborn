@@ -39,8 +39,8 @@ script = ExtResource("8_pointer")
 script = ExtResource("11_floor")
 XLeft = -16.16
 XRight = -8.0
-YLeft = 10.32
-YRight = 10.32
+YLeft = 11.25
+YRight = 11.25
 ShowDebug = false
 DebugTint = Color(1, 0.3, 0.3, 0.55)
 
@@ -48,8 +48,8 @@ DebugTint = Color(1, 0.3, 0.3, 0.55)
 script = ExtResource("11_floor")
 XLeft = -8.0
 XRight = -1.1
-YLeft = 10.32
-YRight = 10.32
+YLeft = 11.25
+YRight = 11.25
 ShowDebug = false
 DebugTint = Color(1, 0.5, 0.2, 0.55)
 
@@ -57,8 +57,8 @@ DebugTint = Color(1, 0.5, 0.2, 0.55)
 script = ExtResource("11_floor")
 XLeft = -1.1
 XRight = 8.6
-YLeft = 10.32
-YRight = 10.32
+YLeft = 11.25
+YRight = 11.25
 ShowDebug = false
 DebugTint = Color(1, 0.5, 0.2, 0.55)
 
@@ -66,8 +66,8 @@ DebugTint = Color(1, 0.5, 0.2, 0.55)
 script = ExtResource("11_floor")
 XLeft = 8.6
 XRight = 19.5
-YLeft = 10.32
-YRight = 10.32
+YLeft = 11.25
+YRight = 11.25
 ShowDebug = false
 DebugTint = Color(1, 1, 0.3, 0.55)
 
@@ -76,8 +76,8 @@ DebugTint = Color(1, 1, 0.3, 0.55)
 script = ExtResource("11_floor")
 XLeft = -19.4
 XRight = -13.3
-YLeft = 5.95
-YRight = 5.95
+YLeft = 7.3
+YRight = 7.3
 ShowDebug = false
 DebugTint = Color(0.5, 0.8, 1, 0.55)
 
@@ -85,8 +85,8 @@ DebugTint = Color(0.5, 0.8, 1, 0.55)
 script = ExtResource("11_floor")
 XLeft = -13.3
 XRight = -2.0
-YLeft = 5.80
-YRight = 5.80
+YLeft = 7.3
+YRight = 7.3
 ShowDebug = false
 DebugTint = Color(0.3, 1, 0.6, 0.55)
 
@@ -95,8 +95,8 @@ DebugTint = Color(0.3, 1, 0.6, 0.55)
 script = ExtResource("11_floor")
 XLeft = -2.0
 XRight = 8.0
-YLeft = 5.80
-YRight = 5.80
+YLeft = 7.3
+YRight = 7.3
 ShowDebug = false
 DebugTint = Color(0.5, 0.8, 1, 0.55)
 
@@ -104,8 +104,8 @@ DebugTint = Color(0.5, 0.8, 1, 0.55)
 script = ExtResource("11_floor")
 XLeft = 8.0
 XRight = 19.3
-YLeft = 5.80
-YRight = 5.80
+YLeft = 7.3
+YRight = 7.3
 ShowDebug = false
 DebugTint = Color(0.9, 0.5, 0.9, 0.55)
 
@@ -117,8 +117,8 @@ DebugTint = Color(0.9, 0.5, 0.9, 0.55)
 script = ExtResource("11_floor")
 XLeft = -19.2
 XRight = -13.3
-YLeft = 2.55
-YRight = 5.80
+YLeft = 3.35
+YRight = 7.3
 ShowDebug = false
 DebugTint = Color(0.8, 0.7, 0.3, 0.55)
 
@@ -126,8 +126,8 @@ DebugTint = Color(0.8, 0.7, 0.3, 0.55)
 script = ExtResource("11_floor")
 XLeft = -13.3
 XRight = -1.0
-YLeft = 2.55
-YRight = 2.55
+YLeft = 3.35
+YRight = 3.35
 ShowDebug = false
 DebugTint = Color(0.7, 0.5, 0.3, 0.55)
 
@@ -138,8 +138,8 @@ DebugTint = Color(0.7, 0.5, 0.3, 0.55)
 script = ExtResource("11_floor")
 XLeft = -1.0
 XRight = 16.8
-YLeft = 2.55
-YRight = 2.55
+YLeft = 3.35
+YRight = 3.35
 ShowDebug = false
 DebugTint = Color(0.6, 0.4, 0.2, 0.55)
 
@@ -147,8 +147,8 @@ DebugTint = Color(0.6, 0.4, 0.2, 0.55)
 script = ExtResource("11_floor")
 XLeft = 16.8
 XRight = 19.8
-YLeft = 2.55
-YRight = 5.80
+YLeft = 3.35
+YRight = 7.3
 ShowDebug = false
 DebugTint = Color(0.3, 0.6, 1, 0.55)
 
@@ -168,8 +168,8 @@ Enabled = false
 script = ExtResource("9_stairs")
 XLeft = -19.2
 XRight = -13.3
-YLeft = 2.55
-YRight = 5.80
+YLeft = 3.35
+YRight = 7.3
 
 [node name="StairHammockToLibMid" type="Node3D" parent="."]
 script = ExtResource("9_stairs")
@@ -207,8 +207,8 @@ Enabled = false
 script = ExtResource("9_stairs")
 XLeft = 16.8
 XRight = 19.8
-YLeft = 2.55
-YRight = 5.80
+YLeft = 3.35
+YRight = 7.3
 
 [node name="StairAlchemyRToStudy" type="Node3D" parent="."]
 script = ExtResource("9_stairs")
@@ -226,8 +226,8 @@ Enabled = false
 [node name="Elevator" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.0, 0, 0)
 script = ExtResource("12_lift")
-YLow = 2.55
-YHigh = 10.32
+YLow = 3.35
+YHigh = 11.25
 StartFloor = 1
 
 ; ── Agents ─────────────────────────────────────────────────────────────
@@ -235,76 +235,76 @@ StartFloor = 1
 ; stair chain). Norn2 on the bottom-left slanted floor so the two start
 ; on different tiers and will migrate. Incubator next to Norn1 on pond.
 [node name="Norn" parent="." instance=ExtResource("3_norn")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 2.75, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 3.55, 0)
 Sex = 1
 
 [node name="Norn2" parent="." instance=ExtResource("3_norn")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 5.98, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 6.35, 0)
 Sex = 2
 
 [node name="Incubator" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 2.75, -0.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 3.55, -0.5)
 script = ExtResource("10_incubator")
 
 ; ── Food: one per floor region so drives can route norns everywhere ────
 ; Y is floor-Y + 0.2 so the sprite sits on the deck.
 [node name="FoodSpiderLedgeTop" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.1, 10.48, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.1, 11.45, 0)
 script = ExtResource("4_food")
 FoodKind = 1
 
 [node name="FoodLibraryTop" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 10.14, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 11.45, 0)
 script = ExtResource("4_food")
 FoodKind = 0
 
 [node name="FoodObservatory" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 10.52, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 11.45, 0)
 script = ExtResource("4_food")
 FoodKind = 0
 
 [node name="FoodStudy" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.5, 10.3, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.5, 11.45, 0)
 script = ExtResource("4_food")
 FoodKind = 2
 
 [node name="FoodLibraryMidUpper" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 6.0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 7.5, 0)
 script = ExtResource("4_food")
 FoodKind = 1
 
 [node name="FoodCrystalShelf" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.5, 6.1, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.5, 7.5, 0)
 script = ExtResource("4_food")
 FoodKind = 1
 
 [node name="FoodAlchemy" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 6.2, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 7.5, 0)
 script = ExtResource("4_food")
 FoodKind = 2
 
 [node name="FoodHammock" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.5, 6.0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.5, 7.5, 0)
 script = ExtResource("4_food")
 FoodKind = 0
 
 [node name="FoodBottomLeftSlant" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 4.85, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 6.35, 0)
 script = ExtResource("4_food")
 FoodKind = 2
 
 [node name="FoodBottomMidLow" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.3, 2.57, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.3, 3.55, 0)
 script = ExtResource("4_food")
 FoodKind = 0
 
 [node name="FoodBottomLeftLow" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 2.75, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 3.55, 0)
 script = ExtResource("4_food")
 FoodKind = 1
 
 [node name="FoodPond" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 2.75, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 3.55, 0)
 script = ExtResource("4_food")
 FoodKind = 2
 

@@ -13,11 +13,12 @@ public class GodotRuntimeSourceTests
             Path.Combine(parts)));
 
     [Fact]
-    public void NornRuntime_DefaultsToProceduralTrue3DModelAndActionPoses()
+    public void NornRuntime_DefaultsToLegacyGlbWithProceduralFallbackAndActionPoses()
     {
         string spriteSource = File.ReadAllText(RepoPath("src", "Godot", "NornBillboardSprite.cs"));
 
-        Assert.Contains("UseProceduralModel = true", spriteSource);
+        Assert.Contains("UseProceduralModel = false", spriteSource);
+        Assert.Contains("LoadLegacyGlbModel", spriteSource);
         Assert.Contains("NornModelFactory.Create()", spriteSource);
         Assert.Contains("SetActionPose", spriteSource);
         Assert.Contains("NornActionPose", spriteSource);
@@ -32,5 +33,15 @@ public class GodotRuntimeSourceTests
         Assert.Contains("SetActionPose", creatureNode);
         Assert.True(File.Exists(RepoPath("src", "Godot", "CreatureContextDrives.cs")));
         Assert.True(File.Exists(RepoPath("src", "Godot", "NornModelFactory.cs")));
+    }
+
+    [Fact]
+    public void PointerAgent_PreservesGrabOffsetWhileCarryingCreatures()
+    {
+        string pointerSource = File.ReadAllText(RepoPath("src", "Godot", "PointerAgent.cs"));
+
+        Assert.Contains("_carriedCreatureOffset", pointerSource);
+        Assert.Contains("creature.Position - Position", pointerSource);
+        Assert.DoesNotContain("_carriedCreature.Position = Position + new Vector3(0, 1.2f, 0)", pointerSource);
     }
 }

@@ -27,10 +27,10 @@
       "id": "norn-procedural-model-v1",
       "category": "creature-model",
       "runtimePath": "res://src/Godot/NornModelFactory.cs",
-      "replacementTarget": "Legacy imported norn.glb as default runtime model",
-      "sourceNotes": "Default runtime now builds an original stylized 3D Norn from named Godot mesh parts. The old GLB remains as an opt-in fallback, while this model receives sex, age, mutation scale, and material tints at runtime.",
+      "replacementTarget": "Legacy imported norn.glb experimental fallback",
+      "sourceNotes": "Original stylized procedural 3D Norn source remains available for iteration, but it is no longer the default runtime model after visual QA. The legacy GLB is the default until a better authored/generated 3D model is available.",
       "promptRef": "art/prompts/norn-procedural-model-v1.md",
-      "status": "active"
+      "status": "planned"
     },
     {
       "id": "egg-sprite-v1",

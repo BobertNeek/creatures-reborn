@@ -34,10 +34,11 @@ public partial class TreehouseMetaroomNode : Node3D
     // ── Floor Y values (match image layout) ──────────────────────────────────
     // Measured against the v1 painting after replacing the Nano Banana
     // background. The v1 image reads as three main gameplay tiers.
-    public const float TopFloorY     = 10.35f;
-    public const float MidHighFloorY = 5.85f;
-    public const float MidLowFloorY  = 5.85f;
-    public const float BottomFloorY  = 2.55f;
+    public const float TopFloorY     = 11.25f;
+    public const float MidHighFloorY = 7.30f;
+    public const float MidLowFloorY  = 7.30f;
+    public const float BottomFloorY  = 3.35f;
+    public const float BackdropCenterY = 8.45f;
 
     // Legacy alias kept pointing at the most common mid height so existing
     // call sites (PointerAgent drop logic, etc.) don't break while the scene
@@ -282,7 +283,7 @@ public partial class TreehouseMetaroomNode : Node3D
         {
             Name = "Backdrop",
             Mesh = new QuadMesh { Size = new Vector2(RoomWidth, RoomHeight) },
-            Position = new Vector3(0, (TopFloorY + BottomFloorY) * 0.5f + 2.0f, -5.0f),
+            Position = new Vector3(0, BackdropCenterY, -5.0f),
         };
         backdrop.MaterialOverride = mat;
         AddChild(backdrop);

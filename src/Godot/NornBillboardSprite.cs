@@ -23,7 +23,7 @@ public partial class NornBillboardSprite : Node3D
     const float StrideBob    = 0.025f;  // body bob amplitude
     const float StrideLength = 0.12f;   // world units per foot-plant
 
-    [Export] public bool UseProceduralModel = true;
+    [Export] public bool UseProceduralModel = false;
 
     private Node3D? _model;
     private Node3D? _body, _head, _earL, _earR;
