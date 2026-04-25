@@ -1,6 +1,7 @@
 using System;
 using Godot;
 using CreaturesReborn.Sim.Creature;
+using CreaturesReborn.Sim.Genome;
 
 namespace CreaturesReborn.Godot.Agents;
 
@@ -23,6 +24,7 @@ public partial class EggNode : Node3D
 {
     [Export] public float  HatchTime  = 12.0f;                          // seconds before hatch
     [Export] public string GenomePath = "";                             // path on disk; blank → starter
+    [Export] public int    Sex        = GeneConstants.MALE;              // expressed sex for hatched creature
     [Export] public string EggSpritePath = "res://art/agents/egg.png";  // override sprite
     [Export] public float  SpriteSize = 0.55f;                          // world-units tall
 
@@ -78,6 +80,7 @@ public partial class EggNode : Node3D
             var norn = (CreatureNode)nornScene.Instantiate();
             if (!string.IsNullOrEmpty(GenomePath))
                 norn.GenomePath = GenomePath;
+            norn.Sex = Sex;
             // Spawn at egg position, slight nudge so it doesn't intersect siblings
             norn.Position = Position + new Vector3(0.3f, 0, 0);
             GetParent()!.AddChild(norn);

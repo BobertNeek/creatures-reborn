@@ -2,6 +2,7 @@ using System;
 using Godot;
 using CreaturesReborn.Sim.Biochemistry;
 using CreaturesReborn.Sim.Creature;
+using CreaturesReborn.Sim.Genome;
 using CreaturesReborn.Sim.Util;
 using C = CreaturesReborn.Sim.Creature.Creature;
 
@@ -20,6 +21,9 @@ public partial class CreatureNode : Node3D
 {
     [Export] public string GenomePath = "res://data/genomes/starter.gen";
     [Export] public float  WalkSpeed  = 1.0f;
+    [Export] public int    Sex        = GeneConstants.MALE;
+    [Export] public int    Variant    = 0;
+    [Export] public string Moniker    = "";
 
     // -------------------------------------------------------------------------
     // State
@@ -57,10 +61,14 @@ public partial class CreatureNode : Node3D
         }
 
         var rng = new Rng((int)GD.Randi());
-        _creature = C.LoadFromFile(absPath, rng);
+        string moniker = string.IsNullOrWhiteSpace(Moniker)
+            ? Name.ToString()
+            : Moniker;
+        _creature = C.LoadFromFile(absPath, rng, Sex, age: 0, Variant, moniker);
         _creature.SetChemical(ChemID.ATP, 1.0f);
 
         _sprite = GetNodeOrNull<NornBillboardSprite>("Sprite");
+        _sprite?.UpdateVisuals(_creature);
 
         // Give the sprite a room-bounds clamper so it respects walls
         // Supports old MetaroomNode, ColonyMetaroomNode, and TreehouseMetaroomNode
@@ -351,6 +359,7 @@ public partial class CreatureNode : Node3D
         var egg = new Agents.EggNode
         {
             GenomePath = tmpPath,
+            Sex = GD.Randf() < 0.5f ? GeneConstants.MALE : GeneConstants.FEMALE,
             HatchTime  = 12.0f,
             Position   = (Position + mate.Position) * 0.5f,
         };

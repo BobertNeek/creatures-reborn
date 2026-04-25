@@ -27,9 +27,11 @@ script = ExtResource("8_pointer")
 
 [node name="Norn" parent="." instance=ExtResource("3_norn")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 0, 0)
+Sex = 1
 
 [node name="Norn2" parent="." instance=ExtResource("3_norn")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, 0)
+Sex = 2
 
 [node name="Incubator" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, -0.5)

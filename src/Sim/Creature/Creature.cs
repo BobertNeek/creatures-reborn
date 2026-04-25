@@ -2,6 +2,7 @@ using System;
 using CreaturesReborn.Sim.Biochemistry;
 using CreaturesReborn.Sim.Brain;
 using CreaturesReborn.Sim.Formats;
+using CreaturesReborn.Sim.Genome;
 using CreaturesReborn.Sim.Util;
 
 namespace CreaturesReborn.Sim.Creature;
@@ -65,8 +66,14 @@ public sealed class Creature
     // -------------------------------------------------------------------------
     // Factory
     // -------------------------------------------------------------------------
-    public static Creature LoadFromFile(string genPath, IRng rng)
-        => new(GenomeReader.LoadNew(rng, genPath), rng);
+    public static Creature LoadFromFile(
+        string genPath,
+        IRng rng,
+        int sex = GeneConstants.MALE,
+        byte age = 0,
+        int variant = 0,
+        string moniker = "")
+        => new(GenomeReader.LoadNew(rng, genPath, sex, age, variant, moniker), rng);
 
     public static Creature CreateFromGenome(G genome, IRng rng)
         => new(genome, rng);

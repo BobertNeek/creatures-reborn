@@ -13,13 +13,13 @@
       "status": "active"
     },
     {
-      "id": "norn-texture-set-v0",
+      "id": "norn-texture-set-v1",
       "category": "creature-textures",
       "runtimePath": "res://assets/textures/norn/",
-      "replacementTarget": "Current Geneforge-derived Norn texture set",
-      "sourceNotes": "Runtime keeps the current 3D Norn model while reboot work regenerates texture and concept direction.",
-      "promptRef": "art/prompts/norn-texture-set.md",
-      "status": "needs-regeneration"
+      "replacementTarget": "Procedural v0 Norn texture set",
+      "sourceNotes": "Runtime keeps the current 3D Norn model but uses regenerated warm/cream/teal texture maps; sex and mutation differences are applied by CreatureAppearance at runtime.",
+      "promptRef": "art/prompts/norn-texture-set-v1.md",
+      "status": "active"
     },
     {
       "id": "egg-sprite-v1",

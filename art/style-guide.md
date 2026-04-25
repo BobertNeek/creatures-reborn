@@ -7,8 +7,8 @@ Creatures Reborn should feel like a closer tribute to Creatures 3 and Docking St
 ## Runtime Shape
 
 - Use generated 2D images for metarooms, agent sprites, food, eggs, props, UI icons, and concept sheets.
-- Keep 3D Norns for the current runtime until a replacement creature pipeline is chosen.
-- Treat generated Norn images as concept and texture direction unless a later milestone explicitly replaces the model.
+- Keep 3D Norns for the current runtime, with regenerated texture maps and DNA-driven material/proportion variation.
+- Treat generated Norn images as concept and texture direction unless a later milestone explicitly replaces the model geometry.
 - Keep metaroom floors visually clear. Detailed backgrounds must not hide creature feet, food, eggs, stairs, or elevator pads.
 
 ## Asset Rules

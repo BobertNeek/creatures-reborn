@@ -36,4 +36,16 @@ public class TreehouseSceneTests
         Assert.Contains(1, foodKinds);
         Assert.Contains(2, foodKinds);
     }
+
+    [Fact]
+    public void TreehouseScene_StartsWithMaleAndFemaleNorns()
+    {
+        string scene = File.ReadAllText(Path.GetFullPath(TreehouseScenePath));
+        HashSet<int> sexes = Regex.Matches(scene, @"Sex = (\d+)")
+            .Select(match => int.Parse(match.Groups[1].Value))
+            .ToHashSet();
+
+        Assert.Contains(1, sexes);
+        Assert.Contains(2, sexes);
+    }
 }

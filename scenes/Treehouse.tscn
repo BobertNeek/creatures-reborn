@@ -236,9 +236,11 @@ StartFloor = 1
 ; on different tiers and will migrate. Incubator next to Norn1 on pond.
 [node name="Norn" parent="." instance=ExtResource("3_norn")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 2.75, 0)
+Sex = 1
 
 [node name="Norn2" parent="." instance=ExtResource("3_norn")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 5.98, 0)
+Sex = 2
 
 [node name="Incubator" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 2.75, -0.5)

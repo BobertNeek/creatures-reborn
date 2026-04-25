@@ -29,6 +29,8 @@ public partial class NornBillboardSprite : Node3D
     private Node3D? _humerusL, _humerusR, _radiusL, _radiusR;
     private Node3D? _tail, _tailTip;
     private Vector3 _basePos;
+    private IReadOnlyDictionary<string, Vector3> _baseScales = new Dictionary<string, Vector3>();
+    private uint? _appliedAppearanceSignature;
 
     private float _phase;        // walk cycle phase (radians, continuous)
     private float _targetY, _curY;
@@ -66,7 +68,8 @@ public partial class NornBillboardSprite : Node3D
         Chain(_radiusR, _humerusR, orig);
         Chain(_tailTip, _tail, orig);
 
-        ApplyTextures();
+        _baseScales = NornAppearanceApplier.CaptureBaseScales(_model);
+        ApplyDefaultTextures();
     }
 
     private Node3D? Grab(string name, Dictionary<string, Vector3> orig)
@@ -123,7 +126,14 @@ public partial class NornBillboardSprite : Node3D
 
     public void UpdateVisuals(Creature creature)
     {
-        // kept for interface — walk direction now set via SetWalkDirection()
+        if (_model == null) return;
+
+        CreatureAppearance appearance = CreatureAppearance.FromGenome(creature.Genome);
+        if (_appliedAppearanceSignature == appearance.Signature)
+            return;
+
+        NornAppearanceApplier.Apply(_model, appearance, _baseScales, LoadNornTexture);
+        _appliedAppearanceSignature = appearance.Signature;
     }
 
     private void Animate(float ph)
@@ -159,7 +169,7 @@ public partial class NornBillboardSprite : Node3D
         if (_tailTip != null) _tailTip.Rotation = new Vector3(s * TailSwing * 0.5f, 0, 0);
     }
 
-    private void ApplyTextures()
+    private void ApplyDefaultTextures()
     {
         if (_model == null) return;
 
@@ -193,7 +203,7 @@ public partial class NornBillboardSprite : Node3D
         {
             var mesh = _model.FindChild(nodeName, true, false) as MeshInstance3D;
             if (mesh == null) continue;
-            var tex = ResourceLoader.Load<Texture2D>($"res://assets/textures/norn/{texFile}");
+            var tex = LoadNornTexture(texFile);
             if (tex == null) continue;
             mesh.MaterialOverride = new StandardMaterial3D
             {
@@ -203,7 +213,7 @@ public partial class NornBillboardSprite : Node3D
         }
 
         // Eyes get a glossy material
-        var eyeTex = ResourceLoader.Load<Texture2D>("res://assets/textures/norn/Eye.png");
+        var eyeTex = LoadNornTexture("Eye.png");
         if (eyeTex == null) return;
         foreach (string name in new[] { "Eye_L", "Eye_R" })
         {
@@ -212,6 +222,20 @@ public partial class NornBillboardSprite : Node3D
                 eye.MaterialOverride = new StandardMaterial3D
                     { AlbedoTexture = eyeTex, Roughness = 0.05f, MetallicSpecular = 0.3f };
         }
+    }
+
+    private static Texture2D? LoadNornTexture(string texFile)
+    {
+        string resPath = $"res://assets/textures/norn/{texFile}";
+        string absPath = ProjectSettings.GlobalizePath(resPath);
+        if (System.IO.File.Exists(absPath))
+        {
+            var img = Image.LoadFromFile(absPath);
+            if (img != null)
+                return ImageTexture.CreateFromImage(img);
+        }
+
+        return ResourceLoader.Load<Texture2D>(resPath);
     }
 
     private static float Lerp(float a, float b, float t) =>
