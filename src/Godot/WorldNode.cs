@@ -46,6 +46,10 @@ public partial class WorldNode : Node3D
         World.BreedingLimit      = BreedingLimit;
         World.TotalPopulationMax = TotalPopulationMax;
 
+        // Dev helper: auto-screenshot-and-quit when launched with
+        // --screenshot=<path>. Inert otherwise. See DebugScreenshot.cs.
+        AddChild(new DebugScreenshot { Name = "DebugScreenshot" });
+
         GD.Print("[WorldNode] Simulation world initialised.");
         GD.Print($"  Tick rate: {TickRate} Hz, Breeding limit: {BreedingLimit}");
     }

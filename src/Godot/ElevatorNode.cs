@@ -25,7 +25,23 @@ public partial class ElevatorNode : Node3D
 {
     [Export] public float CaptureRadius = 0.9f;   // horizontal capture zone
     [Export] public float TravelSpeed   = 3.0f;   // world units per second
-    [Export] public int   StartFloor    = 2;      // 2 = bottom
+    [Export] public int   StartFloor    = 2;      // legacy 3-floor mode: 2 = bottom
+
+    // Custom 2-point mode. If YHigh > YLow, the elevator ignores the legacy
+    // TopFloorY / MidFloorY / BottomFloorY constants and simply shuttles
+    // between YLow and YHigh. Needed for the Treehouse piecewise layout,
+    // where a single elevator connects two specific FloorPlates (e.g. the
+    // unreachable pocket below the bottom-left slanted floor).
+    // StartFloor in custom mode: 0 → YHigh, any other → YLow.
+    [Export] public float YLow  = 0f;
+    [Export] public float YHigh = 0f;
+    private bool UseCustom => YHigh > YLow;
+
+    private float GetY(int floor)
+    {
+        if (UseCustom) return floor == 0 ? YHigh : YLow;
+        return TreehouseMetaroomNode.GetFloorY(floor);
+    }
 
     // Internal state — call-driven, not auto-cycling. Stays at its last
     // commanded floor until the player clicks it again via PointerAgent.
@@ -40,8 +56,9 @@ public partial class ElevatorNode : Node3D
 
     public override void _Ready()
     {
-        _currentFloor = _targetFloor = Mathf.Clamp(StartFloor, 0, 2);
-        _currentY     = TreehouseMetaroomNode.GetFloorY(_currentFloor);
+        int maxFloor = UseCustom ? 1 : 2;
+        _currentFloor = _targetFloor = Mathf.Clamp(StartFloor, 0, maxFloor);
+        _currentY     = GetY(_currentFloor);
 
         BuildVisual();
         UpdatePlatformPosition();
@@ -50,7 +67,7 @@ public partial class ElevatorNode : Node3D
     public override void _Process(double delta)
     {
         float dt = (float)delta;
-        float targetY = TreehouseMetaroomNode.GetFloorY(_targetFloor);
+        float targetY = GetY(_targetFloor);
 
         // Move toward target if we're not there yet
         if (!Mathf.IsEqualApprox(_currentY, targetY))
@@ -75,7 +92,8 @@ public partial class ElevatorNode : Node3D
     /// <summary>Command the lift to head to a specific floor (0=top, 1=mid, 2=bot).</summary>
     public void GoToFloor(int floor)
     {
-        _targetFloor = Mathf.Clamp(floor, 0, 2);
+        int maxFloor = UseCustom ? 1 : 2;
+        _targetFloor = Mathf.Clamp(floor, 0, maxFloor);
     }
 
     // ── Carry creatures ──────────────────────────────────────────────────────
@@ -89,7 +107,7 @@ public partial class ElevatorNode : Node3D
         var parent = GetParent();
         if (parent == null) return;
 
-        float targetY = TreehouseMetaroomNode.GetFloorY(_targetFloor);
+        float targetY = GetY(_targetFloor);
         bool  inTransit = !Mathf.IsEqualApprox(_currentY, targetY);
         if (!inTransit) return;
 
@@ -112,9 +130,20 @@ public partial class ElevatorNode : Node3D
     // ── Visuals ──────────────────────────────────────────────────────────────
     private void BuildVisual()
     {
-        // Shaft — thin translucent column spanning full floor range
-        const float topY = TreehouseMetaroomNode.TopFloorY + 1.2f;
-        const float botY = TreehouseMetaroomNode.BottomFloorY - 0.2f;
+        // Shaft — thin translucent column spanning full floor range. In
+        // custom mode we draw just the YLow..YHigh span; in legacy mode we
+        // bracket the three global floors.
+        float topY, botY;
+        if (UseCustom)
+        {
+            topY = YHigh + 0.2f;
+            botY = YLow  - 0.2f;
+        }
+        else
+        {
+            topY = TreehouseMetaroomNode.TopFloorY + 1.2f;
+            botY = TreehouseMetaroomNode.BottomFloorY - 0.2f;
+        }
         float shaftHeight = topY - botY;
 
         _shaftMesh = new MeshInstance3D

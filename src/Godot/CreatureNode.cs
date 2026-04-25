@@ -384,28 +384,38 @@ public partial class CreatureNode : Node3D
 
     private FoodNode? FindNearestFood(float maxDist)
     {
-        FoodNode? nearest     = null;
-        float     nearestDist = maxDist;
         if (GetParent() == null) return null;
 
-        // Same-floor filter: norns can only walk along their current Y, so
-        // food on other floors should be invisible to ApproachDirection.
-        // Without this, a hungry norn on the bottom floor sees fruit on the
-        // observatory and walks uselessly into the wall under it.
-        const float SameFloorTolerance = 1.0f;
+        // Two-tier search: prefer food on the current floor, but fall back
+        // to food on *any* floor so norns will go hunt for stairs when their
+        // own floor is empty. Stairs (StairsNode) carry the norn across Y
+        // automatically as they walk horizontally, so "walk toward food X"
+        // is sufficient AI — no stair-specific pathfinding needed in the
+        // vertical slice.
+        //
+        // Without this fallback, a bottom-floor norn with food only on the
+        // top deck would idle forever. With it, the norn walks toward the
+        // food, stumbles onto a stair, and ascends.
+        const float SameFloorTolerance = 1.5f;
+
+        FoodNode? same = null;
+        float     sameDist = maxDist;
+        FoodNode? any  = null;
+        float     anyDist = maxDist;
 
         foreach (Node n in GetParent()!.GetChildren())
         {
-            if (n is FoodNode food && !food.IsConsumed)
-            {
-                if (MathF.Abs(food.Position.Y - Position.Y) > SameFloorTolerance)
-                    continue;
+            if (n is not FoodNode food || food.IsConsumed) continue;
 
-                // Use horizontal distance only (we already verified same floor)
-                float d = MathF.Abs(food.Position.X - Position.X);
-                if (d < nearestDist) { nearest = food; nearestDist = d; }
+            float dx = MathF.Abs(food.Position.X - Position.X);
+            if (dx < anyDist) { any = food; anyDist = dx; }
+
+            if (MathF.Abs(food.Position.Y - Position.Y) <= SameFloorTolerance
+                && dx < sameDist)
+            {
+                same = food; sameDist = dx;
             }
         }
-        return nearest;
+        return same ?? any;
     }
 }

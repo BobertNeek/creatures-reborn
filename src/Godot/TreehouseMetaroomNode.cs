@@ -7,20 +7,25 @@ namespace CreaturesReborn.Godot;
 /// <summary>
 /// The Treehouse metaroom — a magical multi-floor tree dwelling.
 ///
-/// Based on the Gemini-generated backdrop (art/metaroom/treehouse_backdrop.png),
+/// Based on the Gemini-generated backdrop (art/metaroom/metaroom.png),
 /// the image shows three distinct walkable floors separated by gnarled root
-/// dividers:
+/// dividers. Floor Y values were measured off the painting so norns stand
+/// on the painted decks rather than floating above them:
 ///
-///   Floor 0 (Y = TopFloorY    = 9.0): Observatory / Library — the sunlit
-///       upper level with a domed telescope platform in the centre,
-///       fireplace-library on the left, and map-study on the right.
-///   Floor 1 (Y = MidFloorY    = 4.5): Living / Lab — hammock bedroom,
-///       reading nook, and alchemy lab with crystal wall.
-///   Floor 2 (Y = BottomFloorY = 0.0): Caves / Pond — glowing crystal caves
-///       on the sides, central mushroom cavern, pond with fish in the middle.
+///   Floor 0 (Y = TopFloorY    = 9.0, ≈36% down the image):
+///       Observatory / Library — domed telescope platform centre,
+///       fireplace-library left, map-study right.
+///   Floor 1 (Y = MidFloorY    = 5.0, ≈68% down):
+///       Living / Lab — hammock nook left-centre, alchemy lab with
+///       crystal wall right.
+///   Floor 2 (Y = BottomFloorY = 2.0, ≈91% down):
+///       Caves / Pond — glowing crystal caves on the sides, central
+///       mushroom cavern, pond with fish in the middle.
 ///
-/// Two elevator shafts (x = -8 and x = +6) connect all three floors along
-/// the natural tree-trunk columns visible in the art.
+/// Floor-to-floor travel is by stairs (StairsNode). Two pairs of adjacent
+/// stair runs (left pair and right pair) let a norn climb bot → mid → top
+/// with a single left- or right-ward walk — so the game no longer needs
+/// elevators at all.
 ///
 /// Rendering: the backdrop PNG is painted onto a huge QuadMesh that sits
 /// behind all agents (z = -10). If the file is missing we build a procedural
@@ -33,12 +38,25 @@ public partial class TreehouseMetaroomNode : Node3D
     [Export] public Texture2D? Backdrop;
     [Export] public float RoomWidth  = 40.0f;
     [Export] public float RoomHeight = 13.5f;
-    [Export] public string BackdropPath = "res://art/metaroom/treehouse_backdrop.png";
+    [Export] public string BackdropPath = "res://art/metaroom/metaroom.png";
 
     // ── Floor Y values (match image layout) ──────────────────────────────────
-    public const float TopFloorY    = 9.0f;
-    public const float MidFloorY    = 4.5f;
-    public const float BottomFloorY = 0.0f;
+    // Measured off metaroom.png. The painting has FOUR distinct walkable
+    // heights — a single Mid value doesn't work because the reading-nook /
+    // alchemy-lab deck and the hammock alcove are at very different heights.
+    //   TopFloorY      ≈ 38% down image  (library / observatory / study)
+    //   MidHighFloorY  ≈ 59% down image  (reading nook + alchemy lab deck)
+    //   MidLowFloorY   ≈ 75% down image  (hammock alcove — below reading nook)
+    //   BottomFloorY   ≈ 83% down image  (pond + mushroom cave + grass)
+    public const float TopFloorY     = 9.0f;
+    public const float MidHighFloorY = 6.2f;
+    public const float MidLowFloorY  = 4.1f;
+    public const float BottomFloorY  = 3.0f;
+
+    // Legacy alias kept pointing at the most common mid height so existing
+    // call sites (PointerAgent drop logic, etc.) don't break while the scene
+    // is being re-laid-out against the painting.
+    public const float MidFloorY = MidHighFloorY;
 
     // Per-floor walkable x range. The metaroom is symmetric around x = 0
     // and the ±RoomWidth/2 values define hard walls.
@@ -64,7 +82,11 @@ public partial class TreehouseMetaroomNode : Node3D
 
         BuildRoomLayout();
         BuildBackdrop();
-        BuildFloorPlates();
+        // NOTE: no more auto-BuildFloorPlates. The painted backdrop already
+        // shows the floors, and the painting's walkable decks are at many
+        // different Y values (not three clean bands). Walkable regions are
+        // instead placed in the scene as FloorPlateNode instances so each
+        // can be tuned to its own X/Y without fighting the painting.
         SetupLighting();
     }
 
@@ -195,24 +217,201 @@ public partial class TreehouseMetaroomNode : Node3D
         AddChild(backdrop);
     }
 
-    /// <summary>Solid three-band placeholder if the PNG is missing.</summary>
+    /// <summary>
+    /// Painted-in-code treehouse placeholder used when treehouse_backdrop.png is
+    /// missing. Wide aspect (matches RoomWidth:RoomHeight ≈ 3:1) and reads as a
+    /// real backdrop — night sky + canopy on top, wood-panelled observatory,
+    /// gnarled root divider, living/lab with crystal wall, another root divider,
+    /// then cave-and-pond at the bottom. Two vertical tree-trunk columns mark
+    /// the elevator shafts at world x = -8 and x = +6.
+    ///
+    /// Deterministic: all noise comes from a fixed-seed RNG so the placeholder
+    /// looks identical every launch.
+    /// </summary>
     private StandardMaterial3D BuildPlaceholderMaterial()
     {
-        // A simple procedural "three bands" gradient baked at build time.
-        var img = Image.CreateEmpty(64, 192, false, Image.Format.Rgb8);
-        for (int y = 0; y < 192; y++)
+        const int W = 384, H = 128;
+        var img = Image.CreateEmpty(W, H, false, Image.Format.Rgb8);
+        var rng = new Random(0x7EA7);
+
+        // Vertical band boundaries (image y grows downward):
+        //   0 .. 10     sky
+        //  10 .. 22     canopy leaves fringe
+        //  22 .. 46     top floor interior (observatory/library)
+        //  46 .. 54     gnarled root divider
+        //  54 .. 80     middle floor interior (living/lab)
+        //  80 .. 88     gnarled root divider
+        //  88 .. 128    bottom floor (caves + pond)
+        //
+        // Tree-trunk columns (elevator shafts) map world x = -8, +6 onto image
+        // x via x_img = (world_x + RoomWidth/2) / RoomWidth * W.
+        //   -8 → (12/40) * 384 = 115
+        //   +6 → (26/40) * 384 = 250
+        int trunkL = 115, trunkR = 250;
+        const int trunkHalfW = 8;
+
+        for (int y = 0; y < H; y++)
         {
-            Color c = y < 64  ? new Color(0.20f, 0.28f, 0.45f)   // top: night-sky blue
-                   : y < 128 ? new Color(0.45f, 0.30f, 0.20f)    // middle: warm wood
-                             : new Color(0.10f, 0.18f, 0.14f);   // bottom: cave green
-            for (int x = 0; x < 64; x++) img.SetPixel(x, y, c);
+            for (int x = 0; x < W; x++)
+            {
+                Color c = PaintPixel(x, y, W, H, trunkL, trunkR, trunkHalfW, rng);
+                img.SetPixel(x, y, c);
+            }
         }
+
+        // Scatter a few stars into the sky band
+        var starRng = new Random(0xC0FFEE);
+        for (int i = 0; i < 30; i++)
+        {
+            int sx = starRng.Next(W);
+            int sy = starRng.Next(10);
+            float b = 0.75f + (float)starRng.NextDouble() * 0.25f;
+            img.SetPixel(sx, sy, new Color(b, b, b * 0.95f));
+        }
+
+        // Scatter glowing crystals into the cave band
+        var crystalRng = new Random(0xBADC);
+        for (int i = 0; i < 18; i++)
+        {
+            int cx = crystalRng.Next(W);
+            int cy = 95 + crystalRng.Next(25);
+            var hue = crystalRng.Next(3) switch
+            {
+                0 => new Color(0.55f, 0.95f, 1.00f),  // cyan
+                1 => new Color(0.90f, 0.60f, 1.00f),  // violet
+                _ => new Color(0.70f, 1.00f, 0.80f),  // pale green
+            };
+            img.SetPixel(cx, cy, hue);
+            if (cx + 1 < W) img.SetPixel(cx + 1, cy, hue * 0.75f);
+            if (cy + 1 < H) img.SetPixel(cx, cy + 1, hue * 0.55f);
+        }
+
         return new StandardMaterial3D
         {
             AlbedoTexture = ImageTexture.CreateFromImage(img),
             ShadingMode   = BaseMaterial3D.ShadingModeEnum.Unshaded,
             TextureFilter = BaseMaterial3D.TextureFilterEnum.Linear,
         };
+    }
+
+    /// <summary>
+    /// Per-pixel painter for the procedural treehouse. Split out from the main
+    /// loop so the vertical structure reads top-to-bottom and each band has its
+    /// own short colour expression.
+    /// </summary>
+    private static Color PaintPixel(
+        int x, int y, int W, int H,
+        int trunkL, int trunkR, int trunkHalfW, Random rng)
+    {
+        // Deterministic low-amplitude noise so surfaces aren't dead flat.
+        // Using rng.NextDouble() is fine because we iterate pixels in a fixed
+        // order with a fixed-seed Random.
+        float n = ((float)rng.NextDouble() - 0.5f) * 0.06f;
+
+        // Tree-trunk columns cut through every band except the sky.
+        bool inTrunkL = System.Math.Abs(x - trunkL) <= trunkHalfW;
+        bool inTrunkR = System.Math.Abs(x - trunkR) <= trunkHalfW;
+        bool inTrunk  = (inTrunkL || inTrunkR) && y > 8;
+        if (inTrunk)
+        {
+            // Gnarled dark-brown trunk with vertical bark striations.
+            float bark = ((x + y / 3) % 4 == 0) ? -0.05f : 0.0f;
+            return new Color(0.22f + bark + n, 0.14f + n, 0.08f + n);
+        }
+
+        // ── Sky (0..10) ─────────────────────────────────────────────────────
+        if (y < 10)
+            return new Color(0.07f + n, 0.09f + n, 0.22f + n);
+
+        // ── Canopy leaves (10..22) ──────────────────────────────────────────
+        if (y < 22)
+        {
+            // Scalloped lower edge: random short dips
+            float scallop = MathF.Sin(x * 0.18f) * 1.2f + MathF.Sin(x * 0.07f) * 2.0f;
+            float bottom  = 22 - MathF.Abs(scallop);
+            if (y < bottom)
+            {
+                // Darker deeper in, lighter near edge
+                float t = (y - 10) / 12f;
+                return new Color(0.06f + t * 0.05f + n,
+                                 0.22f + t * 0.15f + n,
+                                 0.14f + t * 0.07f + n);
+            }
+            // else fall through to interior below
+        }
+
+        // ── Top floor — observatory / library (22..46) ──────────────────────
+        if (y < 46)
+        {
+            // Warm wood walls. Central dome arch suggested by a lighter band.
+            float domeDist = MathF.Abs(x - W * 0.5f);
+            bool  inDome   = domeDist < 55 && y < 36;
+            if (inDome)
+            {
+                // Domed ceiling glow
+                float g = 0.50f - (y - 22) / 28f;
+                return new Color(0.45f + g + n, 0.40f + g + n, 0.30f + g * 0.5f + n);
+            }
+            // Bookshelves on left third
+            if (x < W * 0.22f && ((y / 3) % 2 == 0))
+                return new Color(0.30f + n, 0.18f + n, 0.10f + n);
+            // Map / study on right third — parchment tone
+            if (x > W * 0.78f && y > 28 && y < 42)
+                return new Color(0.68f + n, 0.60f + n, 0.42f + n);
+            // Default warm wood panel
+            return new Color(0.48f + n, 0.33f + n, 0.20f + n);
+        }
+
+        // ── Root divider (46..54) ───────────────────────────────────────────
+        if (y < 54)
+        {
+            float knot = MathF.Sin(x * 0.12f) * 0.04f;
+            return new Color(0.28f + knot + n, 0.18f + n, 0.10f + n);
+        }
+
+        // ── Middle floor — living / lab (54..80) ────────────────────────────
+        if (y < 80)
+        {
+            // Crystal wall on right quarter (pale violet with inner glow)
+            if (x > W * 0.75f)
+            {
+                float t = (x - W * 0.75f) / (W * 0.25f);
+                return new Color(0.55f + t * 0.15f + n,
+                                 0.45f + t * 0.20f + n,
+                                 0.70f + t * 0.20f + n);
+            }
+            // Hammock-nook silhouette left of centre
+            float hx = x - W * 0.30f;
+            float hy = y - 68;
+            if (hx * hx * 0.02f + hy * hy * 0.25f < 3.0f)
+                return new Color(0.32f + n, 0.22f + n, 0.30f + n);
+            // Default wood panel, slightly darker than top floor
+            return new Color(0.40f + n, 0.28f + n, 0.18f + n);
+        }
+
+        // ── Root divider (80..88) ───────────────────────────────────────────
+        if (y < 88)
+        {
+            float knot = MathF.Cos(x * 0.10f) * 0.04f;
+            return new Color(0.26f + knot + n, 0.16f + n, 0.09f + n);
+        }
+
+        // ── Bottom floor — caves & pond (88..H) ─────────────────────────────
+        // Central pond roughly x ∈ [0.35W, 0.65W], y ∈ [108, H]
+        bool inPond = x > W * 0.35f && x < W * 0.65f && y > 108;
+        if (inPond)
+        {
+            // Water ripple shading
+            float ripple = MathF.Sin(x * 0.15f + y * 0.4f) * 0.04f;
+            return new Color(0.10f + ripple + n,
+                             0.25f + ripple + n,
+                             0.32f + ripple + n);
+        }
+        // Cave stone walls
+        float stone = ((x * 7 + y * 13) % 9 == 0) ? 0.05f : 0f;
+        return new Color(0.10f + stone + n,
+                         0.13f + stone + n,
+                         0.12f + stone + n);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

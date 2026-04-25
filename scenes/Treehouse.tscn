@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://6mf4hrw425m5"]
+[gd_scene load_steps=13 format=3 uid="uid://6mf4hrw425m5"]
 
 [ext_resource type="Script" uid="uid://clgg5bo3yi1ua" path="res://src/Godot/WorldNode.cs" id="1_world"]
 [ext_resource type="Script" uid="uid://vcboqmvkc341" path="res://src/Godot/TreehouseMetaroomNode.cs" id="2_tree"]
@@ -8,8 +8,10 @@
 [ext_resource type="Script" uid="uid://cb7k6tt78ljop" path="res://src/Godot/HomeNode.cs" id="6_home"]
 [ext_resource type="Script" uid="uid://cgns1ix775bww" path="res://src/Godot/FoodRespawnManager.cs" id="7_respawn"]
 [ext_resource type="Script" uid="uid://d4j1uc5k143v5" path="res://src/Godot/PointerAgent.cs" id="8_pointer"]
-[ext_resource type="Script" uid="uid://drwchngx7xrd7" path="res://src/Godot/ElevatorNode.cs" id="9_lift"]
+[ext_resource type="Script" path="res://src/Godot/StairsNode.cs" id="9_stairs"]
 [ext_resource type="Script" uid="uid://52j344eloamx" path="res://src/Godot/Agents/IncubatorNode.cs" id="10_incubator"]
+[ext_resource type="Script" path="res://src/Godot/FloorPlateNode.cs" id="11_floor"]
+[ext_resource type="Script" path="res://src/Godot/ElevatorNode.cs" id="12_lift"]
 
 [node name="Treehouse" type="Node3D"]
 script = ExtResource("1_world")
@@ -18,58 +20,272 @@ script = ExtResource("1_world")
 script = ExtResource("2_tree")
 
 [node name="Home" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6, 0)
 script = ExtResource("6_home")
-Radius = 8.0
+Radius = 10.0
 
 [node name="Pointer" type="Node3D" parent="."]
 script = ExtResource("8_pointer")
 
-[node name="LiftLeft" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 0)
-script = ExtResource("9_lift")
-StartFloor = 2
+; ── Floor plates ───────────────────────────────────────────────────────
+; Every plate matches a red line the user drew on user_marked.png (see
+; _dev_screenshots/extracted_overlay.png for the pixel→world extraction).
+; FloorPlateNode supports slanted floors via YLeft/YRight; where dy ≠ 0
+; the slant is honoured in GetYAt() and in the debug bar rotation.
+; ShowDebug=true for this iteration — flip off once accepted.
 
-[node name="LiftRight" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0, 0)
-script = ExtResource("9_lift")
-StartFloor = 2
+; --- Top tier (y ≈ 9.9–10.5) ------------------------------------------------
+[node name="FloorSpiderLedgeTop" type="Node3D" parent="."]
+script = ExtResource("11_floor")
+XLeft = -16.16
+XRight = -14.01
+YLeft = 10.49
+YRight = 10.07
+ShowDebug = true
+DebugTint = Color(1, 0.3, 0.3, 0.55)
 
+[node name="FloorLibraryTop" type="Node3D" parent="."]
+script = ExtResource("11_floor")
+XLeft = -13.23
+XRight = -7.4
+YLeft = 9.91
+YRight = 9.96
+ShowDebug = true
+DebugTint = Color(1, 0.5, 0.2, 0.55)
+
+[node name="FloorObservatory" type="Node3D" parent="."]
+script = ExtResource("11_floor")
+XLeft = 1.65
+XRight = 5.23
+YLeft = 8.82
+YRight = 8.89
+ShowDebug = true
+DebugTint = Color(1, 0.5, 0.2, 0.55)
+
+[node name="FloorStudy" type="Node3D" parent="."]
+script = ExtResource("11_floor")
+XLeft = 8.26
+XRight = 16.98
+YLeft = 10.07
+YRight = 10.13
+ShowDebug = true
+DebugTint = Color(1, 1, 0.3, 0.55)
+
+; --- Upper-mid tier (y ≈ 7.5–9) --------------------------------------------
+[node name="FloorLibraryMidUpper" type="Node3D" parent="."]
+script = ExtResource("11_floor")
+XLeft = -6.55
+XRight = -1.57
+YLeft = 9.0
+YRight = 8.96
+ShowDebug = true
+DebugTint = Color(0.5, 0.8, 1, 0.55)
+
+[node name="FloorCrystalShelf" type="Node3D" parent="."]
+script = ExtResource("11_floor")
+XLeft = -18.57
+XRight = -12.4
+YLeft = 7.78
+YRight = 7.54
+ShowDebug = true
+DebugTint = Color(0.3, 1, 0.6, 0.55)
+
+; --- Mid tier (y ≈ 5.7–6) --------------------------------------------------
+[node name="FloorAlchemyMid" type="Node3D" parent="."]
+script = ExtResource("11_floor")
+XLeft = 1.21
+XRight = 17.78
+YLeft = 5.95
+YRight = 6.04
+ShowDebug = true
+DebugTint = Color(0.5, 0.8, 1, 0.55)
+
+[node name="FloorHammock" type="Node3D" parent="."]
+script = ExtResource("11_floor")
+XLeft = -8.7
+XRight = -4.09
+YLeft = 5.73
+YRight = 5.82
+ShowDebug = true
+DebugTint = Color(0.9, 0.5, 0.9, 0.55)
+
+; --- Bottom tier (y ≈ 0.8–5) -----------------------------------------------
+; BottomLeftSlanted is the big sloped floor running up-right from the
+; root-cavern to the bottom-left corner of the library. Slant honoured by
+; YLeft/YRight (dy = +0.93 across 9.4 units of x).
+[node name="FloorBottomLeftSlant" type="Node3D" parent="."]
+script = ExtResource("11_floor")
+XLeft = -19.4
+XRight = -10.01
+YLeft = 4.72
+YRight = 5.66
+ShowDebug = true
+DebugTint = Color(0.8, 0.7, 0.3, 0.55)
+
+[node name="FloorBottomMidLow" type="Node3D" parent="."]
+script = ExtResource("11_floor")
+XLeft = -7.97
+XRight = -4.64
+YLeft = 2.39
+YRight = 2.35
+ShowDebug = true
+DebugTint = Color(0.7, 0.5, 0.3, 0.55)
+
+; FloorBottomLeftLow is the unreachable pocket in the bottom-left corner
+; — no stairs reach it in the painting, so a dedicated elevator shaft at
+; x≈-13.5 connects it upward to FloorBottomLeftSlant.
+[node name="FloorBottomLeftLow" type="Node3D" parent="."]
+script = ExtResource("11_floor")
+XLeft = -18.44
+XRight = -10.98
+YLeft = 2.0
+YRight = 2.08
+ShowDebug = true
+DebugTint = Color(0.6, 0.4, 0.2, 0.55)
+
+[node name="FloorPond" type="Node3D" parent="."]
+script = ExtResource("11_floor")
+XLeft = 4.29
+XRight = 13.35
+YLeft = 0.87
+YRight = 0.87
+ShowDebug = true
+DebugTint = Color(0.3, 0.6, 1, 0.55)
+
+; ── Stairs ─────────────────────────────────────────────────────────────
+; Each stair maps 1:1 to a white line the user drew. ShowVisual=false
+; because the painting already draws every ramp.
+
+[node name="StairCrystalToLibTop" type="Node3D" parent="."]
+script = ExtResource("9_stairs")
+XLeft = -14.63
+XRight = -11.94
+YLeft = 7.98
+YRight = 9.89
+
+[node name="StairBotMidToHammock" type="Node3D" parent="."]
+script = ExtResource("9_stairs")
+XLeft = -4.96
+XRight = -2.9
+YLeft = 2.31
+YRight = 4.19
+
+[node name="StairHammockToLibMid" type="Node3D" parent="."]
+script = ExtResource("9_stairs")
+XLeft = -3.75
+XRight = -2.39
+YLeft = 5.76
+YRight = 7.79
+
+[node name="StairLibMidToAlchemy" type="Node3D" parent="."]
+script = ExtResource("9_stairs")
+XLeft = -1.54
+XRight = 1.19
+YLeft = 9.03
+YRight = 6.13
+
+[node name="StairAlchemyToObservatory" type="Node3D" parent="."]
+script = ExtResource("9_stairs")
+XLeft = -0.03
+XRight = 1.88
+YLeft = 7.79
+YRight = 9.08
+
+[node name="StairAlchemyToPond" type="Node3D" parent="."]
+script = ExtResource("9_stairs")
+XLeft = 0.61
+XRight = 4.22
+YLeft = 4.28
+YRight = 0.81
+
+[node name="StairPondToAlchemyR" type="Node3D" parent="."]
+script = ExtResource("9_stairs")
+XLeft = 13.4
+XRight = 18.43
+YLeft = 0.87
+YRight = 4.12
+
+[node name="StairAlchemyRToStudy" type="Node3D" parent="."]
+script = ExtResource("9_stairs")
+XLeft = 16.98
+XRight = 19.16
+YLeft = 10.06
+YRight = 7.17
+
+; ── Elevator ───────────────────────────────────────────────────────────
+; Yellow rectangle from the user's mark-up: BL=(-14.53, 2.14), TR=(-12.49,
+; 5.52). Shaft sits at x ≈ -13.5, lifting between the low floor (y=2.08)
+; and the slanted floor (y≈5.36 at that x). This is the only unreachable
+; pocket in the painting — everywhere else is stair-connected.
+[node name="Elevator" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.5, 0, 0)
+script = ExtResource("12_lift")
+YLow = 2.08
+YHigh = 5.36
+StartFloor = 1
+
+; ── Agents ─────────────────────────────────────────────────────────────
+; Norn1 on the pond floor (reachable from everywhere via the center-right
+; stair chain). Norn2 on the bottom-left slanted floor so the two start
+; on different tiers and will migrate. Incubator next to Norn1 on pond.
 [node name="Norn" parent="." instance=ExtResource("3_norn")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1.07, 0)
 
 [node name="Norn2" parent="." instance=ExtResource("3_norn")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 5.36, 0)
 
 [node name="Incubator" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -0.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 1.07, -0.5)
 script = ExtResource("10_incubator")
 
-[node name="FoodTop1" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 9.18, 0)
+; ── Food: one per floor region so drives can route norns everywhere ────
+; Y is floor-Y + 0.2 so the sprite sits on the deck.
+[node name="FoodSpiderLedgeTop" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.1, 10.48, 0)
 script = ExtResource("4_food")
 
-[node name="FoodTop2" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 9.18, 0)
+[node name="FoodLibraryTop" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 10.14, 0)
 script = ExtResource("4_food")
 
-[node name="FoodMid1" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 4.68, 0)
+[node name="FoodObservatory" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 9.05, 0)
 script = ExtResource("4_food")
 
-[node name="FoodMid2" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 4.68, 0)
+[node name="FoodStudy" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.5, 10.3, 0)
 script = ExtResource("4_food")
 
-[node name="FoodBot1" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0.18, 0)
+[node name="FoodLibraryMidUpper" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 9.18, 0)
 script = ExtResource("4_food")
 
-[node name="FoodBot2" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.18, 0)
+[node name="FoodCrystalShelf" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.5, 7.85, 0)
 script = ExtResource("4_food")
 
-[node name="FoodBot3" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0.18, 0)
+[node name="FoodAlchemy" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 6.2, 0)
+script = ExtResource("4_food")
+
+[node name="FoodHammock" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.5, 5.97, 0)
+script = ExtResource("4_food")
+
+[node name="FoodBottomLeftSlant" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 5.36, 0)
+script = ExtResource("4_food")
+
+[node name="FoodBottomMidLow" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.3, 2.57, 0)
+script = ExtResource("4_food")
+
+[node name="FoodBottomLeftLow" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 2.24, 0)
+script = ExtResource("4_food")
+
+[node name="FoodPond" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 1.07, 0)
 script = ExtResource("4_food")
 
 [node name="FoodRespawnManager" type="Node3D" parent="."]
@@ -77,7 +293,11 @@ script = ExtResource("7_respawn")
 RespawnDelay = 25.0
 
 [node name="Camera" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 0.998, 0.063, 0, -0.063, 0.998, 0, 5.0, 20)
+; Straight-on ortho: tilt removed so foreground agents (z=0) align 1:1
+; with backdrop texels (z=-5). With the previous 3.6° tilt, foreground
+; objects projected ~10px higher on screen than the painting at the same
+; world-y, so "feet on painted floor" alignment constantly drifted.
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.5, 20)
 projection = 1
 current = true
 size = 22.0

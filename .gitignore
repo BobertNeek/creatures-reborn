@@ -7,6 +7,10 @@ export_presets.cfg
 .mono/
 mono_crash.*.json
 
+# Local development artifacts
+.worktrees/
+_dev_screenshots/
+
 # .NET
 bin/
 obj/
