@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using Xunit;
 
 namespace CreaturesReborn.Sim.Tests;
@@ -19,5 +22,18 @@ public class TreehouseSceneTests
 
         Assert.Contains("res://src/Godot/FloorPlateNode.cs", scene);
         Assert.DoesNotContain("ShowDebug = true", scene);
+    }
+
+    [Fact]
+    public void TreehouseScene_AssignsFruitSeedAndFoodKinds()
+    {
+        string scene = File.ReadAllText(Path.GetFullPath(TreehouseScenePath));
+        HashSet<int> foodKinds = Regex.Matches(scene, @"FoodKind = (\d+)")
+            .Select(match => int.Parse(match.Groups[1].Value))
+            .ToHashSet();
+
+        Assert.Contains(0, foodKinds);
+        Assert.Contains(1, foodKinds);
+        Assert.Contains(2, foodKinds);
     }
 }

@@ -272,8 +272,8 @@ public partial class CreatureNode : Node3D
         FoodNode? target = _heldFood ?? FindNearestFood(0.8f);
         if (target == null) return false;
 
-        StimulusTable.Apply(_creature!, StimulusId.AteFoodSuccess);
-        _creature!.InjectChemical(ChemID.ATP, target.ATPAmount);
+        StimulusTable.Apply(_creature!, target.EatStimulusId);
+        _creature!.InjectChemical(ChemID.ATP, target.ResolvedATPAmount);
 
         if (_heldFood == target)
             _heldFood = null;

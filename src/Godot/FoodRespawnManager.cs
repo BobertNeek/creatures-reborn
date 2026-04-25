@@ -1,11 +1,12 @@
 using System.Collections.Generic;
 using Godot;
+using CreaturesReborn.Sim.Creature;
 
 namespace CreaturesReborn.Godot;
 
 /// <summary>
 /// Watches a set of food spawn points and respawns a <see cref="FoodNode"/>
-/// at each point after a configurable delay whenever the previous fruit was consumed.
+/// at each point after a configurable delay whenever the previous item was consumed.
 ///
 /// Add one of these as a sibling of the food nodes in your scene, then add each
 /// food node's initial world position to <see cref="_spawnPoints"/> — or let
@@ -14,16 +15,23 @@ namespace CreaturesReborn.Godot;
 [GlobalClass]
 public partial class FoodRespawnManager : Node3D
 {
-    /// <summary>Seconds after consumption before a new fruit appears.</summary>
+    /// <summary>Seconds after consumption before a new food item appears.</summary>
     [Export] public float RespawnDelay = 15.0f;
 
     // Per-spawn-point state
     private readonly struct SpawnPoint
     {
         public readonly Vector3 Position;
+        public readonly FoodKind FoodKind;
         public readonly float   GlycogenAmount;
         public readonly float   ATPAmount;
-        public SpawnPoint(Vector3 pos, float g, float a) { Position = pos; GlycogenAmount = g; ATPAmount = a; }
+        public SpawnPoint(Vector3 pos, FoodKind kind, float g, float a)
+        {
+            Position = pos;
+            FoodKind = kind;
+            GlycogenAmount = g;
+            ATPAmount = a;
+        }
     }
 
     private readonly List<SpawnPoint> _points = new();
@@ -39,7 +47,7 @@ public partial class FoodRespawnManager : Node3D
         {
             if (n is FoodNode food)
             {
-                _points.Add(new SpawnPoint(food.GlobalPosition, food.GlycogenAmount, food.ATPAmount));
+                _points.Add(new SpawnPoint(food.GlobalPosition, food.FoodKind, food.GlycogenAmount, food.ATPAmount));
                 _timers.Add(0f);
             }
         }
@@ -98,6 +106,7 @@ public partial class FoodRespawnManager : Node3D
         {
             GlycogenAmount = _points[idx].GlycogenAmount,
             ATPAmount      = _points[idx].ATPAmount,
+            FoodKind       = _points[idx].FoodKind,
         };
         GetParent()!.AddChild(food);
         food.GlobalPosition = _points[idx].Position;

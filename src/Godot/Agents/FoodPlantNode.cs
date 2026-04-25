@@ -15,7 +15,7 @@ namespace CreaturesReborn.Godot.Agents;
 ///
 /// When activated (clicked or creature push), the plant drops a fruit
 /// that creatures can eat. The fruit provides nutrients based on the
-/// plant's FoodType.
+/// plant's <see cref="PlantType"/>.
 /// </summary>
 [GlobalClass]
 public partial class FoodPlantNode : Node3D
@@ -101,10 +101,11 @@ public partial class FoodPlantNode : Node3D
     // ── Fruit spawning ──────────────────────────────────────────────────────
     private void DropFruit()
     {
-        var (glyc, atp, col) = GetFruitProps();
+        var (kind, glyc, atp) = GetFruitProps();
 
         var food = new FoodNode
         {
+            FoodKind = kind,
             GlycogenAmount = glyc,
             ATPAmount      = atp,
         };
@@ -116,14 +117,14 @@ public partial class FoodPlantNode : Node3D
         _fruitCount++;
     }
 
-    private (float glyc, float atp, Color col) GetFruitProps() => Type switch
+    private (FoodKind kind, float glyc, float atp) GetFruitProps() => Type switch
     {
-        PlantType.Carrot     => (0.35f, 0.15f, new Color(1.0f, 0.55f, 0.15f)),
-        PlantType.Lemon      => (0.25f, 0.25f, new Color(1.0f, 0.95f, 0.30f)),
-        PlantType.Justanut   => (0.40f, 0.10f, new Color(0.65f, 0.45f, 0.25f)),
-        PlantType.Stinger    => (0.20f, 0.30f, new Color(0.20f, 0.80f, 0.35f)),
-        PlantType.AlienBerry => (0.30f, 0.20f, new Color(0.55f, 0.25f, 0.85f)),
-        _ => (0.25f, 0.20f, new Color(1.0f, 0.3f, 0.3f)),
+        PlantType.Justanut   => (FoodKind.Seed, 0.40f, 0.10f),
+        PlantType.Stinger    => (FoodKind.Food, 0.20f, 0.30f),
+        PlantType.Carrot     => (FoodKind.Fruit, 0.35f, 0.15f),
+        PlantType.Lemon      => (FoodKind.Fruit, 0.25f, 0.25f),
+        PlantType.AlienBerry => (FoodKind.Fruit, 0.30f, 0.20f),
+        _ => (FoodKind.Fruit, 0.25f, 0.20f),
     };
 
     private int CountNearbyFruit()
@@ -157,8 +158,6 @@ public partial class FoodPlantNode : Node3D
     // ── Visuals ─────────────────────────────────────────────────────────────
     private void BuildVisual()
     {
-        var (_, _, fruitCol) = GetFruitProps();
-
         // Stem
         _stemNode = new Node3D();
         var stem = new MeshInstance3D();

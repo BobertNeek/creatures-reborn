@@ -261,7 +261,7 @@ public partial class GameGui : Control
         var c = GetSelectedCreatureNode();
         if (c == null) return;
 
-        var food = new FoodNode { GlycogenAmount = 0.4f, ATPAmount = 0.2f };
+        var food = new FoodNode { FoodKind = FoodKind.Food, GlycogenAmount = 0.4f, ATPAmount = 0.2f };
         food.Position = c.Position + new Vector3(0.5f, 0.18f, 0);
         c.GetParent()?.AddChild(food);
         GD.Print("[GUI] Dropped food near creature.");

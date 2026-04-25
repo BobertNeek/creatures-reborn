@@ -148,6 +148,7 @@ public partial class GadgetNode : Node3D
     {
         var food = new FoodNode
         {
+            FoodKind = FoodKind.Food,
             GlycogenAmount = 0.35f,
             ATPAmount = 0.15f,
         };

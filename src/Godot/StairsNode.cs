@@ -33,14 +33,16 @@ public partial class StairsNode : Node3D
     [Export] public int   StepCount = 8;   // visual step resolution
     [Export] public float ClimbSpeed = 4.0f; // world-units / sec a norn tracks the ramp at
     [Export] public bool  ShowVisual = false; // off by default — painted backdrop shows the descent
+    [Export] public bool  Enabled = true;
 
     public override void _Ready()
     {
-        if (ShowVisual) BuildVisual();
+        if (Enabled && ShowVisual) BuildVisual();
     }
 
     public override void _Process(double delta)
     {
+        if (!Enabled) return;
         float dt = (float)delta;
         var parent = GetParent();
         if (parent == null) return;

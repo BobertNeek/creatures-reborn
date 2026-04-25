@@ -153,6 +153,7 @@ public partial class WorldNode : Node3D
         foreach (Node child in GetChildren())
         {
             if (child is not StairsNode stairs) continue;
+            if (!stairs.Enabled) continue;
 
             Room? from = FindEndpointRoom(metaRoom, stairs.XLeft, stairs.YLeft);
             Room? to = FindEndpointRoom(metaRoom, stairs.XRight, stairs.YRight);

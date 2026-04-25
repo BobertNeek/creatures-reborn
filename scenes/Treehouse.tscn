@@ -38,74 +38,74 @@ script = ExtResource("8_pointer")
 [node name="FloorSpiderLedgeTop" type="Node3D" parent="."]
 script = ExtResource("11_floor")
 XLeft = -16.16
-XRight = -14.01
-YLeft = 10.49
-YRight = 10.07
+XRight = -8.0
+YLeft = 10.32
+YRight = 10.32
 ShowDebug = false
 DebugTint = Color(1, 0.3, 0.3, 0.55)
 
 [node name="FloorLibraryTop" type="Node3D" parent="."]
 script = ExtResource("11_floor")
-XLeft = -13.23
-XRight = -7.4
-YLeft = 9.91
-YRight = 9.96
+XLeft = -8.0
+XRight = -1.1
+YLeft = 10.32
+YRight = 10.32
 ShowDebug = false
 DebugTint = Color(1, 0.5, 0.2, 0.55)
 
 [node name="FloorObservatory" type="Node3D" parent="."]
 script = ExtResource("11_floor")
-XLeft = 1.65
-XRight = 5.23
-YLeft = 8.82
-YRight = 8.89
+XLeft = -1.1
+XRight = 8.6
+YLeft = 10.32
+YRight = 10.32
 ShowDebug = false
 DebugTint = Color(1, 0.5, 0.2, 0.55)
 
 [node name="FloorStudy" type="Node3D" parent="."]
 script = ExtResource("11_floor")
-XLeft = 8.26
-XRight = 16.98
-YLeft = 10.07
-YRight = 10.13
+XLeft = 8.6
+XRight = 19.5
+YLeft = 10.32
+YRight = 10.32
 ShowDebug = false
 DebugTint = Color(1, 1, 0.3, 0.55)
 
 ; --- Upper-mid tier (y ≈ 7.5–9) --------------------------------------------
 [node name="FloorLibraryMidUpper" type="Node3D" parent="."]
 script = ExtResource("11_floor")
-XLeft = -6.55
-XRight = -1.57
-YLeft = 9.0
-YRight = 8.96
+XLeft = -19.4
+XRight = -13.3
+YLeft = 5.95
+YRight = 5.95
 ShowDebug = false
 DebugTint = Color(0.5, 0.8, 1, 0.55)
 
 [node name="FloorCrystalShelf" type="Node3D" parent="."]
 script = ExtResource("11_floor")
-XLeft = -18.57
-XRight = -12.4
-YLeft = 7.78
-YRight = 7.54
+XLeft = -13.3
+XRight = -2.0
+YLeft = 5.80
+YRight = 5.80
 ShowDebug = false
 DebugTint = Color(0.3, 1, 0.6, 0.55)
 
 ; --- Mid tier (y ≈ 5.7–6) --------------------------------------------------
 [node name="FloorAlchemyMid" type="Node3D" parent="."]
 script = ExtResource("11_floor")
-XLeft = 1.21
-XRight = 17.78
-YLeft = 5.95
-YRight = 6.04
+XLeft = -2.0
+XRight = 8.0
+YLeft = 5.80
+YRight = 5.80
 ShowDebug = false
 DebugTint = Color(0.5, 0.8, 1, 0.55)
 
 [node name="FloorHammock" type="Node3D" parent="."]
 script = ExtResource("11_floor")
-XLeft = -8.7
-XRight = -4.09
-YLeft = 5.73
-YRight = 5.82
+XLeft = 8.0
+XRight = 19.3
+YLeft = 5.80
+YRight = 5.80
 ShowDebug = false
 DebugTint = Color(0.9, 0.5, 0.9, 0.55)
 
@@ -115,19 +115,19 @@ DebugTint = Color(0.9, 0.5, 0.9, 0.55)
 ; YLeft/YRight (dy = +0.93 across 9.4 units of x).
 [node name="FloorBottomLeftSlant" type="Node3D" parent="."]
 script = ExtResource("11_floor")
-XLeft = -19.4
-XRight = -10.01
-YLeft = 4.72
-YRight = 5.66
+XLeft = -19.2
+XRight = -13.3
+YLeft = 2.55
+YRight = 5.80
 ShowDebug = false
 DebugTint = Color(0.8, 0.7, 0.3, 0.55)
 
 [node name="FloorBottomMidLow" type="Node3D" parent="."]
 script = ExtResource("11_floor")
-XLeft = -7.97
-XRight = -4.64
-YLeft = 2.39
-YRight = 2.35
+XLeft = -13.3
+XRight = -1.0
+YLeft = 2.55
+YRight = 2.55
 ShowDebug = false
 DebugTint = Color(0.7, 0.5, 0.3, 0.55)
 
@@ -136,19 +136,19 @@ DebugTint = Color(0.7, 0.5, 0.3, 0.55)
 ; x≈-13.5 connects it upward to FloorBottomLeftSlant.
 [node name="FloorBottomLeftLow" type="Node3D" parent="."]
 script = ExtResource("11_floor")
-XLeft = -18.44
-XRight = -10.98
-YLeft = 2.0
-YRight = 2.08
+XLeft = -1.0
+XRight = 16.8
+YLeft = 2.55
+YRight = 2.55
 ShowDebug = false
 DebugTint = Color(0.6, 0.4, 0.2, 0.55)
 
 [node name="FloorPond" type="Node3D" parent="."]
 script = ExtResource("11_floor")
-XLeft = 4.29
-XRight = 13.35
-YLeft = 0.87
-YRight = 0.87
+XLeft = 16.8
+XRight = 19.8
+YLeft = 2.55
+YRight = 5.80
 ShowDebug = false
 DebugTint = Color(0.3, 0.6, 1, 0.55)
 
@@ -158,59 +158,65 @@ DebugTint = Color(0.3, 0.6, 1, 0.55)
 
 [node name="StairCrystalToLibTop" type="Node3D" parent="."]
 script = ExtResource("9_stairs")
-XLeft = -14.63
-XRight = -11.94
-YLeft = 7.98
-YRight = 9.89
+XLeft = 100.0
+XRight = 101.0
+YLeft = -20.0
+YRight = -20.0
+Enabled = false
 
 [node name="StairBotMidToHammock" type="Node3D" parent="."]
 script = ExtResource("9_stairs")
-XLeft = -4.96
-XRight = -2.9
-YLeft = 2.31
-YRight = 4.19
+XLeft = -19.2
+XRight = -13.3
+YLeft = 2.55
+YRight = 5.80
 
 [node name="StairHammockToLibMid" type="Node3D" parent="."]
 script = ExtResource("9_stairs")
-XLeft = -3.75
-XRight = -2.39
-YLeft = 5.76
-YRight = 7.79
+XLeft = 100.0
+XRight = 101.0
+YLeft = -20.0
+YRight = -20.0
+Enabled = false
 
 [node name="StairLibMidToAlchemy" type="Node3D" parent="."]
 script = ExtResource("9_stairs")
-XLeft = -1.54
-XRight = 1.19
-YLeft = 9.03
-YRight = 6.13
+XLeft = 100.0
+XRight = 101.0
+YLeft = -20.0
+YRight = -20.0
+Enabled = false
 
 [node name="StairAlchemyToObservatory" type="Node3D" parent="."]
 script = ExtResource("9_stairs")
-XLeft = -0.03
-XRight = 1.88
-YLeft = 7.79
-YRight = 9.08
+XLeft = 100.0
+XRight = 101.0
+YLeft = -20.0
+YRight = -20.0
+Enabled = false
 
 [node name="StairAlchemyToPond" type="Node3D" parent="."]
 script = ExtResource("9_stairs")
-XLeft = 0.61
-XRight = 4.22
-YLeft = 4.28
-YRight = 0.81
+XLeft = 100.0
+XRight = 101.0
+YLeft = -20.0
+YRight = -20.0
+Enabled = false
 
 [node name="StairPondToAlchemyR" type="Node3D" parent="."]
 script = ExtResource("9_stairs")
-XLeft = 13.4
-XRight = 18.43
-YLeft = 0.87
-YRight = 4.12
+XLeft = 16.8
+XRight = 19.8
+YLeft = 2.55
+YRight = 5.80
 
 [node name="StairAlchemyRToStudy" type="Node3D" parent="."]
 script = ExtResource("9_stairs")
-XLeft = 16.98
-XRight = 19.16
-YLeft = 10.06
-YRight = 7.17
+XLeft = 100.0
+XRight = 101.0
+YLeft = -20.0
+YRight = -20.0
+Enabled = false
 
 ; ── Elevator ───────────────────────────────────────────────────────────
 ; Yellow rectangle from the user's mark-up: BL=(-14.53, 2.14), TR=(-12.49,
@@ -218,10 +224,10 @@ YRight = 7.17
 ; and the slanted floor (y≈5.36 at that x). This is the only unreachable
 ; pocket in the painting — everywhere else is stair-connected.
 [node name="Elevator" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -13.5, 0, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.0, 0, 0)
 script = ExtResource("12_lift")
-YLow = 2.08
-YHigh = 5.36
+YLow = 2.55
+YHigh = 10.32
 StartFloor = 1
 
 ; ── Agents ─────────────────────────────────────────────────────────────
@@ -229,13 +235,13 @@ StartFloor = 1
 ; stair chain). Norn2 on the bottom-left slanted floor so the two start
 ; on different tiers and will migrate. Incubator next to Norn1 on pond.
 [node name="Norn" parent="." instance=ExtResource("3_norn")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 1.07, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 2.75, 0)
 
 [node name="Norn2" parent="." instance=ExtResource("3_norn")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 5.36, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 5.98, 0)
 
 [node name="Incubator" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 1.07, -0.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 2.75, -0.5)
 script = ExtResource("10_incubator")
 
 ; ── Food: one per floor region so drives can route norns everywhere ────
@@ -243,50 +249,62 @@ script = ExtResource("10_incubator")
 [node name="FoodSpiderLedgeTop" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.1, 10.48, 0)
 script = ExtResource("4_food")
+FoodKind = 1
 
 [node name="FoodLibraryTop" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 10.14, 0)
 script = ExtResource("4_food")
+FoodKind = 0
 
 [node name="FoodObservatory" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 9.05, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 10.52, 0)
 script = ExtResource("4_food")
+FoodKind = 0
 
 [node name="FoodStudy" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12.5, 10.3, 0)
 script = ExtResource("4_food")
+FoodKind = 2
 
 [node name="FoodLibraryMidUpper" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 9.18, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 6.0, 0)
 script = ExtResource("4_food")
+FoodKind = 1
 
 [node name="FoodCrystalShelf" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.5, 7.85, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.5, 6.1, 0)
 script = ExtResource("4_food")
+FoodKind = 1
 
 [node name="FoodAlchemy" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 6.2, 0)
 script = ExtResource("4_food")
+FoodKind = 2
 
 [node name="FoodHammock" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.5, 5.97, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.5, 6.0, 0)
 script = ExtResource("4_food")
+FoodKind = 0
 
 [node name="FoodBottomLeftSlant" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 5.36, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 4.85, 0)
 script = ExtResource("4_food")
+FoodKind = 2
 
 [node name="FoodBottomMidLow" type="Node3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.3, 2.57, 0)
 script = ExtResource("4_food")
+FoodKind = 0
 
 [node name="FoodBottomLeftLow" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 2.24, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 2.75, 0)
 script = ExtResource("4_food")
+FoodKind = 1
 
 [node name="FoodPond" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 1.07, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, 2.75, 0)
 script = ExtResource("4_food")
+FoodKind = 2
 
 [node name="FoodRespawnManager" type="Node3D" parent="."]
 script = ExtResource("7_respawn")

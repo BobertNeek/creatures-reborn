@@ -33,6 +33,25 @@ public class NornLifeLoopTests
         Assert.True(creature.GetChemical(ChemID.Glycogen) > 0);
     }
 
+    [Theory]
+    [InlineData(FoodKind.Fruit, ChemID.HungerForCarb, ChemID.Glycogen)]
+    [InlineData(FoodKind.Seed, ChemID.HungerForFat, ChemID.Adipose)]
+    [InlineData(FoodKind.Food, ChemID.HungerForProtein, ChemID.Muscle)]
+    public void FoodKindStimulus_TargetsDistinctC3DsNutrition(
+        FoodKind kind,
+        int hungerChem,
+        int storageChem)
+    {
+        var creature = LoadStarter();
+        creature.SetChemical(hungerChem, 0.8f);
+
+        FoodNutrition nutrition = FoodNutrition.ForKind(kind);
+        StimulusTable.Apply(creature, nutrition.StimulusId);
+
+        Assert.True(creature.GetChemical(hungerChem) < 0.8f);
+        Assert.True(creature.GetChemical(storageChem) > 0);
+    }
+
     [Fact]
     public void WallBumpStimulus_RaisesPainAndFear()
     {

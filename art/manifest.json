@@ -4,13 +4,13 @@
   "runtimeShape": "Hybrid 2D/3D: 2D generated backgrounds, props, UI, food, and eggs; 3D Norns retained for now with regenerated texture and concept work.",
   "assets": [
     {
-      "id": "treehouse-metaroom-v0",
+      "id": "treehouse-metaroom-v1",
       "category": "metaroom",
       "runtimePath": "res://art/metaroom/metaroom.png",
-      "replacementTarget": "Current Treehouse backdrop",
-      "sourceNotes": "Existing generated wide Treehouse image preserved as the current slice backdrop.",
-      "promptRef": "art/prompts/treehouse-metaroom.md",
-      "status": "preserved-current"
+      "replacementTarget": "Nano Banana Treehouse backdrop with blocked walk paths",
+      "sourceNotes": "Regenerated ultra-wide Treehouse backdrop with broad, unobstructed floor lanes and central elevator space.",
+      "promptRef": "art/prompts/treehouse-metaroom-v1.md",
+      "status": "active"
     },
     {
       "id": "norn-texture-set-v0",
@@ -37,6 +37,24 @@
       "replacementTarget": "FoodNode procedural apple mesh",
       "sourceNotes": "Create compact food sprites that read clearly against detailed metaroom backgrounds.",
       "promptRef": "art/prompts/food-fruit.md",
+      "status": "planned"
+    },
+    {
+      "id": "food-seed-v1",
+      "category": "agent-sprite",
+      "runtimePath": "res://art/agents/food-seed.png",
+      "replacementTarget": "FoodNode procedural seed mesh",
+      "sourceNotes": "Create a distinct seed sprite for the C3/DS seed category and fat nutrition path.",
+      "promptRef": "art/prompts/food-seed.md",
+      "status": "planned"
+    },
+    {
+      "id": "food-food-v1",
+      "category": "agent-sprite",
+      "runtimePath": "res://art/agents/food-food.png",
+      "replacementTarget": "FoodNode procedural food pellet mesh",
+      "sourceNotes": "Create a distinct prepared-food sprite for the C3/DS food category and protein nutrition path.",
+      "promptRef": "art/prompts/food-food.md",
       "status": "planned"
     },
     {

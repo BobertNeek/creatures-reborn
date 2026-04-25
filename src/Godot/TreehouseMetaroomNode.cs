@@ -6,27 +6,17 @@ using CreaturesReborn.Sim.World;
 namespace CreaturesReborn.Godot;
 
 /// <summary>
-/// The Treehouse metaroom — a magical multi-floor tree dwelling.
+/// The Treehouse metaroom — a cozy multi-floor biotech tree dwelling.
 ///
-/// Based on the Gemini-generated backdrop (art/metaroom/metaroom.png),
-/// the image shows three distinct walkable floors separated by gnarled root
-/// dividers. Floor Y values were measured off the painting so norns stand
-/// on the painted decks rather than floating above them:
+/// Based on the regenerated v1 backdrop (art/metaroom/metaroom.png), the
+/// scene uses authored FloorPlateNode spans so walkable geometry can stay
+/// aligned with the painting without placing foreground art over the norn lanes.
 ///
-///   Floor 0 (Y = TopFloorY    = 9.0, ≈36% down the image):
-///       Observatory / Library — domed telescope platform centre,
-///       fireplace-library left, map-study right.
-///   Floor 1 (Y = MidFloorY    = 5.0, ≈68% down):
-///       Living / Lab — hammock nook left-centre, alchemy lab with
-///       crystal wall right.
-///   Floor 2 (Y = BottomFloorY = 2.0, ≈91% down):
-///       Caves / Pond — glowing crystal caves on the sides, central
-///       mushroom cavern, pond with fish in the middle.
+///   Floor 0: library / observatory / study.
+///   Floor 1: lab / hammock / greenhouse deck.
+///   Floor 2: pond / cave / root nursery deck.
 ///
-/// Floor-to-floor travel is by stairs (StairsNode). Two pairs of adjacent
-/// stair runs (left pair and right pair) let a norn climb bot → mid → top
-/// with a single left- or right-ward walk — so the game no longer needs
-/// elevators at all.
+/// Floor-to-floor travel is by two side ramps plus the central elevator.
 ///
 /// Rendering: the backdrop PNG is painted onto a huge QuadMesh that sits
 /// behind all agents (z = -10). If the file is missing we build a procedural
@@ -42,17 +32,12 @@ public partial class TreehouseMetaroomNode : Node3D
     [Export] public string BackdropPath = "res://art/metaroom/metaroom.png";
 
     // ── Floor Y values (match image layout) ──────────────────────────────────
-    // Measured off metaroom.png. The painting has FOUR distinct walkable
-    // heights — a single Mid value doesn't work because the reading-nook /
-    // alchemy-lab deck and the hammock alcove are at very different heights.
-    //   TopFloorY      ≈ 38% down image  (library / observatory / study)
-    //   MidHighFloorY  ≈ 59% down image  (reading nook + alchemy lab deck)
-    //   MidLowFloorY   ≈ 75% down image  (hammock alcove — below reading nook)
-    //   BottomFloorY   ≈ 83% down image  (pond + mushroom cave + grass)
-    public const float TopFloorY     = 9.0f;
-    public const float MidHighFloorY = 6.2f;
-    public const float MidLowFloorY  = 4.1f;
-    public const float BottomFloorY  = 3.0f;
+    // Measured against the v1 painting after replacing the Nano Banana
+    // background. The v1 image reads as three main gameplay tiers.
+    public const float TopFloorY     = 10.35f;
+    public const float MidHighFloorY = 5.85f;
+    public const float MidLowFloorY  = 5.85f;
+    public const float BottomFloorY  = 2.55f;
 
     // Legacy alias kept pointing at the most common mid height so existing
     // call sites (PointerAgent drop logic, etc.) don't break while the scene
@@ -252,14 +237,11 @@ public partial class TreehouseMetaroomNode : Node3D
     {
         // 3-step fallback to maximise the chance the user's PNG is found:
         //   1. Honour the [Export] Backdrop assigned in the editor
-        //   2. ResourceLoader on the res:// path (needs Godot import .import file)
-        //   3. Raw Image.LoadFromFile on the globalised filesystem path
+        //   2. Raw Image.LoadFromFile on the globalised filesystem path
         //      (works even if Godot hasn't imported the asset yet)
+        //   3. ResourceLoader on the res:// path (needs Godot import .import file)
         // Only after all three fail do we paint the procedural placeholder.
         var tex = Backdrop;
-
-        if (tex == null && ResourceLoader.Exists(BackdropPath))
-            tex = GD.Load<Texture2D>(BackdropPath);
 
         if (tex == null)
         {
@@ -270,11 +252,13 @@ public partial class TreehouseMetaroomNode : Node3D
                 if (img != null)
                 {
                     tex = ImageTexture.CreateFromImage(img);
-                    GD.Print($"[TreehouseMetaroom] Loaded backdrop directly from {absPath} " +
-                             "(no Godot .import file — open the editor once to import properly).");
+                    GD.Print($"[TreehouseMetaroom] Loaded backdrop directly from {absPath}.");
                 }
             }
         }
+
+        if (tex == null && ResourceLoader.Exists(BackdropPath))
+            tex = GD.Load<Texture2D>(BackdropPath);
 
         StandardMaterial3D mat;
         if (tex != null)
