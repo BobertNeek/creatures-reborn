@@ -109,15 +109,14 @@ YRight = 7.3
 ShowDebug = false
 DebugTint = Color(0.9, 0.5, 0.9, 0.55)
 
-; --- Bottom tier (y ≈ 0.8–5) -----------------------------------------------
-; BottomLeftSlanted is the big sloped floor running up-right from the
-; root-cavern to the bottom-left corner of the library. Slant honoured by
-; YLeft/YRight (dy = +0.93 across 9.4 units of x).
+; --- Bottom tier (y ≈ 3.3–7.5) ---------------------------------------------
+; BottomLeftSlanted is the painted left ramp. It starts on the mossy ledge
+; above the bottom deck, not on the bottom deck itself.
 [node name="FloorBottomLeftSlant" type="Node3D" parent="."]
 script = ExtResource("11_floor")
-XLeft = -19.2
+XLeft = -19.8
 XRight = -13.3
-YLeft = 3.35
+YLeft = 4.25
 YRight = 7.3
 ShowDebug = false
 DebugTint = Color(0.8, 0.7, 0.3, 0.55)
@@ -137,7 +136,7 @@ DebugTint = Color(0.7, 0.5, 0.3, 0.55)
 [node name="FloorBottomLeftLow" type="Node3D" parent="."]
 script = ExtResource("11_floor")
 XLeft = -1.0
-XRight = 16.8
+XRight = 14.8
 YLeft = 3.35
 YRight = 3.35
 ShowDebug = false
@@ -145,8 +144,8 @@ DebugTint = Color(0.6, 0.4, 0.2, 0.55)
 
 [node name="FloorPond" type="Node3D" parent="."]
 script = ExtResource("11_floor")
-XLeft = 16.8
-XRight = 19.8
+XLeft = 14.8
+XRight = 18.8
 YLeft = 3.35
 YRight = 7.3
 ShowDebug = false
@@ -166,9 +165,9 @@ Enabled = false
 
 [node name="StairBotMidToHammock" type="Node3D" parent="."]
 script = ExtResource("9_stairs")
-XLeft = -19.2
+XLeft = -19.8
 XRight = -13.3
-YLeft = 3.35
+YLeft = 4.25
 YRight = 7.3
 
 [node name="StairHammockToLibMid" type="Node3D" parent="."]
@@ -205,8 +204,8 @@ Enabled = false
 
 [node name="StairPondToAlchemyR" type="Node3D" parent="."]
 script = ExtResource("9_stairs")
-XLeft = 16.8
-XRight = 19.8
+XLeft = 14.8
+XRight = 18.8
 YLeft = 3.35
 YRight = 7.3
 
@@ -239,7 +238,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 3.55, 0)
 Sex = 1
 
 [node name="Norn2" parent="." instance=ExtResource("3_norn")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 6.35, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 6.7, 0)
 Sex = 2
 
 [node name="Incubator" type="Node3D" parent="."]
@@ -289,7 +288,7 @@ script = ExtResource("4_food")
 FoodKind = 0
 
 [node name="FoodBottomLeftSlant" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 6.35, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 6.7, 0)
 script = ExtResource("4_food")
 FoodKind = 2
 

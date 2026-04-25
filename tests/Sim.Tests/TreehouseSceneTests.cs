@@ -61,4 +61,52 @@ public class TreehouseSceneTests
         Assert.DoesNotContain("YLeft = 5.80", scene);
         Assert.DoesNotContain("YLeft = 2.55", scene);
     }
+
+    [Fact]
+    public void TreehouseScene_UsesBackdropAlignedRampEndpoints()
+    {
+        string scene = File.ReadAllText(Path.GetFullPath(TreehouseScenePath));
+
+        AssertNodeSurface(scene, "FloorBottomLeftSlant", -19.8f, -13.3f, 4.25f, 7.3f);
+        AssertNodeSurface(scene, "StairBotMidToHammock", -19.8f, -13.3f, 4.25f, 7.3f);
+        AssertNodeSurface(scene, "FloorPond", 14.8f, 18.8f, 3.35f, 7.3f);
+        AssertNodeSurface(scene, "StairPondToAlchemyR", 14.8f, 18.8f, 3.35f, 7.3f);
+        AssertNodeValue(scene, "FloorBottomLeftLow", "XRight", 14.8f);
+    }
+
+    private static void AssertNodeSurface(
+        string scene,
+        string nodeName,
+        float xLeft,
+        float xRight,
+        float yLeft,
+        float yRight)
+    {
+        AssertNodeValue(scene, nodeName, "XLeft", xLeft);
+        AssertNodeValue(scene, nodeName, "XRight", xRight);
+        AssertNodeValue(scene, nodeName, "YLeft", yLeft);
+        AssertNodeValue(scene, nodeName, "YRight", yRight);
+    }
+
+    private static void AssertNodeValue(string scene, string nodeName, string property, float expected)
+    {
+        var match = Regex.Match(
+            scene,
+            $@"\[node name=""{Regex.Escape(nodeName)}""[^\]]*\](?<body>.*?)(?=\n\[node |\z)",
+            RegexOptions.Singleline);
+
+        Assert.True(match.Success, $"Node {nodeName} was not found.");
+
+        var valueMatch = Regex.Match(
+            match.Groups["body"].Value,
+            $@"^{Regex.Escape(property)} = (?<value>-?\d+(?:\.\d+)?)\r?$",
+            RegexOptions.Multiline);
+
+        Assert.True(valueMatch.Success, $"{nodeName}.{property} was not found.");
+        float actual = float.Parse(
+            valueMatch.Groups["value"].Value,
+            System.Globalization.CultureInfo.InvariantCulture);
+
+        Assert.Equal(expected, actual, precision: 2);
+    }
 }
