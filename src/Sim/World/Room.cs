@@ -73,7 +73,9 @@ public sealed class Room
         if (x < XLeft || x > XRight) return false;
         float ceiling = CeilingYAtX(x);
         float floor   = FloorYAtX(x);
-        return y >= ceiling && y <= floor;
+        float minY = MathF.Min(ceiling, floor);
+        float maxY = MathF.Max(ceiling, floor);
+        return y >= minY && y <= maxY;
     }
 
     // ── CA tick ─────────────────────────────────────────────────────────────

@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "artDirection": "Closer tribute to Creatures 3 and Docking Station: cozy biotech, readable side-view rooms, tactile handmade props, original regenerated assets.",
+  "runtimeShape": "Hybrid 2D/3D: 2D generated backgrounds, props, UI, food, and eggs; 3D Norns retained for now with regenerated texture and concept work.",
+  "assets": [
+    {
+      "id": "treehouse-metaroom-v0",
+      "category": "metaroom",
+      "runtimePath": "res://art/metaroom/metaroom.png",
+      "replacementTarget": "Current Treehouse backdrop",
+      "sourceNotes": "Existing generated wide Treehouse image preserved as the current slice backdrop.",
+      "promptRef": "art/prompts/treehouse-metaroom.md",
+      "status": "preserved-current"
+    },
+    {
+      "id": "norn-texture-set-v0",
+      "category": "creature-textures",
+      "runtimePath": "res://assets/textures/norn/",
+      "replacementTarget": "Current Geneforge-derived Norn texture set",
+      "sourceNotes": "Runtime keeps the current 3D Norn model while reboot work regenerates texture and concept direction.",
+      "promptRef": "art/prompts/norn-texture-set.md",
+      "status": "needs-regeneration"
+    },
+    {
+      "id": "egg-sprite-v1",
+      "category": "agent-sprite",
+      "runtimePath": "res://art/agents/egg.png",
+      "replacementTarget": "Procedural EggNode fallback sprite",
+      "sourceNotes": "Create a small readable 2D egg sprite with transparent background for Sprite3D runtime use.",
+      "promptRef": "art/prompts/egg-sprite.md",
+      "status": "planned"
+    },
+    {
+      "id": "food-fruit-v1",
+      "category": "agent-sprite",
+      "runtimePath": "res://art/agents/food-fruit.png",
+      "replacementTarget": "FoodNode procedural apple mesh",
+      "sourceNotes": "Create compact food sprites that read clearly against detailed metaroom backgrounds.",
+      "promptRef": "art/prompts/food-fruit.md",
+      "status": "planned"
+    },
+    {
+      "id": "ui-icons-v1",
+      "category": "ui",
+      "runtimePath": "res://art/ui/",
+      "replacementTarget": "Current text-heavy debug GUI controls",
+      "sourceNotes": "Small readable interface icons for creature care, camera, breeding, and future agent panels.",
+      "promptRef": "art/prompts/ui-icons.md",
+      "status": "planned"
+    },
+    {
+      "id": "treehouse-props-v1",
+      "category": "metaroom-props",
+      "runtimePath": "res://art/props/treehouse/",
+      "replacementTarget": "Future authored props over the Treehouse backdrop",
+      "sourceNotes": "Layered prop sprites should preserve walkable-floor readability and avoid hiding Norns.",
+      "promptRef": "art/prompts/treehouse-props.md",
+      "status": "planned"
+    }
+  ]
+}

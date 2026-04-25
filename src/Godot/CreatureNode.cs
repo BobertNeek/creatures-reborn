@@ -199,8 +199,7 @@ public partial class CreatureNode : Node3D
             _stuckTime += TickInterval;
             if (_stuckTime >= StuckThreshold)
             {
-                _creature!.AddDriveInput(DriveId.Fear, 1.0f);
-                _creature!.AddDriveInput(DriveId.Pain, 0.3f);
+                StimulusTable.Apply(_creature!, StimulusId.WallBump);
                 // Bounce: reverse walk direction briefly
                 var wallBounds = GetRoomBounds();
                 if (wallBounds is var (wlb, wrb))
@@ -263,6 +262,7 @@ public partial class CreatureNode : Node3D
         if (food == null) return false;
         _heldFood = food;
         food.PickUp(this);
+        StimulusTable.Apply(_creature!, StimulusId.GotFood);
         return true;
     }
 
@@ -272,9 +272,8 @@ public partial class CreatureNode : Node3D
         FoodNode? target = _heldFood ?? FindNearestFood(0.8f);
         if (target == null) return false;
 
-        // Inject nutrition
-        _creature!.InjectChemical(ChemID.Glycogen, target.GlycogenAmount);
-        _creature!.InjectChemical(ChemID.ATP,      target.ATPAmount);
+        StimulusTable.Apply(_creature!, StimulusId.AteFoodSuccess);
+        _creature!.InjectChemical(ChemID.ATP, target.ATPAmount);
 
         if (_heldFood == target)
             _heldFood = null;
@@ -287,9 +286,7 @@ public partial class CreatureNode : Node3D
     {
         var food = FindNearestFood(20.0f);
         if (food == null) return 0;
-        float dx = food.Position.X - Position.X;
-        if (MathF.Abs(dx) < 0.1f) return 0;
-        return dx > 0 ? 1 : -1;
+        return CreaturePerception.DirectionToward(GetParent(), Position, food.Position);
     }
 
     private void Drop()
@@ -361,7 +358,8 @@ public partial class CreatureNode : Node3D
         GD.Print($"[CreatureNode] Egg laid at {egg.Position}, will hatch in {egg.HatchTime}s.");
 
         // Consume progesterone on both parents + 30 s cooldown on mother
-        _creature.InjectChemical(ChemID.Progesterone, -0.8f);
+        StimulusTable.Apply(_creature, StimulusId.LaidEgg);
+        _creature.InjectChemical(ChemID.Progesterone, -0.3f);
         mate.Creature.InjectChemical(ChemID.Progesterone, -0.4f);
         _layEggCooldown = 30.0f;
     }
@@ -384,38 +382,6 @@ public partial class CreatureNode : Node3D
 
     private FoodNode? FindNearestFood(float maxDist)
     {
-        if (GetParent() == null) return null;
-
-        // Two-tier search: prefer food on the current floor, but fall back
-        // to food on *any* floor so norns will go hunt for stairs when their
-        // own floor is empty. Stairs (StairsNode) carry the norn across Y
-        // automatically as they walk horizontally, so "walk toward food X"
-        // is sufficient AI — no stair-specific pathfinding needed in the
-        // vertical slice.
-        //
-        // Without this fallback, a bottom-floor norn with food only on the
-        // top deck would idle forever. With it, the norn walks toward the
-        // food, stumbles onto a stair, and ascends.
-        const float SameFloorTolerance = 1.5f;
-
-        FoodNode? same = null;
-        float     sameDist = maxDist;
-        FoodNode? any  = null;
-        float     anyDist = maxDist;
-
-        foreach (Node n in GetParent()!.GetChildren())
-        {
-            if (n is not FoodNode food || food.IsConsumed) continue;
-
-            float dx = MathF.Abs(food.Position.X - Position.X);
-            if (dx < anyDist) { any = food; anyDist = dx; }
-
-            if (MathF.Abs(food.Position.Y - Position.Y) <= SameFloorTolerance
-                && dx < sameDist)
-            {
-                same = food; sameDist = dx;
-            }
-        }
-        return same ?? any;
+        return CreaturePerception.FindNearestReachableFood(GetParent(), Position, maxDist);
     }
 }

@@ -32,7 +32,7 @@ script = ExtResource("8_pointer")
 ; _dev_screenshots/extracted_overlay.png for the pixel→world extraction).
 ; FloorPlateNode supports slanted floors via YLeft/YRight; where dy ≠ 0
 ; the slant is honoured in GetYAt() and in the debug bar rotation.
-; ShowDebug=true for this iteration — flip off once accepted.
+; ShowDebug=false for normal play; flip on only while re-placing floor plates.
 
 ; --- Top tier (y ≈ 9.9–10.5) ------------------------------------------------
 [node name="FloorSpiderLedgeTop" type="Node3D" parent="."]
@@ -41,7 +41,7 @@ XLeft = -16.16
 XRight = -14.01
 YLeft = 10.49
 YRight = 10.07
-ShowDebug = true
+ShowDebug = false
 DebugTint = Color(1, 0.3, 0.3, 0.55)
 
 [node name="FloorLibraryTop" type="Node3D" parent="."]
@@ -50,7 +50,7 @@ XLeft = -13.23
 XRight = -7.4
 YLeft = 9.91
 YRight = 9.96
-ShowDebug = true
+ShowDebug = false
 DebugTint = Color(1, 0.5, 0.2, 0.55)
 
 [node name="FloorObservatory" type="Node3D" parent="."]
@@ -59,7 +59,7 @@ XLeft = 1.65
 XRight = 5.23
 YLeft = 8.82
 YRight = 8.89
-ShowDebug = true
+ShowDebug = false
 DebugTint = Color(1, 0.5, 0.2, 0.55)
 
 [node name="FloorStudy" type="Node3D" parent="."]
@@ -68,7 +68,7 @@ XLeft = 8.26
 XRight = 16.98
 YLeft = 10.07
 YRight = 10.13
-ShowDebug = true
+ShowDebug = false
 DebugTint = Color(1, 1, 0.3, 0.55)
 
 ; --- Upper-mid tier (y ≈ 7.5–9) --------------------------------------------
@@ -78,7 +78,7 @@ XLeft = -6.55
 XRight = -1.57
 YLeft = 9.0
 YRight = 8.96
-ShowDebug = true
+ShowDebug = false
 DebugTint = Color(0.5, 0.8, 1, 0.55)
 
 [node name="FloorCrystalShelf" type="Node3D" parent="."]
@@ -87,7 +87,7 @@ XLeft = -18.57
 XRight = -12.4
 YLeft = 7.78
 YRight = 7.54
-ShowDebug = true
+ShowDebug = false
 DebugTint = Color(0.3, 1, 0.6, 0.55)
 
 ; --- Mid tier (y ≈ 5.7–6) --------------------------------------------------
@@ -97,7 +97,7 @@ XLeft = 1.21
 XRight = 17.78
 YLeft = 5.95
 YRight = 6.04
-ShowDebug = true
+ShowDebug = false
 DebugTint = Color(0.5, 0.8, 1, 0.55)
 
 [node name="FloorHammock" type="Node3D" parent="."]
@@ -106,7 +106,7 @@ XLeft = -8.7
 XRight = -4.09
 YLeft = 5.73
 YRight = 5.82
-ShowDebug = true
+ShowDebug = false
 DebugTint = Color(0.9, 0.5, 0.9, 0.55)
 
 ; --- Bottom tier (y ≈ 0.8–5) -----------------------------------------------
@@ -119,7 +119,7 @@ XLeft = -19.4
 XRight = -10.01
 YLeft = 4.72
 YRight = 5.66
-ShowDebug = true
+ShowDebug = false
 DebugTint = Color(0.8, 0.7, 0.3, 0.55)
 
 [node name="FloorBottomMidLow" type="Node3D" parent="."]
@@ -128,7 +128,7 @@ XLeft = -7.97
 XRight = -4.64
 YLeft = 2.39
 YRight = 2.35
-ShowDebug = true
+ShowDebug = false
 DebugTint = Color(0.7, 0.5, 0.3, 0.55)
 
 ; FloorBottomLeftLow is the unreachable pocket in the bottom-left corner
@@ -140,7 +140,7 @@ XLeft = -18.44
 XRight = -10.98
 YLeft = 2.0
 YRight = 2.08
-ShowDebug = true
+ShowDebug = false
 DebugTint = Color(0.6, 0.4, 0.2, 0.55)
 
 [node name="FloorPond" type="Node3D" parent="."]
@@ -149,7 +149,7 @@ XLeft = 4.29
 XRight = 13.35
 YLeft = 0.87
 YRight = 0.87
-ShowDebug = true
+ShowDebug = false
 DebugTint = Color(0.3, 0.6, 1, 0.55)
 
 ; ── Stairs ─────────────────────────────────────────────────────────────

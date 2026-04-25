@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 using CreaturesReborn.Sim.World;
 using CreaturesReborn.Sim.Agent;
@@ -28,6 +29,7 @@ public partial class WorldNode : Node3D
 
     // ── The sim world ───────────────────────────────────────────────────────
     public GameWorld World { get; private set; } = new();
+    public RoomNavigation? Navigation { get; private set; }
 
     // ── Tick accumulator ────────────────────────────────────────────────────
     private float _tickAccum;
@@ -49,6 +51,8 @@ public partial class WorldNode : Node3D
         // Dev helper: auto-screenshot-and-quit when launched with
         // --screenshot=<path>. Inert otherwise. See DebugScreenshot.cs.
         AddChild(new DebugScreenshot { Name = "DebugScreenshot" });
+
+        RegisterSceneGeometry();
 
         GD.Print("[WorldNode] Simulation world initialised.");
         GD.Print($"  Tick rate: {TickRate} Hz, Breeding limit: {BreedingLimit}");
@@ -96,5 +100,127 @@ public partial class WorldNode : Node3D
     {
         var b = GetRoomBounds();
         return b is var (l, r) ? Math.Clamp(x, l, r) : x;
+    }
+
+    public float SnapToWalkableY(float x, float y, float fallback = 0f)
+        => Navigation?.SnapToNearestSurface(x, y)?.Y ?? fallback;
+
+    public int FirstNavigationDirection(Vector3 from, Vector3 target)
+        => Navigation?.FirstHorizontalDirection(from.X, from.Y, target.X, target.Y)
+           ?? Math.Sign(target.X - from.X);
+
+    private void RegisterSceneGeometry()
+    {
+        World.Map.Reset();
+        Navigation = null;
+
+        var treehouse = GetNodeOrNull<TreehouseMetaroomNode>("Metaroom");
+        if (treehouse != null)
+        {
+            RegisterTreehouseGeometry(treehouse);
+            Navigation = new RoomNavigation(World.Map);
+            GD.Print($"[WorldNode] Registered Treehouse geometry: {World.Map.AllRooms.Count} rooms.");
+            return;
+        }
+
+        var colony = GetNodeOrNull<ColonyMetaroomNode>("Metaroom");
+        if (colony != null)
+        {
+            World.Map.RegisterMetaRoom(colony.MetaRoom);
+            Navigation = new RoomNavigation(World.Map);
+            return;
+        }
+    }
+
+    private void RegisterTreehouseGeometry(TreehouseMetaroomNode treehouse)
+    {
+        var floorPlates = new List<FloorPlateNode>();
+        foreach (Node child in GetChildren())
+        {
+            if (child is FloorPlateNode floorPlate)
+                floorPlates.Add(floorPlate);
+        }
+
+        treehouse.RebuildRoomLayoutFromFloorPlates(floorPlates);
+        World.Map.SetDimensions(treehouse.RoomWidth, treehouse.RoomHeight);
+        World.Map.RegisterMetaRoom(treehouse.MetaRoom);
+        RegisterStairLinks(treehouse.MetaRoom);
+        RegisterElevatorLinks(treehouse.MetaRoom);
+    }
+
+    private void RegisterStairLinks(MetaRoom metaRoom)
+    {
+        foreach (Node child in GetChildren())
+        {
+            if (child is not StairsNode stairs) continue;
+
+            Room? from = FindEndpointRoom(metaRoom, stairs.XLeft, stairs.YLeft);
+            Room? to = FindEndpointRoom(metaRoom, stairs.XRight, stairs.YRight);
+            if (from == null || to == null || ReferenceEquals(from, to)) continue;
+
+            World.Map.ConnectRooms(
+                from,
+                to,
+                RoomLinkKind.Stair,
+                stairs.XLeft,
+                stairs.YLeft,
+                stairs.XRight,
+                stairs.YRight);
+        }
+    }
+
+    private void RegisterElevatorLinks(MetaRoom metaRoom)
+    {
+        foreach (Node child in GetChildren())
+        {
+            if (child is not ElevatorNode elevator) continue;
+
+            float x = elevator.Position.X;
+            float lowY = elevator.YLow;
+            float highY = elevator.YHigh;
+            if (highY <= lowY)
+            {
+                lowY = TreehouseMetaroomNode.BottomFloorY;
+                highY = TreehouseMetaroomNode.TopFloorY;
+            }
+
+            Room? low = FindEndpointRoom(metaRoom, x, lowY);
+            Room? high = FindEndpointRoom(metaRoom, x, highY);
+            if (low == null || high == null || ReferenceEquals(low, high)) continue;
+
+            World.Map.ConnectRooms(
+                low,
+                high,
+                RoomLinkKind.Elevator,
+                x,
+                lowY,
+                x,
+                highY);
+        }
+    }
+
+    private static Room? FindEndpointRoom(MetaRoom metaRoom, float x, float y)
+    {
+        Room? exact = metaRoom.RoomAt(x, y);
+        if (exact != null) return exact;
+
+        Room? best = null;
+        float bestDistance = float.MaxValue;
+        for (int i = 0; i < metaRoom.Rooms.Count; i++)
+        {
+            Room room = metaRoom.Rooms[i];
+            float sx = Math.Clamp(x, room.XLeft, room.XRight);
+            float sy = room.FloorYAtX(sx);
+            float dx = sx - x;
+            float dy = sy - y;
+            float distance = dx * dx + dy * dy;
+            if (distance < bestDistance)
+            {
+                best = room;
+                bestDistance = distance;
+            }
+        }
+
+        return best;
     }
 }

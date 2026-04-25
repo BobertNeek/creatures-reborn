@@ -18,6 +18,7 @@ public sealed class GameMap
     // ── Storage ─────────────────────────────────────────────────────────────
     private readonly List<MetaRoom> _metaRooms = new();
     private readonly List<Room>     _allRooms  = new();
+    private readonly Dictionary<Room, List<RoomNavigationLink>> _navigationLinks = new();
 
     private int _nextMetaRoomId = 0;
     private int _nextRoomId     = 0;
@@ -52,6 +53,26 @@ public sealed class GameMap
         };
         _metaRooms.Add(mr);
         return mr;
+    }
+
+    /// <summary>
+    /// Register an externally-authored metaroom and its rooms with the map.
+    /// Used by the Godot scene layer when geometry is authored in a scene file.
+    /// </summary>
+    public void RegisterMetaRoom(MetaRoom metaRoom)
+    {
+        if (!_metaRooms.Contains(metaRoom))
+            _metaRooms.Add(metaRoom);
+
+        _nextMetaRoomId = Math.Max(_nextMetaRoomId, metaRoom.Id + 1);
+        for (int i = 0; i < metaRoom.Rooms.Count; i++)
+        {
+            Room room = metaRoom.Rooms[i];
+            room.MetaRoomId = metaRoom.Id;
+            if (!_allRooms.Contains(room))
+                _allRooms.Add(room);
+            _nextRoomId = Math.Max(_nextRoomId, room.Id + 1);
+        }
     }
 
     public MetaRoom? GetMetaRoom(int id)
@@ -101,6 +122,44 @@ public sealed class GameMap
         r2.Doors[r1] = perm;
     }
 
+    public void ConnectRooms(
+        Room from,
+        Room to,
+        RoomLinkKind kind,
+        float fromX,
+        float fromY,
+        float toX,
+        float toY,
+        int permeability = 100,
+        bool bidirectional = true)
+    {
+        AddNavigationLink(new RoomNavigationLink(
+            from, to, kind, fromX, fromY, toX, toY, permeability));
+
+        if (bidirectional)
+        {
+            AddNavigationLink(new RoomNavigationLink(
+                to, from, kind, toX, toY, fromX, fromY, permeability));
+        }
+
+        SetDoor(from, to, permeability);
+    }
+
+    public IReadOnlyList<RoomNavigationLink> GetNavigationLinks(Room room)
+        => _navigationLinks.TryGetValue(room, out var links)
+            ? links
+            : Array.Empty<RoomNavigationLink>();
+
+    private void AddNavigationLink(RoomNavigationLink link)
+    {
+        if (!_navigationLinks.TryGetValue(link.From, out var links))
+        {
+            links = new List<RoomNavigationLink>();
+            _navigationLinks[link.From] = links;
+        }
+        links.Add(link);
+    }
+
     public bool HasDoor(Room r1, Room r2)
         => r1.Doors.ContainsKey(r2);
 
@@ -146,6 +205,7 @@ public sealed class GameMap
     {
         _metaRooms.Clear();
         _allRooms.Clear();
+        _navigationLinks.Clear();
         _nextMetaRoomId = 0;
         _nextRoomId     = 0;
     }

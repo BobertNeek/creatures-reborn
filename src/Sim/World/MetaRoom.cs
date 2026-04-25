@@ -46,6 +46,11 @@ public sealed class MetaRoom
         return room.Id;
     }
 
+    public void ClearRooms()
+    {
+        _rooms.Clear();
+    }
+
     /// <summary>
     /// Find the room containing the given point, or null if outside all rooms.
     /// </summary>

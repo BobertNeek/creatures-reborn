@@ -130,10 +130,9 @@ public partial class PointerAgent : Node3D
         var lift = FindNearestElevator(1.2f);
         if (lift != null)
         {
-            int next = (TreehouseMetaroomNode.GetFloorIndex(Position.Y) + 2) % 3;
-            // Heuristic: send the lift to the floor *above* the floor the user clicked on.
-            // (Clicking the lift while on the bottom calls it down; clicking near the top
-            //  sends it up.) Cycling 0→1→2 each call gives full coverage.
+            int next = lift.YHigh > lift.YLow && Position.Y < (lift.YLow + lift.YHigh) * 0.5f
+                ? 0
+                : 1;
             lift.GoToFloor(next);
             FlashCursor(new Color(0.6f, 0.85f, 1.0f));
             GD.Print($"[Hand] Called lift to floor {next}.");
@@ -221,7 +220,7 @@ public partial class PointerAgent : Node3D
         var world  = GetParent() as WorldNode;
         float dropX = Position.X;
         if (world != null) dropX = world.ClampX(dropX);
-        float dropY = SnapToNearestFloorY(Position.Y);
+        float dropY = SnapToNearestFloorY(dropX, Position.Y);
 
         _carriedCreature.Position = new Vector3(dropX, dropY, _carriedCreature.Position.Z);
 
@@ -234,11 +233,15 @@ public partial class PointerAgent : Node3D
 
     /// <summary>If a treehouse metaroom exists, snap to its nearest floor Y;
     /// otherwise return 0 (the conventional ground plane).</summary>
-    private float SnapToNearestFloorY(float y)
+    private float SnapToNearestFloorY(float x, float y)
     {
+        var world = GetParent() as WorldNode;
+        if (world?.Navigation != null)
+            return world.SnapToWalkableY(x, y, 0f);
+
         var treehouse = GetParent()?.GetNodeOrNull<TreehouseMetaroomNode>("Metaroom");
         if (treehouse == null) return 0f;
-        return TreehouseMetaroomNode.GetFloorY(TreehouseMetaroomNode.GetFloorIndex(y));
+        return treehouse.GetNearestFloorY(x, y);
     }
 
     // ── Pick up / drop food ─────────────────────────────────────────────────
@@ -252,8 +255,10 @@ public partial class PointerAgent : Node3D
     private void DropFood()
     {
         if (_carriedFood == null) return;
-        float dropY = SnapToNearestFloorY(Position.Y) + 0.18f;
-        _carriedFood.Drop(new Vector3(Position.X, dropY, 0));
+        var world = GetParent() as WorldNode;
+        float dropX = world?.ClampX(Position.X) ?? Position.X;
+        float dropY = SnapToNearestFloorY(dropX, Position.Y) + 0.18f;
+        _carriedFood.Drop(new Vector3(dropX, dropY, 0));
         _carriedFood = null;
         GD.Print($"[Hand] Dropped food at floor Y={dropY:F1}.");
     }

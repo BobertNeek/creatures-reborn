@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Godot;
 using CreaturesReborn.Sim.World;
 
@@ -90,6 +91,33 @@ public partial class TreehouseMetaroomNode : Node3D
         SetupLighting();
     }
 
+    public void RebuildRoomLayoutFromFloorPlates(IEnumerable<FloorPlateNode> floorPlates)
+    {
+        MetaRoom.ClearRooms();
+
+        int id = 0;
+        foreach (FloorPlateNode plate in floorPlates)
+        {
+            if (plate.XRight <= plate.XLeft) continue;
+
+            float ceilingOffset = EstimateCeilingOffset(plate);
+            MetaRoom.AddRoom(new Room
+            {
+                Id = id++,
+                XLeft = plate.XLeft,
+                XRight = plate.XRight,
+                YLeftFloor = plate.YLeft,
+                YRightFloor = plate.YRight,
+                YLeftCeiling = plate.YLeft + ceilingOffset,
+                YRightCeiling = plate.YRight + ceilingOffset,
+                Type = EstimateRoomType(plate),
+            });
+        }
+
+        if (id == 0)
+            BuildRoomLayout();
+    }
+
     // ─────────────────────────────────────────────────────────────────────────
     // Public helpers for other nodes
     // ─────────────────────────────────────────────────────────────────────────
@@ -111,6 +139,65 @@ public partial class TreehouseMetaroomNode : Node3D
         if (dTop < dMid && dTop < dBot) return 0;
         if (dMid < dBot) return 1;
         return 2;
+    }
+
+    public float GetNearestFloorY(float x, float y)
+    {
+        if (MetaRoom.Rooms.Count == 0)
+            return GetFloorY(GetFloorIndex(y));
+
+        Room? best = null;
+        float bestDistance = float.MaxValue;
+        float bestY = BottomFloorY;
+
+        for (int i = 0; i < MetaRoom.Rooms.Count; i++)
+        {
+            Room room = MetaRoom.Rooms[i];
+            if (x < room.XLeft || x > room.XRight) continue;
+
+            float floorY = room.FloorYAtX(x);
+            float distance = MathF.Abs(floorY - y);
+            if (distance < bestDistance)
+            {
+                best = room;
+                bestY = floorY;
+                bestDistance = distance;
+            }
+        }
+
+        if (best != null) return bestY;
+
+        for (int i = 0; i < MetaRoom.Rooms.Count; i++)
+        {
+            Room room = MetaRoom.Rooms[i];
+            float sx = Math.Clamp(x, room.XLeft, room.XRight);
+            float floorY = room.FloorYAtX(sx);
+            float dx = sx - x;
+            float dy = floorY - y;
+            float distance = dx * dx + dy * dy;
+            if (distance < bestDistance)
+            {
+                bestY = floorY;
+                bestDistance = distance;
+            }
+        }
+
+        return bestY;
+    }
+
+    private static float EstimateCeilingOffset(FloorPlateNode plate)
+        => plate.Name.ToString().Contains("Pond", StringComparison.OrdinalIgnoreCase)
+            ? 2.0f
+            : 3.0f;
+
+    private static RoomType EstimateRoomType(FloorPlateNode plate)
+    {
+        string name = plate.Name.ToString();
+        if (name.Contains("Pond", StringComparison.OrdinalIgnoreCase))
+            return RoomType.Underwater;
+        if (name.Contains("Bottom", StringComparison.OrdinalIgnoreCase))
+            return RoomType.Soil;
+        return RoomType.IndoorWood;
     }
 
     // ─────────────────────────────────────────────────────────────────────────
