@@ -29,6 +29,7 @@ public class ArtManifestTests
         string[] requiredIds =
         {
             "treehouse-metaroom-v1",
+            "treehouse-metaroom-v2",
             "norn-texture-set-v1",
             "egg-sprite-v1",
             "food-fruit-v1",

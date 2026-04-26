@@ -8,7 +8,8 @@ namespace CreaturesReborn.Godot;
 /// <summary>
 /// The Treehouse metaroom — a cozy multi-floor biotech tree dwelling.
 ///
-/// Based on the regenerated v1 backdrop (art/metaroom/metaroom.png), the
+/// Based on the regenerated v2 backdrop
+/// (art/metaroom/metaroom-right-connector-v2.png), the
 /// scene uses authored FloorPlateNode spans so walkable geometry can stay
 /// aligned with the painting without placing foreground art over the norn lanes.
 ///
@@ -29,11 +30,11 @@ public partial class TreehouseMetaroomNode : Node3D
     [Export] public Texture2D? Backdrop;
     [Export] public float RoomWidth  = 40.0f;
     [Export] public float RoomHeight = 13.5f;
-    [Export] public string BackdropPath = "res://art/metaroom/metaroom.png";
+    [Export] public string BackdropPath = "res://art/metaroom/metaroom-right-connector-v2.png";
 
     // ── Floor Y values (match image layout) ──────────────────────────────────
-    // Measured against the v1 painting after replacing the Nano Banana
-    // background. The v1 image reads as three main gameplay tiers.
+    // Measured against the regenerated Treehouse paintings after replacing the
+    // Nano Banana background. The image reads as three main gameplay tiers.
     public const float TopFloorY     = 11.25f;
     public const float MidHighFloorY = 7.65f;
     public const float MidLowFloorY  = 7.65f;

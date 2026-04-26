@@ -8,8 +8,19 @@
       "category": "metaroom",
       "runtimePath": "res://art/metaroom/metaroom.png",
       "replacementTarget": "Nano Banana Treehouse backdrop with blocked walk paths",
-      "sourceNotes": "Regenerated ultra-wide Treehouse backdrop with broad, unobstructed floor lanes and central elevator space.",
+      "sourceNotes": "Preserved first regenerated ultra-wide Treehouse backdrop with broad, unobstructed floor lanes and central elevator space. Superseded by v2 so non-connector side openings can be visually capped.",
       "promptRef": "art/prompts/treehouse-metaroom-v1.md",
+      "expectedWidth": 1983,
+      "expectedHeight": 793,
+      "status": "archived"
+    },
+    {
+      "id": "treehouse-metaroom-v2",
+      "category": "metaroom",
+      "runtimePath": "res://art/metaroom/metaroom-right-connector-v2.png",
+      "replacementTarget": "Treehouse backdrop side openings without a logical metaroom connector",
+      "sourceNotes": "Image-model edit of the Treehouse backdrop with endpoint root walls on non-connector floor ends and a single right-side branch tunnel/bridge that visually leads toward the brighter leafy neighboring metaroom.",
+      "promptRef": "art/prompts/treehouse-metaroom-v2.md",
       "expectedWidth": 1983,
       "expectedHeight": 793,
       "status": "active"
