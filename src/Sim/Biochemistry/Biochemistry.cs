@@ -33,6 +33,9 @@ public sealed class Biochemistry
     private const float SleepinessRecovery = 0.060f;
     private const float SleepAtpRecovery = 0.025f;
     private const int InvoluntarySleepLocusOffset = 5;
+    private const float PainFromInjuryRate = 0.050f;
+    private const float MaxPainFromInjuryPerTick = 0.040f;
+    private const float BasePainRecovery = 0.035f;
 
     // -------------------------------------------------------------------------
     // State
@@ -418,6 +421,9 @@ public sealed class Biochemistry
 
         // 5. Fatigue and sleep pressure are derived from chemistry.
         UpdateFatigueAndSleep();
+
+        // 6. Pain reflects injury, while energy and endorphins support recovery.
+        UpdatePainInjuryAndRecovery();
         }
         finally
         {
@@ -532,5 +538,46 @@ public sealed class Biochemistry
         int involuntarySleep = SensorimotorEmitterLocus.Involuntary0 + InvoluntarySleepLocusOffset;
         if (involuntarySleep < BiochemConst.MAX_LOCI_PER_TISSUE)
             _creatureLoci[(int)CreatureTissue.Sensorimotor, involuntarySleep].Value = value;
+    }
+
+    private void UpdatePainInjuryAndRecovery()
+    {
+        float injury = _chemConcs[ChemID.Injury];
+        float endorphin = _chemConcs[ChemID.Endorphin];
+        float atp = _chemConcs[ChemID.ATP];
+
+        if (injury > 0.00001f)
+        {
+            float painRise = Math.Min(MaxPainFromInjuryPerTick, injury * PainFromInjuryRate);
+            AddChemical(
+                ChemID.Pain,
+                painRise,
+                ChemicalDeltaSource.InjuryRecovery,
+                "injury:pain-signal");
+        }
+
+        float repair = Math.Clamp(atp * 0.025f + endorphin * 0.045f, 0.0f, 0.080f);
+        if (repair > 0.00001f && injury > 0.00001f)
+        {
+            SubChemical(
+                ChemID.Injury,
+                repair,
+                ChemicalDeltaSource.InjuryRecovery,
+                "injury:chemical-repair");
+        }
+
+        float pain = _chemConcs[ChemID.Pain];
+        if (pain <= 0.00001f)
+            return;
+
+        if (repair <= 0.015f && endorphin <= 0.050f)
+            return;
+
+        float painRelief = BasePainRecovery + endorphin * 0.080f + repair * 0.800f;
+        SubChemical(
+            ChemID.Pain,
+            painRelief,
+            ChemicalDeltaSource.InjuryRecovery,
+            "injury:pain-relief");
     }
 }

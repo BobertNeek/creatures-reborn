@@ -166,6 +166,45 @@ public class NornLifeLoopTests
 
         Assert.True(creature.GetChemical(ChemID.Pain) > 0);
         Assert.True(creature.GetChemical(ChemID.Fear) > 0);
+        Assert.True(creature.GetChemical(ChemID.Injury) > 0);
+    }
+
+    [Fact]
+    public void InjuryChemistry_RaisesPainAndTracesChangeWhenUnrecovered()
+    {
+        var creature = LoadStarter(seed: 70);
+        creature.SetChemical(ChemID.ATP, 0.0f);
+        creature.SetChemical(ChemID.Injury, 0.7f);
+        creature.SetChemical(ChemID.Pain, 0.0f);
+        var trace = new BiochemistryTrace();
+
+        creature.Biochemistry.Update(trace);
+
+        Assert.True(creature.GetChemical(ChemID.Pain) > 0.0f);
+        Assert.Contains(trace.Deltas, d =>
+            d.ChemicalId == ChemID.Pain &&
+            d.Source == ChemicalDeltaSource.InjuryRecovery &&
+            d.Amount > 0);
+    }
+
+    [Fact]
+    public void RecoveryChemistry_UsesAtpAndEndorphinToReducePainAndInjury()
+    {
+        var creature = LoadStarter(seed: 71);
+        creature.SetChemical(ChemID.ATP, 1.0f);
+        creature.SetChemical(ChemID.Endorphin, 0.6f);
+        creature.SetChemical(ChemID.Injury, 0.6f);
+        creature.SetChemical(ChemID.Pain, 0.6f);
+        var trace = new BiochemistryTrace();
+
+        creature.Biochemistry.Update(trace);
+
+        Assert.True(creature.GetChemical(ChemID.Injury) < 0.6f);
+        Assert.True(creature.GetChemical(ChemID.Pain) < 0.6f);
+        Assert.Contains(trace.Deltas, d =>
+            d.ChemicalId == ChemID.Injury &&
+            d.Source == ChemicalDeltaSource.InjuryRecovery &&
+            d.Amount < 0);
     }
 
     [Fact]

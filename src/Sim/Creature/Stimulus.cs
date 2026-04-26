@@ -141,6 +141,7 @@ public static class StimulusTable
         _table[StimulusId.WallBump] = new(
             ChemID.Pain, 0.15f,
             ChemID.Fear, 0.1f,
+            ChemID.Injury, 0.04f,
             significance: 0.5f);
 
         // Got food (picked up)
@@ -206,6 +207,7 @@ public static class StimulusTable
         _table[StimulusId.Fell] = new(
             ChemID.Pain, 0.2f,
             ChemID.Fear, 0.15f,
+            ChemID.Injury, 0.12f,
             significance: 0.6f);
 
         // Hand held creature
