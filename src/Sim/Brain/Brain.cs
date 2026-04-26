@@ -376,10 +376,18 @@ public sealed class Brain : IBrainLocusProvider
         for (int i = 0; i < _tracts.Count; i++)
             tracts.Add(_tracts[i].CreateSnapshot(i, options.MaxDendritesPerTract));
 
+        var moduleSnapshots = new List<BrainModuleSnapshot>();
+        foreach (IBrainModule module in _modules)
+        {
+            if (module is IBrainModuleSnapshotProvider provider)
+                moduleSnapshots.Add(provider.CreateModuleSnapshot());
+        }
+
         return new BrainSnapshot(
             lobes,
             tracts,
             GetModuleDescriptors(),
+            moduleSnapshots,
             _instincts.Count,
             _processingInstincts);
     }

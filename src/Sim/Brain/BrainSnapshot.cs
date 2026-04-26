@@ -8,6 +8,7 @@ public sealed record BrainSnapshot(
     IReadOnlyList<LobeSnapshot> Lobes,
     IReadOnlyList<TractSnapshot> Tracts,
     IReadOnlyList<BrainModuleDescriptor> Modules,
+    IReadOnlyList<BrainModuleSnapshot> ModuleSnapshots,
     int InstinctsRemaining,
     bool IsProcessingInstincts);
 
@@ -59,3 +60,27 @@ public sealed record BrainModuleDescriptor(
                 ? "Runs after the classic lobe/tract stack without shadowing a lobe."
                 : "Shadows the named classic lobe token.");
 }
+
+public interface IBrainModuleSnapshotProvider
+{
+    BrainModuleSnapshot CreateModuleSnapshot();
+}
+
+public sealed record BrainModuleSnapshot(
+    string ModuleName,
+    int Tick,
+    string Kind,
+    bool Enabled,
+    int? ShadowedLobeToken,
+    string? ShadowedLobeTokenText,
+    IReadOnlyList<BrainModuleStateValue> StateValues,
+    IReadOnlyList<BrainModuleWeightState> Weights);
+
+public sealed record BrainModuleStateValue(string Name, float Value);
+
+public sealed record BrainModuleWeightState(
+    string Name,
+    int SourceIndex,
+    int TargetIndex,
+    float Value,
+    float LastDelta);
