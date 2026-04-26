@@ -278,6 +278,38 @@ public sealed class Brain : IBrainLocusProvider
     public int GetWinningIdByToken(int lobeToken)
         => GetWinningId(lobeToken);
 
+    public float GetChemicalLevel(int chemicalId)
+    {
+        if (_chemicals == null || (uint)chemicalId >= (uint)_chemicals.Length)
+            return 0.0f;
+        return _chemicals[chemicalId];
+    }
+
+    public float ReadPort(BrainPort port)
+    {
+        if (port.Kind == BrainPortKind.Chemical)
+            return port.Index.HasValue ? GetChemicalLevel(port.Index.Value) : 0.0f;
+
+        if (!port.LobeToken.HasValue)
+            return 0.0f;
+
+        Lobe? lobe = GetLobeFromToken(port.LobeToken.Value);
+        if (lobe == null)
+            return 0.0f;
+
+        if (port.Kind == BrainPortKind.Motor)
+            return GetWinningId(port.LobeToken.Value);
+
+        int index = port.Index ?? 0;
+        return port.Kind switch
+        {
+            BrainPortKind.Drive => lobe.GetNeuronState(index, NeuronVar.State),
+            BrainPortKind.LobeInput => lobe.GetNeuronState(index, NeuronVar.Input),
+            BrainPortKind.LobeOutput => lobe.GetNeuronState(index, NeuronVar.Output),
+            _ => 0.0f,
+        };
+    }
+
     public void ClearActivity()
     {
         foreach (Lobe lobe in _lobes)
@@ -324,6 +356,9 @@ public sealed class Brain : IBrainLocusProvider
 
     public Lobe? GetLobe(int index)
         => (uint)index < (uint)_lobes.Count ? _lobes[index] : null;
+
+    public Lobe? GetLobeByToken(int token)
+        => GetLobeFromToken(token);
 
     public Tract? GetTract(int index)
         => (uint)index < (uint)_tracts.Count ? _tracts[index] : null;
