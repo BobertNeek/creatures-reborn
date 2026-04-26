@@ -41,6 +41,8 @@ public sealed class Biochemistry
     private readonly FloatLocus[,] _creatureLoci =
         new FloatLocus[(int)CreatureTissue.Count, BiochemConst.MAX_LOCI_PER_TISSUE];
 
+    private BiochemistryTrace? _activeTrace;
+
     /// <summary>
     /// Pluggable brain locus provider.  Set this when the Brain is constructed so that
     /// neuroemitters and emitters can read real neuron outputs.
@@ -79,24 +81,83 @@ public sealed class Biochemistry
     public float GetChemical(int chem) => _chemConcs[chem];
 
     public void SetChemical(int chem, float amount)
+        => SetChemical(chem, amount, ChemicalDeltaSource.DirectSet, null);
+
+    public void SetChemical(
+        int chem,
+        float amount,
+        ChemicalDeltaSource source,
+        string? detail = null,
+        BiochemistryTrace? trace = null)
     {
         if (chem == 0) return;
-        _chemConcs[chem] = Math.Clamp(amount, 0.0f, 1.0f);
+        float before = _chemConcs[chem];
+        float after = Math.Clamp(amount, 0.0f, 1.0f);
+        _chemConcs[chem] = after;
+        RecordDelta(chem, before, after - before, after, source, detail, trace);
     }
 
     public void AddChemical(int chem, float amount)
+        => AddChemical(chem, amount, ChemicalDeltaSource.DirectAdd, null);
+
+    public void AddChemical(
+        int chem,
+        float amount,
+        ChemicalDeltaSource source,
+        string? detail = null,
+        BiochemistryTrace? trace = null)
     {
         if (chem == 0) return;
-        _chemConcs[chem] = Math.Clamp(_chemConcs[chem] + amount, 0.0f, 1.0f);
+        float before = _chemConcs[chem];
+        float after = Math.Clamp(before + amount, 0.0f, 1.0f);
+        _chemConcs[chem] = after;
+        RecordDelta(chem, before, after - before, after, source, detail, trace);
     }
 
     public void SubChemical(int chem, float amount)
+        => SubChemical(chem, amount, ChemicalDeltaSource.DirectSubtract, null);
+
+    public void SubChemical(
+        int chem,
+        float amount,
+        ChemicalDeltaSource source,
+        string? detail = null,
+        BiochemistryTrace? trace = null)
     {
         if (chem == 0) return;
-        _chemConcs[chem] = Math.Clamp(_chemConcs[chem] - amount, 0.0f, 1.0f);
+        float before = _chemConcs[chem];
+        float after = Math.Clamp(before - amount, 0.0f, 1.0f);
+        _chemConcs[chem] = after;
+        RecordDelta(chem, before, after - before, after, source, detail, trace);
     }
 
     public ReadOnlySpan<float> GetChemicalConcs() => _chemConcs;
+
+    public ChemicalHalfLifeView GetHalfLifeView(int chem)
+        => new(chem, ChemicalCatalog.Get(chem), _decayRates[chem]);
+
+    public BiochemistryTrace BeginTrace()
+    {
+        _activeTrace = new BiochemistryTrace();
+        return _activeTrace;
+    }
+
+    public BiochemistryTrace? EndTrace()
+    {
+        BiochemistryTrace? trace = _activeTrace;
+        _activeTrace = null;
+        return trace;
+    }
+
+    private void RecordDelta(
+        int chem,
+        float before,
+        float amount,
+        float after,
+        ChemicalDeltaSource source,
+        string? detail,
+        BiochemistryTrace? trace)
+        => (trace ?? _activeTrace)?.Record(chem, before, amount, after, source, detail);
 
     /// <summary>
     /// Internal access to the mutable chemical concentrations array.
@@ -110,6 +171,9 @@ public sealed class Biochemistry
     public int   OrganCount            => _numOrgans;
     public Organ GetOrgan(int i)       => _organs[i];
     public int   NeuroEmitterCount     => _numNeuroEmitters;
+
+    public OrganDefinitionView GetOrganDefinitionView(int i)
+        => _organs[i].CreateDefinitionView(i);
 
     // -------------------------------------------------------------------------
     // Locus table
@@ -294,7 +358,16 @@ public sealed class Biochemistry
     // Mirrors c2e Biochemistry::Update (Biochemistry.cpp:320-352).
     // -------------------------------------------------------------------------
     public void Update()
+        => Update(null);
+
+    public void Update(BiochemistryTrace? trace)
     {
+        BiochemistryTrace? previousTrace = _activeTrace;
+        if (trace != null)
+            _activeTrace = trace;
+
+        try
+        {
         // 1. NeuroEmitters
         for (int i = 0; i < _numNeuroEmitters; i++)
         {
@@ -309,7 +382,11 @@ public sealed class Biochemistry
                     product *= n.NeuronalInputs[o].Value;
 
                 for (int o = 0; o < NeuroEmitter.NumChemEmissions; o++)
-                    AddChemical(n.ChemEmissions[o].ChemId, n.ChemEmissions[o].Amount * product);
+                    AddChemical(
+                        n.ChemEmissions[o].ChemId,
+                        n.ChemEmissions[o].Amount * product,
+                        ChemicalDeltaSource.NeuroEmitter,
+                        $"neuroemitter:{i}");
             }
         }
 
@@ -319,6 +396,16 @@ public sealed class Biochemistry
 
         // 3. Half-life decay
         for (int i = 0; i < BiochemConst.NUMCHEM; i++)
-            _chemConcs[i] *= _decayRates[i];
+        {
+            float before = _chemConcs[i];
+            float after = before * _decayRates[i];
+            _chemConcs[i] = after;
+            RecordDelta(i, before, after - before, after, ChemicalDeltaSource.HalfLifeDecay, "half-life decay", null);
+        }
+        }
+        finally
+        {
+            _activeTrace = previousTrace;
+        }
     }
 }

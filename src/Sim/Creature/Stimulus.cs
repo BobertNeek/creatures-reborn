@@ -245,11 +245,20 @@ public static class StimulusTable
     /// Apply a stimulus to a creature: inject the defined chemicals.
     /// </summary>
     public static void Apply(Creature creature, int stimId)
+        => Apply(creature, stimId, trace: null);
+
+    public static void Apply(Creature creature, int stimId, BiochemistryTrace? trace)
     {
         var def = Get(stimId);
-        if (def.Chem1 != 0) creature.InjectChemical(def.Chem1, def.Amt1);
-        if (def.Chem2 != 0) creature.InjectChemical(def.Chem2, def.Amt2);
-        if (def.Chem3 != 0) creature.InjectChemical(def.Chem3, def.Amt3);
-        if (def.Chem4 != 0) creature.InjectChemical(def.Chem4, def.Amt4);
+        ApplyChemical(creature, stimId, def.Chem1, def.Amt1, trace);
+        ApplyChemical(creature, stimId, def.Chem2, def.Amt2, trace);
+        ApplyChemical(creature, stimId, def.Chem3, def.Amt3, trace);
+        ApplyChemical(creature, stimId, def.Chem4, def.Amt4, trace);
+    }
+
+    private static void ApplyChemical(Creature creature, int stimId, int chem, float amount, BiochemistryTrace? trace)
+    {
+        if (chem == 0) return;
+        creature.Biochemistry.AddChemical(chem, amount, ChemicalDeltaSource.Stimulus, $"stimulus:{stimId}", trace);
     }
 }

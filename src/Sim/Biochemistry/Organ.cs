@@ -68,6 +68,45 @@ public sealed class Organ
 
     public void SetOwner(Biochemistry owner) => _owner = owner;
 
+    public OrganSnapshot CreateSnapshot(int index)
+        => new(
+            index,
+            Failed ? OrganHealthState.Failed : (_energyAvailableFlag ? OrganHealthState.Functioning : OrganHealthState.EnergyStarved),
+            _initialLifeForce,
+            _shortTermLifeForce,
+            _longTermLifeForce,
+            _longTermRateOfRepair,
+            _energyCost,
+            _damageDueToZeroEnergy,
+            _numReactions,
+            _numEmitters,
+            _numReceptors);
+
+    public IReadOnlyList<ReactionDefinitionView> GetReactionDefinitionViews()
+    {
+        var reactions = new List<ReactionDefinitionView>(_numReactions);
+        for (int i = 0; i < _numReactions; i++)
+        {
+            Reaction reaction = _reactions[i];
+            reactions.Add(new(
+                i,
+                reaction.R1,
+                reaction.propR1,
+                reaction.R2,
+                reaction.propR2,
+                reaction.P1,
+                reaction.propP1,
+                reaction.P2,
+                reaction.propP2,
+                reaction.Rate.Value));
+        }
+
+        return reactions;
+    }
+
+    public OrganDefinitionView CreateDefinitionView(int index)
+        => new(index, CreateSnapshot(index), GetReactionDefinitionViews());
+
     // -------------------------------------------------------------------------
     // Construction
     // -------------------------------------------------------------------------
@@ -324,7 +363,7 @@ public sealed class Organ
     {
         _shortTermLifeForce = BoundedSub(_shortTermLifeForce, damage);
         LocLifeForce.Value  = _shortTermLifeForce / _initialLifeForce;
-        _owner?.AddChemical(ChemID.Injury, LfToLoc(damage));
+        _owner?.AddChemical(ChemID.Injury, LfToLoc(damage), ChemicalDeltaSource.OrganInjury, "organ injury");
     }
 
     // -------------------------------------------------------------------------
@@ -346,7 +385,7 @@ public sealed class Organ
         {
             float repair = delta * LocLongTermRateOfRepair.Value;
             _shortTermLifeForce += repair;
-            _owner?.SubChemical(ChemID.Injury, LfToLoc(repair));
+            _owner?.SubChemical(ChemID.Injury, LfToLoc(repair), ChemicalDeltaSource.OrganInjury, "organ repair");
         }
 
         LocLifeForce.Value = _shortTermLifeForce / _initialLifeForce;
@@ -365,8 +404,8 @@ public sealed class Organ
         if (_owner == null) return true;
         if (_owner.GetChemical(ChemID.ATP) >= _energyCost)
         {
-            _owner.SubChemical(ChemID.ATP, _energyCost);
-            _owner.AddChemical(ChemID.ADP, _energyCost);
+            _owner.SubChemical(ChemID.ATP, _energyCost, ChemicalDeltaSource.OrganEnergy, "organ ATP cost");
+            _owner.AddChemical(ChemID.ADP, _energyCost, ChemicalDeltaSource.OrganEnergy, "organ ADP output");
             return true;
         }
         return false;
@@ -395,9 +434,9 @@ public sealed class Organ
                     if (conc > 0.0f)
                     {
                         if ((e.Effect & (int)EmitterFlags.EM_DIGITAL) != 0)
-                            _owner.AddChemical(e.Chem, e.Gain);
+                            _owner.AddChemical(e.Chem, e.Gain, ChemicalDeltaSource.Emitter, $"emitter:{i}");
                         else
-                            _owner.AddChemical(e.Chem, conc * e.Gain);
+                            _owner.AddChemical(e.Chem, conc * e.Gain, ChemicalDeltaSource.Emitter, $"emitter:{i}");
 
                         if ((e.Effect & (int)EmitterFlags.EM_REMOVE) != 0)
                             e.Source.Value = 0.0f;
@@ -434,10 +473,10 @@ public sealed class Organ
 
         avail *= rate;
 
-        _owner.SubChemical(rn.R1, avail * rn.propR1);
-        _owner.SubChemical(rn.R2, avail * rn.propR2);
-        _owner.AddChemical(rn.P1, avail * rn.propP1);
-        _owner.AddChemical(rn.P2, avail * rn.propP2);
+        _owner.SubChemical(rn.R1, avail * rn.propR1, ChemicalDeltaSource.Reaction, $"reaction:{idx}:reactant1");
+        _owner.SubChemical(rn.R2, avail * rn.propR2, ChemicalDeltaSource.Reaction, $"reaction:{idx}:reactant2");
+        _owner.AddChemical(rn.P1, avail * rn.propP1, ChemicalDeltaSource.Reaction, $"reaction:{idx}:product1");
+        _owner.AddChemical(rn.P2, avail * rn.propP2, ChemicalDeltaSource.Reaction, $"reaction:{idx}:product2");
 
         return true;
     }
