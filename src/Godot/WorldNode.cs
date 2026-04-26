@@ -109,6 +109,15 @@ public partial class WorldNode : Node3D
     public float SnapToWalkableY(float x, float y, float fallback = 0f)
         => Navigation?.SnapToNearestSurface(x, y)?.Y ?? fallback;
 
+    public Vector3 ProjectWalkStep(Vector3 from, float requestedX)
+    {
+        WalkableSurface? surface = Navigation?.ProjectHorizontalStep(from.X, from.Y, requestedX);
+        if (surface == null)
+            return new Vector3(ClampX(requestedX), from.Y, from.Z);
+
+        return new Vector3(surface.Value.X, surface.Value.Y, from.Z);
+    }
+
     public int FirstNavigationDirection(Vector3 from, Vector3 target)
         => Navigation?.FirstHorizontalDirection(from.X, from.Y, target.X, target.Y)
            ?? Math.Sign(target.X - from.X);

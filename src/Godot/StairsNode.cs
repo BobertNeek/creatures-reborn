@@ -62,17 +62,12 @@ public partial class StairsNode : Node3D
             float t = (cx - XLeft) / (XRight - XLeft);
             float expectedY = Mathf.Lerp(YLeft, YRight, Mathf.Clamp(t, 0f, 1f));
 
-            // Capture rule: "standing on or falling onto the ramp".
-            //   • If the norn is BELOW the ramp surface by more than a small
-            //     tolerance, they're on a lower floor — ignore.
-            //   • If they're at or above the ramp, pull them onto it. This
-            //     means a norn walking along a higher floor and crossing
-            //     the stair's X range smoothly descends onto it (instead of
-            //     walking off into empty space).
-            // Using an "above-only" rule prevents norns on a lower floor
-            // that shares X range with the stair from being yanked upward.
-            const float BelowTol = 0.3f;
-            if (cn.Position.Y < expectedY - BelowTol) continue;
+            // Capture only when already near the ramp surface. The Treehouse
+            // has overlapping horizontal decks and painted ramps in X; an
+            // "anything above the ramp" rule pulls creatures off the upper
+            // deck even when they are standing on a different floor.
+            const float SurfaceCaptureTolerance = 0.45f;
+            if (MathF.Abs(cn.Position.Y - expectedY) > SurfaceCaptureTolerance) continue;
 
             float newY = Mathf.MoveToward(cn.Position.Y, expectedY, ClimbSpeed * dt);
             cn.Position = new Vector3(cn.Position.X, newY, cn.Position.Z);

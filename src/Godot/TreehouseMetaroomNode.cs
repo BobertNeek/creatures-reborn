@@ -35,8 +35,8 @@ public partial class TreehouseMetaroomNode : Node3D
     // Measured against the v1 painting after replacing the Nano Banana
     // background. The v1 image reads as three main gameplay tiers.
     public const float TopFloorY     = 11.25f;
-    public const float MidHighFloorY = 7.30f;
-    public const float MidLowFloorY  = 7.30f;
+    public const float MidHighFloorY = 7.65f;
+    public const float MidLowFloorY  = 7.65f;
     public const float BottomFloorY  = 3.35f;
     public const float BackdropCenterY = 8.45f;
 

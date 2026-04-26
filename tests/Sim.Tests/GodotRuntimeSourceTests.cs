@@ -44,4 +44,26 @@ public class GodotRuntimeSourceTests
         Assert.Contains("creature.Position - Position", pointerSource);
         Assert.DoesNotContain("_carriedCreature.Position = Position + new Vector3(0, 1.2f, 0)", pointerSource);
     }
+
+    [Fact]
+    public void NornRuntime_ProjectsWalkStepsOntoWalkableTreehouseSurfaces()
+    {
+        string spriteSource = File.ReadAllText(RepoPath("src", "Godot", "NornBillboardSprite.cs"));
+        string creatureSource = File.ReadAllText(RepoPath("src", "Godot", "CreatureNode.cs"));
+        string worldSource = File.ReadAllText(RepoPath("src", "Godot", "WorldNode.cs"));
+
+        Assert.Contains("SetWalkSurface", spriteSource);
+        Assert.Contains("_walkSurface(parent.Position, newX)", spriteSource);
+        Assert.Contains("SetWalkSurface", creatureSource);
+        Assert.Contains("ProjectWalkStep", worldSource);
+    }
+
+    [Fact]
+    public void StairsNode_OnlyCapturesCreaturesNearRampSurface()
+    {
+        string stairsSource = File.ReadAllText(RepoPath("src", "Godot", "StairsNode.cs"));
+
+        Assert.Contains("MathF.Abs(cn.Position.Y - expectedY)", stairsSource);
+        Assert.DoesNotContain("if (cn.Position.Y < expectedY - BelowTol) continue;", stairsSource);
+    }
 }

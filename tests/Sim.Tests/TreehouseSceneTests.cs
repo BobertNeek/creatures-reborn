@@ -55,8 +55,9 @@ public class TreehouseSceneTests
         string scene = File.ReadAllText(Path.GetFullPath(TreehouseScenePath));
 
         Assert.Contains("YLeft = 11.25", scene);
-        Assert.Contains("YLeft = 7.3", scene);
+        Assert.Contains("YLeft = 7.65", scene);
         Assert.Contains("YLeft = 3.35", scene);
+        Assert.DoesNotContain("YLeft = 7.3", scene);
         Assert.DoesNotContain("YLeft = 10.32", scene);
         Assert.DoesNotContain("YLeft = 5.80", scene);
         Assert.DoesNotContain("YLeft = 2.55", scene);
@@ -67,10 +68,10 @@ public class TreehouseSceneTests
     {
         string scene = File.ReadAllText(Path.GetFullPath(TreehouseScenePath));
 
-        AssertNodeSurface(scene, "FloorBottomLeftSlant", -19.8f, -13.3f, 4.25f, 7.3f);
-        AssertNodeSurface(scene, "StairBotMidToHammock", -19.8f, -13.3f, 4.25f, 7.3f);
-        AssertNodeSurface(scene, "FloorPond", 14.8f, 18.8f, 3.35f, 7.3f);
-        AssertNodeSurface(scene, "StairPondToAlchemyR", 14.8f, 18.8f, 3.35f, 7.3f);
+        AssertNodeSurface(scene, "FloorBottomLeftSlant", -19.8f, -13.3f, 4.25f, 7.65f);
+        AssertNodeSurface(scene, "StairBotMidToHammock", -19.8f, -13.3f, 4.25f, 7.65f);
+        AssertNodeSurface(scene, "FloorPond", 14.8f, 18.8f, 3.35f, 7.65f);
+        AssertNodeSurface(scene, "StairPondToAlchemyR", 14.8f, 18.8f, 3.35f, 7.65f);
         AssertNodeValue(scene, "FloorBottomLeftLow", "XRight", 14.8f);
     }
 

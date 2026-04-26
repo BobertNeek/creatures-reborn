@@ -71,13 +71,13 @@ YRight = 11.25
 ShowDebug = false
 DebugTint = Color(1, 1, 0.3, 0.55)
 
-; --- Upper-mid tier (y ≈ 7.5–9) --------------------------------------------
+; --- Upper-mid tier (y ≈ 7.6–9) --------------------------------------------
 [node name="FloorLibraryMidUpper" type="Node3D" parent="."]
 script = ExtResource("11_floor")
 XLeft = -19.4
 XRight = -13.3
-YLeft = 7.3
-YRight = 7.3
+YLeft = 7.65
+YRight = 7.65
 ShowDebug = false
 DebugTint = Color(0.5, 0.8, 1, 0.55)
 
@@ -85,18 +85,18 @@ DebugTint = Color(0.5, 0.8, 1, 0.55)
 script = ExtResource("11_floor")
 XLeft = -13.3
 XRight = -2.0
-YLeft = 7.3
-YRight = 7.3
+YLeft = 7.65
+YRight = 7.65
 ShowDebug = false
 DebugTint = Color(0.3, 1, 0.6, 0.55)
 
-; --- Mid tier (y ≈ 5.7–6) --------------------------------------------------
+; --- Mid tier (y ≈ 7.6–7.8) ------------------------------------------------
 [node name="FloorAlchemyMid" type="Node3D" parent="."]
 script = ExtResource("11_floor")
 XLeft = -2.0
 XRight = 8.0
-YLeft = 7.3
-YRight = 7.3
+YLeft = 7.65
+YRight = 7.65
 ShowDebug = false
 DebugTint = Color(0.5, 0.8, 1, 0.55)
 
@@ -104,8 +104,8 @@ DebugTint = Color(0.5, 0.8, 1, 0.55)
 script = ExtResource("11_floor")
 XLeft = 8.0
 XRight = 19.3
-YLeft = 7.3
-YRight = 7.3
+YLeft = 7.65
+YRight = 7.65
 ShowDebug = false
 DebugTint = Color(0.9, 0.5, 0.9, 0.55)
 
@@ -117,7 +117,7 @@ script = ExtResource("11_floor")
 XLeft = -19.8
 XRight = -13.3
 YLeft = 4.25
-YRight = 7.3
+YRight = 7.65
 ShowDebug = false
 DebugTint = Color(0.8, 0.7, 0.3, 0.55)
 
@@ -147,7 +147,7 @@ script = ExtResource("11_floor")
 XLeft = 14.8
 XRight = 18.8
 YLeft = 3.35
-YRight = 7.3
+YRight = 7.65
 ShowDebug = false
 DebugTint = Color(0.3, 0.6, 1, 0.55)
 
@@ -168,7 +168,7 @@ script = ExtResource("9_stairs")
 XLeft = -19.8
 XRight = -13.3
 YLeft = 4.25
-YRight = 7.3
+YRight = 7.65
 
 [node name="StairHammockToLibMid" type="Node3D" parent="."]
 script = ExtResource("9_stairs")
@@ -207,7 +207,7 @@ script = ExtResource("9_stairs")
 XLeft = 14.8
 XRight = 18.8
 YLeft = 3.35
-YRight = 7.3
+YRight = 7.65
 
 [node name="StairAlchemyRToStudy" type="Node3D" parent="."]
 script = ExtResource("9_stairs")
@@ -238,7 +238,7 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 3.55, 0)
 Sex = 1
 
 [node name="Norn2" parent="." instance=ExtResource("3_norn")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 6.7, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 6.95, 0)
 Sex = 2
 
 [node name="Incubator" type="Node3D" parent="."]
@@ -268,27 +268,27 @@ script = ExtResource("4_food")
 FoodKind = 2
 
 [node name="FoodLibraryMidUpper" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 7.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 7.85, 0)
 script = ExtResource("4_food")
 FoodKind = 1
 
 [node name="FoodCrystalShelf" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.5, 7.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.5, 7.85, 0)
 script = ExtResource("4_food")
 FoodKind = 1
 
 [node name="FoodAlchemy" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 7.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 7.85, 0)
 script = ExtResource("4_food")
 FoodKind = 2
 
 [node name="FoodHammock" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.5, 7.5, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -6.5, 7.85, 0)
 script = ExtResource("4_food")
 FoodKind = 0
 
 [node name="FoodBottomLeftSlant" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 6.7, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 6.95, 0)
 script = ExtResource("4_food")
 FoodKind = 2
 

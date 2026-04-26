@@ -41,10 +41,12 @@ public partial class NornBillboardSprite : Node3D
     private int   _walkDir;      // -1, 0, +1  set by CreatureNode
     private NornActionPose _actionPose = NornActionPose.Idle;
     private Func<float, float>? _clampX;  // room bounds clamper
+    private Func<Vector3, float, Vector3>? _walkSurface;
 
     public void SetWalkDirection(int dir) => _walkDir = dir;
     public void SetActionPose(NornActionPose pose) => _actionPose = pose;
     public void SetClampX(Func<float, float> clamp) => _clampX = clamp;
+    public void SetWalkSurface(Func<Vector3, float, Vector3> projectWalkStep) => _walkSurface = projectWalkStep;
 
     public override void _Ready()
     {
@@ -127,8 +129,15 @@ public partial class NornBillboardSprite : Node3D
             float moveSpeed = WalkCycleHz * 2f * StrideLength;
             float dx = _walkDir * moveSpeed * dt;
             float newX = parent.Position.X + dx;
-            if (_clampX != null) newX = _clampX(newX);
-            parent.Position = new Vector3(newX, parent.Position.Y, parent.Position.Z);
+            if (_walkSurface != null)
+            {
+                parent.Position = _walkSurface(parent.Position, newX);
+            }
+            else
+            {
+                if (_clampX != null) newX = _clampX(newX);
+                parent.Position = new Vector3(newX, parent.Position.Y, parent.Position.Z);
+            }
 
             _targetY = _walkDir > 0 ? 0f : 180f;
         }

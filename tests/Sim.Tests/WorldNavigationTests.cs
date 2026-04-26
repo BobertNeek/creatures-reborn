@@ -85,4 +85,47 @@ public class WorldNavigationTests
         Assert.Equal("connected", target.Value.Id);
         Assert.Same(connected, target.Value.Room);
     }
+
+    [Fact]
+    public void ProjectHorizontalStep_ClampsAtEndOfCurrentSurface()
+    {
+        var map = new GameMap();
+        var metaRoom = map.AddMetaRoom(0, 0, 40, 20, "test");
+        var ledge = map.AddRoom(metaRoom.Id, 0, 10, 8, 8, 5, 5);
+        map.AddRoom(metaRoom.Id, 20, 30, 8, 8, 5, 5);
+
+        var nav = new RoomNavigation(map);
+        var step = nav.ProjectHorizontalStep(9.8f, 5.0f, 10.4f);
+
+        Assert.NotNull(step);
+        Assert.Same(ledge, step.Value.Room);
+        Assert.Equal(10.0f, step.Value.X, precision: 3);
+        Assert.Equal(5.0f, step.Value.Y, precision: 3);
+    }
+
+    [Fact]
+    public void ProjectHorizontalStep_TransfersAcrossAdjacentRampSurfaces()
+    {
+        var map = new GameMap();
+        var metaRoom = map.AddMetaRoom(0, 0, 40, 20, "test");
+        var lower = map.AddRoom(metaRoom.Id, 0, 10, 5, 5, 1, 1);
+        var ramp = map.AddRoom(metaRoom.Id, 10, 14, 5, 9, 1, 5);
+        var upper = map.AddRoom(metaRoom.Id, 14, 20, 9, 9, 5, 5);
+        map.ConnectRooms(lower, ramp, RoomLinkKind.Stair, 10, 1, 10, 1);
+        map.ConnectRooms(ramp, upper, RoomLinkKind.Stair, 14, 5, 14, 5);
+
+        var nav = new RoomNavigation(map);
+        var rampStep = nav.ProjectHorizontalStep(9.9f, 1.0f, 10.2f);
+        var upperStep = nav.ProjectHorizontalStep(13.9f, 4.9f, 14.2f);
+
+        Assert.NotNull(rampStep);
+        Assert.Same(ramp, rampStep.Value.Room);
+        Assert.Equal(10.2f, rampStep.Value.X, precision: 3);
+        Assert.Equal(1.2f, rampStep.Value.Y, precision: 3);
+
+        Assert.NotNull(upperStep);
+        Assert.Same(upper, upperStep.Value.Room);
+        Assert.Equal(14.2f, upperStep.Value.X, precision: 3);
+        Assert.Equal(5.0f, upperStep.Value.Y, precision: 3);
+    }
 }

@@ -77,7 +77,9 @@ public partial class CreatureNode : Node3D
         var mm       = GetParent()?.GetNodeOrNull<MetaroomNode>("Metaroom");
         var colony   = GetParent()?.GetNodeOrNull<ColonyMetaroomNode>("Metaroom");
         var treehouse = GetParent()?.GetNodeOrNull<TreehouseMetaroomNode>("Metaroom");
-        if (mm != null && _sprite != null)
+        if (GetParent() is WorldNode worldNode && treehouse != null && _sprite != null)
+            _sprite.SetWalkSurface(worldNode.ProjectWalkStep);
+        else if (mm != null && _sprite != null)
             _sprite.SetClampX(x => mm.Sim.ClampX(x));
         else if (colony != null && _sprite != null)
             _sprite.SetClampX(x => colony.MetaRoom.ClampX(x));
