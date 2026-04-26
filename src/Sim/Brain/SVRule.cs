@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using CreaturesReborn.Sim.Biochemistry;
 using CreaturesReborn.Sim.Util;
 
@@ -108,6 +109,23 @@ public sealed class SVRule
 
     public void RegisterChemicals(float[] chemicals) => _chemicals = chemicals;
     public void RegisterRng(IRng rng) => _rng = rng;
+
+    public IReadOnlyList<SVRuleEntrySnapshot> DescribeEntries()
+    {
+        var entries = new List<SVRuleEntrySnapshot>(BrainConst.SVRuleLength);
+        for (int i = 0; i < BrainConst.SVRuleLength; i++)
+        {
+            Entry entry = _entries[i];
+            entries.Add(new(
+                i,
+                (Op)entry.OpCode,
+                (Operand)entry.OperandCode,
+                entry.ArrayIndex,
+                entry.FloatValue));
+        }
+
+        return entries;
+    }
 
     // -------------------------------------------------------------------------
     // InitFromGenome — mirrors c2e SVRule::InitFromGenome

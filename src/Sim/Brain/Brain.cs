@@ -18,7 +18,7 @@ using G = CreaturesReborn.Sim.Genome.Genome;
 public sealed class Brain : IBrainLocusProvider
 {
     // Hardcoded chemical indices (Brain.catalogue in c2e)
-    // Chemical 255 = instinct signal; 254 = pre-instinct signal (placeholder)
+    // Chemical 255 = instinct signal; 254 = pre-instinct signal reserved for pre-instinct state.
     private const int InstinctChemIndex    = 255;
     private const int PreInstinctChemIndex = 254;
 
@@ -178,6 +178,14 @@ public sealed class Brain : IBrainLocusProvider
         module.Initialise(this);
     }
 
+    public IReadOnlyList<BrainModuleDescriptor> GetModuleDescriptors()
+    {
+        var descriptors = new List<BrainModuleDescriptor>(_modules.Count);
+        foreach (IBrainModule module in _modules)
+            descriptors.Add(BrainModuleDescriptor.FromModule(module));
+        return descriptors;
+    }
+
     private bool IsLobeTokenShadowed(int token)
     {
         foreach (var m in _modules)
@@ -285,7 +293,7 @@ public sealed class Brain : IBrainLocusProvider
     /// <summary>
     /// Maps a script offset (verb/decision byte from instinct gene) to a neuron ID.
     /// In c2e this is done via script table lookup; here we pass through unchanged
-    /// as a placeholder — correct mapping requires the full CAOS script table.
+    /// as a temporary pass-through — correct mapping requires the full CAOS script table.
     /// </summary>
     public int GetNeuronIdFromScriptOffset(int scriptOffset) => scriptOffset;
 
@@ -298,6 +306,27 @@ public sealed class Brain : IBrainLocusProvider
     public Lobe? GetLobe(int index)
         => (uint)index < (uint)_lobes.Count ? _lobes[index] : null;
 
+    public BrainSnapshot CreateSnapshot()
+        => CreateSnapshot(new BrainSnapshotOptions());
+
+    public BrainSnapshot CreateSnapshot(BrainSnapshotOptions options)
+    {
+        var lobes = new List<LobeSnapshot>(_lobes.Count);
+        for (int i = 0; i < _lobes.Count; i++)
+            lobes.Add(_lobes[i].CreateSnapshot(i, options.MaxNeuronsPerLobe));
+
+        var tracts = new List<TractSnapshot>(_tracts.Count);
+        for (int i = 0; i < _tracts.Count; i++)
+            tracts.Add(_tracts[i].CreateSnapshot(i, options.MaxDendritesPerTract));
+
+        return new BrainSnapshot(
+            lobes,
+            tracts,
+            GetModuleDescriptors(),
+            _instincts.Count,
+            _processingInstincts);
+    }
+
     // -------------------------------------------------------------------------
     // Utility: pack a 4-char ASCII string into an int token (matches c2e TOKEN)
     // -------------------------------------------------------------------------
@@ -305,5 +334,15 @@ public sealed class Brain : IBrainLocusProvider
     {
         if (s.Length < 4) s = s.PadRight(4);
         return s[0] | (s[1] << 8) | (s[2] << 16) | (s[3] << 24);
+    }
+
+    public static string TokenToString(int token)
+    {
+        Span<char> chars = stackalloc char[4];
+        chars[0] = (char)(token & 0xFF);
+        chars[1] = (char)((token >> 8) & 0xFF);
+        chars[2] = (char)((token >> 16) & 0xFF);
+        chars[3] = (char)((token >> 24) & 0xFF);
+        return new string(chars).TrimEnd();
     }
 }

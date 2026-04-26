@@ -235,6 +235,36 @@ public sealed class Tract : BrainComponent
     // -------------------------------------------------------------------------
     public int DendriteCount => _dendrites.Count;
 
+    public TractSnapshot CreateSnapshot(int index, int maxDendrites)
+    {
+        int count = Math.Min(Math.Max(0, maxDendrites), _dendrites.Count);
+        var dendrites = new List<DendriteSnapshot>(count);
+        for (int i = 0; i < count; i++)
+        {
+            Dendrite dendrite = _dendrites[i];
+            var weights = new float[BrainConst.NumSVRuleVariables];
+            Array.Copy(dendrite.Weights, weights, weights.Length);
+            dendrites.Add(new(
+                dendrite.IdInList,
+                dendrite.SrcNeuron?.IdInList ?? -1,
+                dendrite.DstNeuron?.IdInList ?? -1,
+                weights));
+        }
+
+        int srcToken = _src.Lobe?.Token ?? 0;
+        int dstToken = _dst.Lobe?.Token ?? 0;
+        return new TractSnapshot(
+            index,
+            UpdateAtTime,
+            srcToken,
+            Brain.TokenToString(srcToken),
+            dstToken,
+            Brain.TokenToString(dstToken),
+            _dendrites.Count,
+            STtoLTRate,
+            dendrites);
+    }
+
     // -------------------------------------------------------------------------
     // Private: build dendrite list from genome parameters
     // -------------------------------------------------------------------------

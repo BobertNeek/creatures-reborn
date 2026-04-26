@@ -202,4 +202,28 @@ public sealed class Lobe : BrainComponent
         if ((uint)stateVar >= BrainConst.NumSVRuleVariables) return 0.0f;
         return _neurons[neuron].States[stateVar];
     }
+
+    public LobeSnapshot CreateSnapshot(int index, int maxNeurons)
+    {
+        int count = Math.Min(Math.Max(0, maxNeurons), _neurons.Count);
+        var neurons = new List<NeuronSnapshot>(count);
+        for (int i = 0; i < count; i++)
+        {
+            var states = new float[BrainConst.NumSVRuleVariables];
+            Array.Copy(_neurons[i].States, states, states.Length);
+            neurons.Add(new NeuronSnapshot(i, states));
+        }
+
+        return new LobeSnapshot(
+            index,
+            Token,
+            Brain.TokenToString(Token),
+            _tissueId,
+            Width,
+            Height,
+            UpdateAtTime,
+            _neurons.Count,
+            _winningNeuronId,
+            neurons);
+    }
 }
