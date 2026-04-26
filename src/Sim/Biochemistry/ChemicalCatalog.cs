@@ -54,6 +54,8 @@ public static class ChemicalCatalog
         Set(definitions, ChemID.Glucose, "glucose", "Glucose", ChemicalCategory.Energy, "#e6bf4a");
         Set(definitions, ChemID.Adipose, "adipose", "Adipose", ChemicalCategory.Storage, "#d79b4b");
         Set(definitions, ChemID.Muscle, "muscle", "Muscle", ChemicalCategory.Storage, "#c75f5f");
+        Set(definitions, ChemID.Air, "air", "Air", ChemicalCategory.Environment, "#91c7d9");
+        Set(definitions, ChemID.Oxygen, "oxygen", "Oxygen", ChemicalCategory.Energy, "#8ed0f0");
         Set(definitions, ChemID.Reward, "reward", "Reward", ChemicalCategory.Reinforcement, "#63b36c");
         Set(definitions, ChemID.Punishment, "punishment", "Punishment", ChemicalCategory.Reinforcement, "#bf5a5a");
         Set(definitions, ChemID.ReinforcementBase, "reinforcement_base", "Reinforcement Base", ChemicalCategory.Reinforcement, "#7892d4");
@@ -77,8 +79,28 @@ public static class ChemicalCatalog
         Set(definitions, ChemID.Tiredness, "tiredness", "Tiredness", ChemicalCategory.Drive, "#6f6f9e");
         Set(definitions, ChemID.Sleepiness, "sleepiness", "Sleepiness", ChemicalCategory.Drive, "#575791");
 
+        Set(definitions, ChemID.HeavyMetals, "heavy_metals", "Heavy Metals", ChemicalCategory.Toxin, "#787878");
+        Set(definitions, ChemID.Cyanide, "cyanide", "Cyanide", ChemicalCategory.Toxin, "#6d8a7e");
+        Set(definitions, ChemID.Belladonna, "belladonna", "Belladonna", ChemicalCategory.Toxin, "#795c8f");
+        Set(definitions, ChemID.Geddonase, "geddonase", "Geddonase", ChemicalCategory.Toxin, "#a36d45");
+        Set(definitions, ChemID.Glycotoxin, "glycotoxin", "Glycotoxin", ChemicalCategory.Toxin, "#8c8140");
+        Set(definitions, ChemID.SleepToxin, "sleep_toxin", "Sleep Toxin", ChemicalCategory.Toxin, "#6767a8");
+        Set(definitions, ChemID.FeverToxin, "fever_toxin", "Fever Toxin", ChemicalCategory.Toxin, "#c5634c");
+        Set(definitions, ChemID.HistamineA, "histamine_a", "Histamine A", ChemicalCategory.Toxin, "#bd7b6a");
+        Set(definitions, ChemID.HistamineB, "histamine_b", "Histamine B", ChemicalCategory.Toxin, "#bd8b6a");
+        Set(definitions, ChemID.Alcohol, "alcohol", "Alcohol", ChemicalCategory.Toxin, "#a5a45f");
+        Set(definitions, ChemID.AtpDecoupler, "atp_decoupler", "ATP Decoupler", ChemicalCategory.Toxin, "#9c4545");
+        Set(definitions, ChemID.CarbonMonoxide, "carbon_monoxide", "Carbon Monoxide", ChemicalCategory.Toxin, "#6d6d75");
+        Set(definitions, ChemID.FearToxin, "fear_toxin", "Fear Toxin", ChemicalCategory.Toxin, "#7f674e");
+        Set(definitions, ChemID.MuscleToxin, "muscle_toxin", "Muscle Toxin", ChemicalCategory.Toxin, "#9b4d4d");
+
         for (int i = ChemID.FirstAntigen; i <= ChemID.LastAntigen; i++)
             Set(definitions, i, $"antigen{i - ChemID.FirstAntigen}", $"Antigen {i - ChemID.FirstAntigen}", ChemicalCategory.Immune, "#6aaf8d");
+
+        Set(definitions, ChemID.Wounded, "wounded", "Wounded", ChemicalCategory.Injury, "#9f3838");
+
+        for (int i = ChemID.FirstAntibody; i <= ChemID.LastAntibody; i++)
+            Set(definitions, i, $"antibody{i - ChemID.FirstAntibody}", $"Antibody {i - ChemID.FirstAntibody}", ChemicalCategory.Immune, "#5d9fc0");
 
         for (int i = ChemID.FirstSmell; i < definitions.Length; i++)
             definitions[i] = definitions[i] with { Category = ChemicalCategory.Smell, DebugColor = "#68a86e" };

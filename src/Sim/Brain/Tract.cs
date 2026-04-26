@@ -170,6 +170,9 @@ public sealed class Tract : BrainComponent
     // DoUpdate — migrate, fire update rule, reward/punish, track weak dendrites
     // -------------------------------------------------------------------------
     public override void DoUpdate()
+        => DoUpdate(trace: null, tick: 0);
+
+    public void DoUpdate(LearningTrace? trace, int tick)
     {
         if (UpdateAtTime == 0) return;
 
@@ -195,7 +198,7 @@ public sealed class Tract : BrainComponent
                 srcStates, d.Weights, dstStates, spareStates,
                 srcId, dstId, this);
 
-            ProcessRewardAndPunishment(d);
+            ProcessRewardAndPunishment(d, trace, tick);
 
             if (_randomConnectAndMigrate)
                 UpdateWeakDendritesList(d);
@@ -367,19 +370,50 @@ public sealed class Tract : BrainComponent
     // -------------------------------------------------------------------------
     // Reward/Punishment
     // -------------------------------------------------------------------------
-    private void ProcessRewardAndPunishment(Dendrite d)
+    private void ProcessRewardAndPunishment(Dendrite d, LearningTrace? trace, int tick)
     {
         if (!Reward.IsSupported() && !Punishment.IsSupported()) return;
         if (d.DstNeuron == null) return;
         if (d.DstNeuron.States[NeuronVar.Output] == 0.0f) return;
 
         if (Reward.IsSupported() && _chemicals != null)
-            Reward.ReinforceAVariable(_chemicals[Reward.GetChemIndex()],
-                ref d.Weights[DendriteVar.WeightST]);
+            ApplyReinforcement(d, trace, tick, Reward, ReinforcementKind.Reward);
 
         if (Punishment.IsSupported() && _chemicals != null)
-            Punishment.ReinforceAVariable(_chemicals[Punishment.GetChemIndex()],
-                ref d.Weights[DendriteVar.WeightST]);
+            ApplyReinforcement(d, trace, tick, Punishment, ReinforcementKind.Punishment);
+    }
+
+    private void ApplyReinforcement(
+        Dendrite dendrite,
+        LearningTrace? trace,
+        int tick,
+        ReinforcementDetails details,
+        ReinforcementKind kind)
+    {
+        if (_chemicals == null)
+            return;
+
+        int chemicalId = details.GetChemIndex();
+        float level = _chemicals[chemicalId];
+        float before = dendrite.Weights[DendriteVar.WeightST];
+        details.ReinforceAVariable(level, ref dendrite.Weights[DendriteVar.WeightST]);
+        float after = dendrite.Weights[DendriteVar.WeightST];
+        if (trace == null || before == after)
+            return;
+
+        trace.RecordReinforcement(new ReinforcementTrace(
+            Tick: tick,
+            TractIndex: IdInList,
+            ChemicalId: chemicalId,
+            Level: level,
+            BeforeWeight: before,
+            AfterWeight: after,
+            Kind: kind)
+        {
+            DendriteId = dendrite.IdInList,
+            SourceNeuronId = dendrite.SrcNeuron?.IdInList ?? -1,
+            DestinationNeuronId = dendrite.DstNeuron?.IdInList ?? -1,
+        });
     }
 
     // -------------------------------------------------------------------------

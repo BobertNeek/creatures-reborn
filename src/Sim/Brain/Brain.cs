@@ -43,6 +43,7 @@ public sealed class Brain : IBrainLocusProvider
     // Instinct control
     // -------------------------------------------------------------------------
     private bool _processingInstincts;
+    private int _updateTick;
 
     // -------------------------------------------------------------------------
     // ReadFromGenome — mirroring Brain.cpp:77-158
@@ -126,10 +127,14 @@ public sealed class Brain : IBrainLocusProvider
     // Update — normal or instinct-processing tick
     // -------------------------------------------------------------------------
     public void Update()
+        => Update(null);
+
+    public void Update(LearningTrace? trace)
     {
         if (!_processingInstincts)
         {
-            UpdateComponents();
+            UpdateComponents(trace);
+            _updateTick++;
             return;
         }
 
@@ -137,25 +142,39 @@ public sealed class Brain : IBrainLocusProvider
         if (_instincts.Count > 0)
         {
             Instinct inst = _instincts[_instincts.Count - 1];
+            int remainingBefore = _instincts.Count;
             if (inst.Process())
             {
                 _instincts.RemoveAt(_instincts.Count - 1);
+                trace?.RecordInstinct(new InstinctTrace(_updateTick, remainingBefore - 1, Fired: true));
             }
+            else
+            {
+                trace?.RecordInstinct(new InstinctTrace(_updateTick, remainingBefore, Fired: false));
+            }
+            _updateTick++;
             return;
         }
 
         // No instincts left — back to normal
         _processingInstincts = false;
+        _updateTick++;
     }
 
     public void UpdateComponents()
+        => UpdateComponents(null);
+
+    public void UpdateComponents(LearningTrace? trace)
     {
         foreach (var c in _components)
         {
             // If a registered module shadows this lobe, skip the SVRule update.
             if (c is Lobe lobe && IsLobeTokenShadowed(lobe.Token))
                 continue;
-            c.DoUpdate();
+            if (c is Tract tract)
+                tract.DoUpdate(trace, _updateTick);
+            else
+                c.DoUpdate();
         }
 
         // Run plugged-in modules (after default lobe stack, or as shadow replacements).
@@ -259,6 +278,38 @@ public sealed class Brain : IBrainLocusProvider
     public int GetWinningIdByToken(int lobeToken)
         => GetWinningId(lobeToken);
 
+    public float GetChemicalLevel(int chemicalId)
+    {
+        if (_chemicals == null || (uint)chemicalId >= (uint)_chemicals.Length)
+            return 0.0f;
+        return _chemicals[chemicalId];
+    }
+
+    public float ReadPort(BrainPort port)
+    {
+        if (port.Kind == BrainPortKind.Chemical)
+            return port.Index.HasValue ? GetChemicalLevel(port.Index.Value) : 0.0f;
+
+        if (!port.LobeToken.HasValue)
+            return 0.0f;
+
+        Lobe? lobe = GetLobeFromToken(port.LobeToken.Value);
+        if (lobe == null)
+            return 0.0f;
+
+        if (port.Kind == BrainPortKind.Motor)
+            return GetWinningId(port.LobeToken.Value);
+
+        int index = port.Index ?? 0;
+        return port.Kind switch
+        {
+            BrainPortKind.Drive => lobe.GetNeuronState(index, NeuronVar.State),
+            BrainPortKind.LobeInput => lobe.GetNeuronState(index, NeuronVar.Input),
+            BrainPortKind.LobeOutput => lobe.GetNeuronState(index, NeuronVar.Output),
+            _ => 0.0f,
+        };
+    }
+
     public void ClearActivity()
     {
         foreach (Lobe lobe in _lobes)
@@ -306,6 +357,12 @@ public sealed class Brain : IBrainLocusProvider
     public Lobe? GetLobe(int index)
         => (uint)index < (uint)_lobes.Count ? _lobes[index] : null;
 
+    public Lobe? GetLobeByToken(int token)
+        => GetLobeFromToken(token);
+
+    public Tract? GetTract(int index)
+        => (uint)index < (uint)_tracts.Count ? _tracts[index] : null;
+
     public BrainSnapshot CreateSnapshot()
         => CreateSnapshot(new BrainSnapshotOptions());
 
@@ -319,10 +376,18 @@ public sealed class Brain : IBrainLocusProvider
         for (int i = 0; i < _tracts.Count; i++)
             tracts.Add(_tracts[i].CreateSnapshot(i, options.MaxDendritesPerTract));
 
+        var moduleSnapshots = new List<BrainModuleSnapshot>();
+        foreach (IBrainModule module in _modules)
+        {
+            if (module is IBrainModuleSnapshotProvider provider)
+                moduleSnapshots.Add(provider.CreateModuleSnapshot());
+        }
+
         return new BrainSnapshot(
             lobes,
             tracts,
             GetModuleDescriptors(),
+            moduleSnapshots,
             _instincts.Count,
             _processingInstincts);
     }

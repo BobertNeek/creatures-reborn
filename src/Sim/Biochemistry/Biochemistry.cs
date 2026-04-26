@@ -40,6 +40,14 @@ public sealed class Biochemistry
     private const float TemperaturePunishmentRate = 0.045f;
     private const float RadiationPunishmentRate = 0.050f;
     private const float RadiationFearRate = 0.040f;
+    private const float AirQualitySuffocationThreshold = 0.350f;
+    private const float OxygenStressThreshold = 0.250f;
+    private const float AirQualityAdjustmentRate = 0.180f;
+    private const float AntibodyNeutralizeRate = 0.045f;
+    private const float AntibodyAutoResponseRate = 0.010f;
+    private const float AntigenSideEffectRate = 0.020f;
+    private const float ToxinEffectRate = 0.050f;
+    private const float ToxinOrganStressRate = 0.006f;
 
     // -------------------------------------------------------------------------
     // State
@@ -59,6 +67,8 @@ public sealed class Biochemistry
         new FloatLocus[(int)CreatureTissue.Count, BiochemConst.MAX_LOCI_PER_TISSUE];
 
     private BiochemistryTrace? _activeTrace;
+    private bool _respirationSignalActive;
+    private float _lastAirQuality = 1.0f;
 
     /// <summary>
     /// Pluggable brain locus provider.  Set this when the Brain is constructed so that
@@ -86,6 +96,8 @@ public sealed class Biochemistry
         // LOC_CONST (sensorimotor tissue) must always be 1.0 — it's a constant signal source.
         if (SensorimotorEmitterLocus.Const < BiochemConst.MAX_LOCI_PER_TISSUE)
             _creatureLoci[(int)CreatureTissue.Sensorimotor, SensorimotorEmitterLocus.Const].Value = 1.0f;
+        if (SensorimotorEmitterLocus.AirQuality < BiochemConst.MAX_LOCI_PER_TISSUE)
+            _creatureLoci[(int)CreatureTissue.Sensorimotor, SensorimotorEmitterLocus.AirQuality].Value = 1.0f;
 
         for (int i = 0; i < BiochemConst.MAX_NEUROEMITTERS; i++)
             _neuroEmitters[i] = new NeuroEmitter();
@@ -227,6 +239,48 @@ public sealed class Biochemistry
         }
     }
 
+    public float ApplyAirQuality(float airQuality, BiochemistryTrace? trace = null)
+    {
+        _respirationSignalActive = true;
+        airQuality = Math.Clamp(airQuality, 0.0f, 1.0f);
+        _lastAirQuality = airQuality;
+        SetCreatureLocusValue((int)CreatureTissue.Sensorimotor, SensorimotorEmitterLocus.AirQuality, airQuality);
+
+        AdjustChemicalToward(
+            ChemID.Air,
+            airQuality,
+            AirQualityAdjustmentRate,
+            "respiration:air-quality",
+            trace,
+            ChemicalDeltaSource.Respiration);
+        AdjustChemicalToward(
+            ChemID.Oxygen,
+            airQuality,
+            AirQualityAdjustmentRate,
+            "respiration:oxygen-availability",
+            trace,
+            ChemicalDeltaSource.Respiration);
+
+        float suffocation = AirQualitySuffocation(airQuality);
+        if (suffocation > 0.00001f)
+        {
+            AddChemical(
+                ChemID.Punishment,
+                suffocation * 0.035f,
+                ChemicalDeltaSource.Respiration,
+                "respiration:low-air-punishment",
+                trace);
+            AddChemical(
+                ChemID.Fear,
+                suffocation * 0.025f,
+                ChemicalDeltaSource.Respiration,
+                "respiration:low-air-fear",
+                trace);
+        }
+
+        return suffocation;
+    }
+
     private void RecordDelta(
         int chem,
         float before,
@@ -258,17 +312,18 @@ public sealed class Biochemistry
         float target,
         float maxStep,
         string detail,
-        BiochemistryTrace? trace)
+        BiochemistryTrace? trace,
+        ChemicalDeltaSource source = ChemicalDeltaSource.Environment)
     {
         float current = _chemConcs[chem];
         float delta = Math.Clamp(target - current, -maxStep, maxStep);
         if (delta > 0.00001f)
         {
-            AddChemical(chem, delta, ChemicalDeltaSource.Environment, detail, trace);
+            AddChemical(chem, delta, source, detail, trace);
         }
         else if (delta < -0.00001f)
         {
-            SubChemical(chem, -delta, ChemicalDeltaSource.Environment, detail, trace);
+            SubChemical(chem, -delta, source, detail, trace);
         }
     }
 
@@ -510,13 +565,16 @@ public sealed class Biochemistry
             RecordDelta(i, before, after - before, after, ChemicalDeltaSource.HalfLifeDecay, "half-life decay", null);
         }
 
-        // 4. Core metabolism: stores drive hunger and can buffer low ATP.
+        // 4. Respiration, immune, and toxin hooks perturb core chemistry.
+        UpdateRespirationImmuneAndToxinHooks();
+
+        // 5. Core metabolism: stores drive hunger and can buffer low ATP.
         UpdateHungerAndEnergyMetabolism();
 
-        // 5. Fatigue and sleep pressure are derived from chemistry.
+        // 6. Fatigue and sleep pressure are derived from chemistry.
         UpdateFatigueAndSleep();
 
-        // 6. Pain reflects injury, while energy and endorphins support recovery.
+        // 7. Pain reflects injury, while energy and endorphins support recovery.
         UpdatePainInjuryAndRecovery();
         }
         finally
@@ -524,6 +582,176 @@ public sealed class Biochemistry
             _activeTrace = previousTrace;
         }
     }
+
+    private void UpdateRespirationImmuneAndToxinHooks()
+    {
+        UpdateRespirationHooks();
+        UpdateImmuneHooks();
+        UpdateToxinHooks();
+    }
+
+    private void UpdateRespirationHooks()
+    {
+        bool hasRespirationChemistry =
+            _respirationSignalActive ||
+            _chemConcs[ChemID.Air] > 0.00001f ||
+            _chemConcs[ChemID.Oxygen] > 0.00001f ||
+            _chemConcs[ChemID.CarbonMonoxide] > 0.00001f;
+        if (!hasRespirationChemistry)
+            return;
+
+        float airQuality = _respirationSignalActive
+            ? _lastAirQuality
+            : _creatureLoci[(int)CreatureTissue.Sensorimotor, SensorimotorEmitterLocus.AirQuality].Value;
+        if (_respirationSignalActive)
+            SetCreatureLocusValue((int)CreatureTissue.Sensorimotor, SensorimotorEmitterLocus.AirQuality, airQuality);
+
+        float suffocation = AirQualitySuffocation(airQuality);
+        float oxygenDeficit = Math.Clamp(OxygenStressThreshold - _chemConcs[ChemID.Oxygen], 0.0f, OxygenStressThreshold);
+        float stress = Math.Max(suffocation, oxygenDeficit / OxygenStressThreshold);
+        if (stress <= 0.00001f)
+            return;
+
+        float atpDrain = Math.Min(_chemConcs[ChemID.ATP], stress * 0.035f);
+        if (atpDrain > 0.00001f)
+        {
+            SubChemical(ChemID.ATP, atpDrain, ChemicalDeltaSource.Respiration, "respiration:oxygen-atp-drain");
+            AddChemical(ChemID.ADP, atpDrain, ChemicalDeltaSource.Respiration, "respiration:oxygen-adp-output");
+        }
+
+        AddChemical(ChemID.Punishment, stress * 0.020f, ChemicalDeltaSource.Respiration, "respiration:suffocation-punishment");
+    }
+
+    private void UpdateImmuneHooks()
+    {
+        for (int i = 0; i <= ChemID.LastAntigen - ChemID.FirstAntigen; i++)
+        {
+            int antigen = ChemID.FirstAntigen + i;
+            int antibody = ChemID.FirstAntibody + i;
+            float antigenLevel = _chemConcs[antigen];
+            if (antigenLevel <= 0.00001f)
+                continue;
+
+            AddChemical(
+                antibody,
+                antigenLevel * AntibodyAutoResponseRate,
+                ChemicalDeltaSource.Immune,
+                $"immune:antibody:{i}:auto-response");
+
+            float antibodyLevel = _chemConcs[antibody];
+            float neutralized = Math.Min(Math.Min(antigenLevel, antibodyLevel), AntibodyNeutralizeRate);
+            if (neutralized > 0.00001f)
+            {
+                SubChemical(antigen, neutralized, ChemicalDeltaSource.Immune, $"immune:antigen:{i}:neutralized");
+                SubChemical(antibody, neutralized, ChemicalDeltaSource.Immune, $"immune:antibody:{i}:spent");
+            }
+
+            ApplyAntigenSideEffect(i, antigenLevel);
+        }
+    }
+
+    private void ApplyAntigenSideEffect(int antigenIndex, float antigenLevel)
+    {
+        float amount = Math.Min(0.025f, antigenLevel * AntigenSideEffectRate);
+        if (amount <= 0.00001f)
+            return;
+
+        switch (antigenIndex)
+        {
+            case 0:
+                AddChemical(ChemID.HistamineB, amount, ChemicalDeltaSource.Immune, "immune:antigen0:histamine-b");
+                break;
+            case 1:
+                AddChemical(ChemID.HistamineA, amount, ChemicalDeltaSource.Immune, "immune:antigen1:histamine-a");
+                break;
+            case 2:
+            case 3:
+                AddChemical(ChemID.Coldness, amount, ChemicalDeltaSource.Immune, $"immune:antigen{antigenIndex}:coldness");
+                break;
+            case 4:
+            case 6:
+                AddChemical(ChemID.Hotness, amount, ChemicalDeltaSource.Immune, $"immune:antigen{antigenIndex}:hotness");
+                break;
+            case 5:
+                AddChemical(ChemID.Wounded, amount, ChemicalDeltaSource.Immune, "immune:antigen5:wounded");
+                break;
+            case 7:
+                AddChemical(ChemID.Pain, amount, ChemicalDeltaSource.Immune, "immune:antigen7:pain");
+                break;
+        }
+    }
+
+    private void UpdateToxinHooks()
+    {
+        TransferChemical(ChemID.ATP, ChemID.ADP, _chemConcs[ChemID.AtpDecoupler] * ToxinEffectRate,
+            "toxin:atp-decoupler");
+        SubChemicalBounded(ChemID.Oxygen, _chemConcs[ChemID.CarbonMonoxide] * ToxinEffectRate,
+            "toxin:carbon-monoxide:oxygen");
+        TransferChemical(ChemID.ATP, ChemID.ADP, _chemConcs[ChemID.Cyanide] * 0.025f,
+            "toxin:cyanide:energy-block");
+        SubChemicalBounded(ChemID.Glycogen, _chemConcs[ChemID.Glycotoxin] * ToxinEffectRate,
+            "toxin:glycotoxin:glycogen");
+        SubChemicalBounded(ChemID.Adipose, _chemConcs[ChemID.Geddonase] * ToxinEffectRate,
+            "toxin:geddonase:adipose");
+        SubChemicalBounded(ChemID.Muscle, _chemConcs[ChemID.MuscleToxin] * ToxinEffectRate,
+            "toxin:muscle-toxin:muscle");
+
+        AddToxinEffect(ChemID.Sleepiness, _chemConcs[ChemID.SleepToxin] * 0.040f,
+            "toxin:sleep-toxin:sleepiness");
+        AddToxinEffect(ChemID.Hotness, _chemConcs[ChemID.FeverToxin] * 0.040f,
+            "toxin:fever-toxin:hotness");
+        AddToxinEffect(ChemID.Fear, _chemConcs[ChemID.FearToxin] * 0.045f,
+            "toxin:fear-toxin:fear");
+        AddToxinEffect(ChemID.Injury, _chemConcs[ChemID.Wounded] * 0.055f,
+            "toxin:wounded:injury");
+
+        float toxicLoad = 0.0f;
+        for (int chem = ChemID.FirstToxin; chem <= ChemID.LastToxin; chem++)
+            toxicLoad += _chemConcs[chem];
+        toxicLoad += _chemConcs[ChemID.Wounded];
+
+        float injury = Math.Min(0.050f, toxicLoad * ToxinOrganStressRate);
+        if (injury <= 0.00001f)
+            return;
+
+        AddChemical(ChemID.Injury, injury, ChemicalDeltaSource.Toxin, "toxin:organ-stress");
+        for (int i = 0; i < _numOrgans; i++)
+        {
+            _organs[i].LocInjuryToApply.Value = Math.Clamp(
+                _organs[i].LocInjuryToApply.Value + injury * 0.5f,
+                0.0f,
+                1.0f);
+        }
+    }
+
+    private void TransferChemical(int fromChem, int toChem, float amount, string detail)
+    {
+        amount = Math.Min(_chemConcs[fromChem], Math.Clamp(amount, 0.0f, 1.0f));
+        if (amount <= 0.00001f)
+            return;
+
+        SubChemical(fromChem, amount, ChemicalDeltaSource.Toxin, detail);
+        AddChemical(toChem, amount, ChemicalDeltaSource.Toxin, detail);
+    }
+
+    private void SubChemicalBounded(int chem, float amount, string detail)
+    {
+        amount = Math.Min(_chemConcs[chem], Math.Clamp(amount, 0.0f, 1.0f));
+        if (amount > 0.00001f)
+            SubChemical(chem, amount, ChemicalDeltaSource.Toxin, detail);
+    }
+
+    private void AddToxinEffect(int chem, float amount, string detail)
+    {
+        amount = Math.Clamp(amount, 0.0f, 1.0f);
+        if (amount > 0.00001f)
+            AddChemical(chem, amount, ChemicalDeltaSource.Toxin, detail);
+    }
+
+    private static float AirQualitySuffocation(float airQuality)
+        => airQuality < AirQualitySuffocationThreshold
+            ? Math.Clamp((AirQualitySuffocationThreshold - airQuality) / AirQualitySuffocationThreshold, 0.0f, 1.0f)
+            : 0.0f;
 
     private void UpdateHungerAndEnergyMetabolism()
     {

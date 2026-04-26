@@ -15,7 +15,12 @@ public sealed record ReinforcementTrace(
     float Level,
     float BeforeWeight,
     float AfterWeight,
-    ReinforcementKind Kind);
+    ReinforcementKind Kind)
+{
+    public int DendriteId { get; init; } = -1;
+    public int SourceNeuronId { get; init; } = -1;
+    public int DestinationNeuronId { get; init; } = -1;
+}
 
 public sealed record InstinctTrace(int Tick, int RemainingInstincts, bool Fired);
 
