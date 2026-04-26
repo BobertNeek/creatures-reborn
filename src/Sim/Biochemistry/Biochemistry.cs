@@ -36,6 +36,10 @@ public sealed class Biochemistry
     private const float PainFromInjuryRate = 0.050f;
     private const float MaxPainFromInjuryPerTick = 0.040f;
     private const float BasePainRecovery = 0.035f;
+    private const float EnvironmentAdjustmentRate = 0.120f;
+    private const float TemperaturePunishmentRate = 0.045f;
+    private const float RadiationPunishmentRate = 0.050f;
+    private const float RadiationFearRate = 0.040f;
 
     // -------------------------------------------------------------------------
     // State
@@ -162,6 +166,67 @@ public sealed class Biochemistry
         return trace;
     }
 
+    public void ApplyEnvironmentSignals(
+        float hotness,
+        float coldness,
+        float light,
+        float radiation,
+        float comfortNeed,
+        float stress,
+        BiochemistryTrace? trace = null)
+    {
+        hotness = Math.Clamp(hotness, 0.0f, 1.0f);
+        coldness = Math.Clamp(coldness, 0.0f, 1.0f);
+        light = Math.Clamp(light, 0.0f, 1.0f);
+        radiation = Math.Clamp(radiation, 0.0f, 1.0f);
+        comfortNeed = Math.Clamp(comfortNeed, 0.0f, 1.0f);
+        stress = Math.Clamp(stress, 0.0f, 1.0f);
+
+        SetCreatureLocusValue((int)CreatureTissue.Sensorimotor, SensorimotorEmitterLocus.Coldness, coldness);
+        SetCreatureLocusValue((int)CreatureTissue.Sensorimotor, SensorimotorEmitterLocus.Hotness, hotness);
+        SetCreatureLocusValue((int)CreatureTissue.Sensorimotor, SensorimotorEmitterLocus.LightLevel, light);
+        SetCreatureLocusValue((int)CreatureTissue.Sensorimotor, SensorimotorEmitterLocus.Radiation, radiation);
+
+        AdjustChemicalToward(
+            ChemID.Hotness,
+            hotness,
+            EnvironmentAdjustmentRate,
+            "environment:temperature:hotness",
+            trace);
+        AdjustChemicalToward(
+            ChemID.Coldness,
+            coldness,
+            EnvironmentAdjustmentRate,
+            "environment:temperature:coldness",
+            trace);
+
+        if (comfortNeed > 0.00001f)
+        {
+            AddChemical(
+                ChemID.Punishment,
+                comfortNeed * TemperaturePunishmentRate,
+                ChemicalDeltaSource.Environment,
+                "environment:temperature:punishment",
+                trace);
+        }
+
+        if (stress > 0.00001f)
+        {
+            AddChemical(
+                ChemID.Punishment,
+                stress * RadiationPunishmentRate,
+                ChemicalDeltaSource.Environment,
+                "environment:radiation:punishment",
+                trace);
+            AddChemical(
+                ChemID.Fear,
+                stress * RadiationFearRate,
+                ChemicalDeltaSource.Environment,
+                "environment:radiation:fear",
+                trace);
+        }
+    }
+
     private void RecordDelta(
         int chem,
         float before,
@@ -177,6 +242,35 @@ public sealed class Biochemistry
     /// Used by <c>Creature</c> to pass the same array to <c>Brain.RegisterBiochemistry</c>.
     /// </summary>
     internal float[] GetChemicalArray() => _chemConcs;
+
+    private void SetCreatureLocusValue(int tissue, int locus, float value)
+    {
+        if ((uint)tissue >= (uint)(int)CreatureTissue.Count)
+            return;
+        if ((uint)locus >= (uint)BiochemConst.MAX_LOCI_PER_TISSUE)
+            return;
+
+        _creatureLoci[tissue, locus].Value = Math.Clamp(value, 0.0f, 1.0f);
+    }
+
+    private void AdjustChemicalToward(
+        int chem,
+        float target,
+        float maxStep,
+        string detail,
+        BiochemistryTrace? trace)
+    {
+        float current = _chemConcs[chem];
+        float delta = Math.Clamp(target - current, -maxStep, maxStep);
+        if (delta > 0.00001f)
+        {
+            AddChemical(chem, delta, ChemicalDeltaSource.Environment, detail, trace);
+        }
+        else if (delta < -0.00001f)
+        {
+            SubChemical(chem, -delta, ChemicalDeltaSource.Environment, detail, trace);
+        }
+    }
 
     // -------------------------------------------------------------------------
     // Organ access

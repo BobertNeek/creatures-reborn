@@ -4,6 +4,7 @@ using CreaturesReborn.Sim.Brain;
 using CreaturesReborn.Sim.Formats;
 using CreaturesReborn.Sim.Genome;
 using CreaturesReborn.Sim.Util;
+using CreaturesReborn.Sim.World;
 
 namespace CreaturesReborn.Sim.Creature;
 
@@ -171,6 +172,31 @@ public sealed class Creature
 
     public void InjectChemical(int idx, float amount)
         => Biochemistry.AddChemical(idx, amount);
+
+    public CreatureEnvironmentResponse ApplyEnvironment(Room room, BiochemistryTrace? trace = null)
+        => ApplyEnvironment(CreatureEnvironmentContext.FromRoom(room), trace);
+
+    public CreatureEnvironmentResponse ApplyEnvironment(
+        CreatureEnvironmentContext context,
+        BiochemistryTrace? trace = null)
+    {
+        CreatureEnvironmentResponse response = CreatureEnvironmentEffects.Evaluate(context);
+        Biochemistry.ApplyEnvironmentSignals(
+            response.Hotness,
+            response.Coldness,
+            response.Light,
+            response.Radiation,
+            response.ComfortNeed,
+            response.Stress,
+            trace);
+
+        AddDriveInput(DriveId.Hotness, response.Hotness);
+        AddDriveInput(DriveId.Coldness, response.Coldness);
+        AddDriveInput(DriveId.Comfort, response.ComfortNeed);
+        AddDriveInput(DriveId.Fear, response.Stress);
+
+        return response;
+    }
 
     // -------------------------------------------------------------------------
     // Drive level readout

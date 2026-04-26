@@ -19,7 +19,8 @@ public enum ChemicalDeltaSource
     CreatureInjection,
     Metabolism,
     Fatigue,
-    InjuryRecovery
+    InjuryRecovery,
+    Environment
 }
 
 public sealed record ChemicalDelta(
