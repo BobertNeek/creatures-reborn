@@ -102,11 +102,65 @@ public sealed class Creature
     /// </summary>
     public void Tick()
     {
+        TickInternal(collector: null);
+    }
+
+    public CreatureTickTrace Tick(CreatureTraceOptions options)
+    {
+        var collector = new CreatureTraceCollector(options);
+        TickInternal(collector);
+        return collector.Trace;
+    }
+
+    private void TickInternal(CreatureTraceCollector? collector)
+    {
+        if (collector != null)
+        {
+            collector.Trace.AgeBefore = Genome.Age;
+            collector.Record(CreatureTickStage.Context, "Begin creature tick.");
+        }
+
         FeedDriveInputs();
-        Biochemistry.Update();
+        collector?.Record(CreatureTickStage.Drives, "Copied creature drive loci into brain drive inputs.");
+
+        BiochemistryTrace? biochemistryTrace = collector?.Options.IncludeBiochemistryTrace == true
+            ? new BiochemistryTrace()
+            : null;
+        Biochemistry.Update(biochemistryTrace);
+        if (collector != null)
+        {
+            collector.Trace.Biochemistry = biochemistryTrace;
+            collector.Record(CreatureTickStage.Biochemistry, "Updated neuroemitters, organs, and chemical half-lives.");
+        }
+
+        if (collector?.Options.IncludeBrainSnapshot == true)
+            collector.Trace.BrainBefore = Brain.CreateSnapshot();
+
         Brain.Update();
+        if (collector != null)
+        {
+            if (collector.Options.IncludeBrainSnapshot)
+                collector.Trace.BrainAfter = Brain.CreateSnapshot();
+            collector.Record(CreatureTickStage.Brain, "Updated brain lobes, tracts, instincts, and modules.");
+            collector.Record(CreatureTickStage.Learning, "Learning signals are available through brain and biochemistry traces when enabled.");
+        }
+
         Motor.Resolve();
+        if (collector != null)
+        {
+            collector.Trace.MotorVerb = Motor.CurrentVerb;
+            collector.Trace.MotorNoun = Motor.CurrentNoun;
+            collector.Record(CreatureTickStage.Motor, "Resolved motor verb, noun, gait, and pose from brain outputs.");
+            collector.Record(CreatureTickStage.Action, "Action application is handled by caller-facing world/Godot layers.");
+            collector.Record(CreatureTickStage.Reproduction, "Reproduction state is unchanged by core tick unless external systems invoke it.");
+        }
+
         AdvanceAge(1);
+        if (collector != null)
+        {
+            collector.Trace.AgeAfter = Genome.Age;
+            collector.Record(CreatureTickStage.Age, "Advanced age accumulator by one tick.");
+        }
     }
 
     // -------------------------------------------------------------------------
