@@ -50,7 +50,7 @@ public partial class NornBillboardSprite : Node3D
 
     public override void _Ready()
     {
-        _model = UseProceduralModel ? NornModelFactory.Create() : LoadLegacyGlbModel();
+        _model = ShouldUseProceduralModel() ? NornModelFactory.Create() : LoadLegacyGlbModel();
         if (_model == null) return;
         if (_model.GetParent() == null)
             AddChild(_model);
@@ -80,6 +80,12 @@ public partial class NornBillboardSprite : Node3D
         _baseScales = NornAppearanceApplier.CaptureBaseScales(_model);
         ApplyDefaultTextures();
     }
+
+    private bool ShouldUseProceduralModel()
+        => UseProceduralModel || IsHeadlessDisplay();
+
+    private static bool IsHeadlessDisplay()
+        => string.Equals(DisplayServer.GetName(), "headless", StringComparison.OrdinalIgnoreCase);
 
     private Node3D? LoadLegacyGlbModel()
     {

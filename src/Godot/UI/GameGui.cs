@@ -188,11 +188,11 @@ public partial class GameGui : Control
     private void BuildActionBar()
     {
         _actionBar = MakePanel(new Vector2(0, 0), new Vector2(400, 50));
-        _actionBar.SetAnchorsPreset(LayoutPreset.BottomWide);
-        _actionBar.Position = new Vector2(0, -55);
-        _actionBar.Size = new Vector2(0, 50);
         _actionBar.SetAnchorsAndOffsetsPreset(LayoutPreset.BottomWide);
+        _actionBar.OffsetLeft = 0;
+        _actionBar.OffsetRight = 0;
         _actionBar.OffsetTop = -55;
+        _actionBar.OffsetBottom = -5;
         AddChild(_actionBar);
 
         var hbox = new HBoxContainer();

@@ -80,12 +80,19 @@ foreach ($scene in $scenes) {
         Where-Object {
             $_ -match "ERROR:" -and
             $_ -notmatch "ProgressDialog" -and
-            $_ -notmatch "Parameter `"t`" is null" -and
-            $_ -notmatch "texture_2d_get" -and
             $_ -notmatch "Condition `"!windows\.has"
         }
     if ($unexpectedErrors.Count -gt 0) {
         throw "Unexpected Godot errors in $($scene.Path): $($unexpectedErrors -join '; ')"
+    }
+
+    $assetWarnings = $text -split "`r?`n" |
+        Where-Object {
+            $_ -match "WARNING:" -and
+            ($_ -match "Invalid UID" -or $_ -match "external resource")
+        }
+    if ($assetWarnings.Count -gt 0) {
+        throw "Unexpected Godot asset warnings in $($scene.Path): $($assetWarnings -join '; ')"
     }
 
     if (-not $KeepLogs) {

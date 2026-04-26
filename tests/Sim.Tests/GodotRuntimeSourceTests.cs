@@ -18,6 +18,9 @@ public class GodotRuntimeSourceTests
         string spriteSource = File.ReadAllText(RepoPath("src", "Godot", "NornBillboardSprite.cs"));
 
         Assert.Contains("UseProceduralModel = false", spriteSource);
+        Assert.Contains("ShouldUseProceduralModel", spriteSource);
+        Assert.Contains("DisplayServer.GetName()", spriteSource);
+        Assert.Contains("\"headless\"", spriteSource);
         Assert.Contains("LoadLegacyGlbModel", spriteSource);
         Assert.Contains("NornModelFactory.Create()", spriteSource);
         Assert.Contains("SetActionPose", spriteSource);
@@ -80,5 +83,55 @@ public class GodotRuntimeSourceTests
         Assert.Contains("CreateCaSnapshot", debugHud);
         Assert.Contains("AgentAffordanceCatalog.ForAgent", debugHud);
         Assert.DoesNotContain("new GameWorld", debugHud);
+    }
+
+    [Fact]
+    public void GameGui_UsesOffsetsForHorizontallyStretchedActionBar()
+    {
+        string gameGui = File.ReadAllText(RepoPath("src", "Godot", "UI", "GameGui.cs"));
+
+        Assert.Contains("_actionBar.SetAnchorsAndOffsetsPreset(LayoutPreset.BottomWide)", gameGui);
+        Assert.Contains("_actionBar.OffsetLeft = 0", gameGui);
+        Assert.Contains("_actionBar.OffsetRight = 0", gameGui);
+        Assert.Contains("_actionBar.OffsetBottom = -5", gameGui);
+        Assert.DoesNotContain("_actionBar.Size = new Vector2(0, 50)", gameGui);
+    }
+
+    [Fact]
+    public void DebugScreenshot_UsesFallbackBeforeReadingViewportTextureInHeadlessMode()
+    {
+        string screenshotSource = File.ReadAllText(RepoPath("src", "Godot", "DebugScreenshot.cs"));
+
+        Assert.Contains("DisplayServer.GetName()", screenshotSource);
+        Assert.Contains("\"headless\"", screenshotSource);
+        Assert.Contains("CreateFallbackImage", screenshotSource);
+    }
+
+    [Fact]
+    public void LegacyNornGlbExternalTextureSources_ArePresentBesideModel()
+    {
+        string[] textureNames =
+        {
+            "norn_Body_F.png",
+            "norn_Ear_F.png",
+            "norn_Feet_F.png",
+            "norn_Head_F.png",
+            "norn_Humerus_F.png",
+            "norn_Radius_F.png",
+            "norn_Shin_F.png",
+            "norn_Thigh_F.png",
+            "norn_Tail_Base_F.png",
+            "norn_Tail_Tip_F.png",
+        };
+
+        foreach (string textureName in textureNames)
+            Assert.True(File.Exists(RepoPath("assets", "models", textureName)), $"{textureName} is required by norn.glb.");
+
+        foreach (string textureName in textureNames)
+        {
+            string uidPath = RepoPath("assets", "models", $"{textureName}.uid");
+            Assert.True(File.Exists(uidPath), $"{textureName}.uid keeps norn.glb external resource UIDs valid.");
+            Assert.StartsWith("uid://", File.ReadAllText(uidPath).Trim());
+        }
     }
 }

@@ -23,5 +23,8 @@ public class GodotSmokeAutomationTests
         Assert.Contains("--screenshot=", script);
         Assert.Contains("Simulation world initialised", script);
         Assert.Contains("Saved PNG", script);
+        Assert.Contains("Unexpected Godot asset warnings", script);
+        Assert.DoesNotContain("texture_2d_get", script);
+        Assert.DoesNotContain("Parameter `\"t`\" is null", script);
     }
 }
