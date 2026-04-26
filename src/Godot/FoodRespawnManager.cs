@@ -43,6 +43,16 @@ public partial class FoodRespawnManager : Node3D
         // Auto-discover all FoodNode siblings and register their spawn points
         if (GetParent() == null) return;
 
+        RegisterExistingFoodSpawnPoints();
+    }
+
+    public void RegisterExistingFoodSpawnPoints()
+    {
+        if (GetParent() == null) return;
+
+        _points.Clear();
+        _timers.Clear();
+
         foreach (Node n in GetParent().GetChildren())
         {
             if (n is FoodNode food)

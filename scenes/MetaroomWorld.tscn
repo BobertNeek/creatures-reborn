@@ -1,0 +1,38 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://src/Godot/WorldNode.cs" id="1_world"]
+[ext_resource type="Script" path="res://src/Godot/MetaroomRuntimeLoader.cs" id="2_loader"]
+[ext_resource type="Script" path="res://src/Godot/PointerAgent.cs" id="3_pointer"]
+[ext_resource type="Script" path="res://src/Godot/FoodRespawnManager.cs" id="4_respawn"]
+[ext_resource type="Script" path="res://src/Godot/UI/GameGui.cs" id="5_gui"]
+
+[node name="MetaroomWorld" type="Node3D"]
+script = ExtResource("1_world")
+
+[node name="MetaroomRuntimeLoader" type="Node" parent="."]
+script = ExtResource("2_loader")
+DefinitionPaths = Array[String](["res://data/metarooms/treehouse.json", "res://data/metarooms/forest.json"])
+
+[node name="Pointer" type="Node3D" parent="."]
+script = ExtResource("3_pointer")
+
+[node name="FoodRespawnManager" type="Node3D" parent="."]
+script = ExtResource("4_respawn")
+RespawnDelay = 25.0
+
+[node name="Camera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.5, 20)
+projection = 1
+current = true
+size = 22.0
+
+[node name="GuiLayer" type="CanvasLayer" parent="."]
+
+[node name="GameGui" type="Control" parent="GuiLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("5_gui")

@@ -60,6 +60,13 @@ public static class AgentCatalog
         "hand",
         IsEdible: false);
 
+    public static readonly AgentArchetype Door = new(
+        "world.door",
+        new AgentClassifier(AgentFamily.Simple, 8, 1),
+        ObjectCategory.Door,
+        "door",
+        IsEdible: false);
+
     public static readonly AgentArchetype Elevator = new(
         "machine.elevator",
         new AgentClassifier(AgentFamily.Compound, 5, 1),

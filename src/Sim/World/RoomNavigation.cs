@@ -8,6 +8,7 @@ public enum RoomLinkKind
     Walk,
     Stair,
     Elevator,
+    Door,
 }
 
 public sealed record RoomNavigationLink(

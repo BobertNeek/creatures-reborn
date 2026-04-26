@@ -1,0 +1,25 @@
+{
+  "id": "forest",
+  "name": "Forest Metaroom Placeholder",
+  "backgroundPath": "res://art/metaroom/metaroom-right-connector-v2.png",
+  "backgroundWidth": 1983,
+  "backgroundHeight": 793,
+  "worldX": 44,
+  "worldY": 0,
+  "worldWidth": 40,
+  "worldHeight": 13.5,
+  "backdropCenterX": 0,
+  "backdropCenterY": 8.45,
+  "paths": [
+    { "id": "forest-top", "name": "Forest Top", "kind": "floor", "roomType": "indoorWood", "ceilingOffset": 3, "enabled": true, "points": [ { "x": -18, "y": 10.8 }, { "x": 18, "y": 10.8 } ] },
+    { "id": "forest-mid", "name": "Forest Mid", "kind": "floor", "roomType": "outdoor", "ceilingOffset": 3, "enabled": true, "points": [ { "x": -19, "y": 7.4 }, { "x": 19, "y": 7.4 } ] },
+    { "id": "forest-bottom", "name": "Forest Bottom", "kind": "floor", "roomType": "soil", "ceilingOffset": 3, "enabled": true, "points": [ { "x": -18, "y": 3.4 }, { "x": 18, "y": 3.4 } ] },
+    { "id": "forest-left-ramp", "name": "Forest Left Ramp", "kind": "ramp", "roomType": "outdoor", "ceilingOffset": 2.5, "enabled": true, "points": [ { "x": -19, "y": 7.4 }, { "x": -14, "y": 3.4 } ] }
+  ],
+  "objects": [
+    { "id": "forest-left-door", "name": "Left Door", "kind": "door", "position": { "x": -19, "y": 7.4 }, "scale": 1.2, "rotationDegrees": 0, "enabled": true, "door": { "targetMetaroomId": "treehouse", "targetDoorId": "treehouse-right-door", "transitionMode": "portal", "bidirectional": true, "captureRadius": 0.9, "exitOffset": { "x": -0.8, "y": 0 }, "permeability": 100 } },
+    { "id": "forest-food", "name": "Forest Fruit", "kind": "foodSpawn", "position": { "x": 0, "y": 3.6 }, "scale": 1, "rotationDegrees": 0, "enabled": true, "food": { "foodKind": "fruit", "glycogenAmount": 0.3, "atpAmount": -1, "respawnDelay": 25 } },
+    { "id": "forest-toy", "name": "Forest Toy", "kind": "toy", "position": { "x": 5, "y": 7.6 }, "scale": 1, "rotationDegrees": 0, "enabled": true, "gadget": { "gadgetType": "musicola", "scanRadius": 6, "timerInterval": 10 } },
+    { "id": "forest-norn-spawn", "name": "Forest Norn Spawn", "kind": "nornSpawn", "position": { "x": -3, "y": 3.6 }, "scale": 1, "rotationDegrees": 0, "enabled": true }
+  ]
+}

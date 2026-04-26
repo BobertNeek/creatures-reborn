@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 using CreaturesReborn.Sim.World;
 using CreaturesReborn.Sim.Agent;
@@ -92,6 +93,12 @@ public partial class WorldNode : Node3D
         if (colony != null) return (colony.MetaRoom.LeftBound, colony.MetaRoom.RightBound);
         var treehouse = GetNodeOrNull<TreehouseMetaroomNode>("Metaroom");
         if (treehouse != null) return (treehouse.MetaRoom.LeftBound, treehouse.MetaRoom.RightBound);
+        if (World.Map.AllRooms.Count > 0)
+        {
+            float left = World.Map.AllRooms.Min(room => room.XLeft);
+            float right = World.Map.AllRooms.Max(room => room.XRight);
+            return (left, right);
+        }
         return null;
     }
 
@@ -126,6 +133,15 @@ public partial class WorldNode : Node3D
     {
         World.Map.Reset();
         Navigation = null;
+
+        var runtimeLoader = GetNodeOrNull<MetaroomRuntimeLoader>("MetaroomRuntimeLoader");
+        if (runtimeLoader != null && runtimeLoader.HasDefinitions)
+        {
+            runtimeLoader.LoadIntoWorld(this);
+            Navigation = new RoomNavigation(World.Map);
+            GD.Print($"[WorldNode] Loaded JSON metaroom geometry: {World.Map.AllRooms.Count} rooms.");
+            return;
+        }
 
         var treehouse = GetNodeOrNull<TreehouseMetaroomNode>("Metaroom");
         if (treehouse != null)
