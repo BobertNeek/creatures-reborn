@@ -137,11 +137,15 @@ public sealed class Creature
         if (collector?.Options.IncludeBrainSnapshot == true)
             collector.Trace.BrainBefore = Brain.CreateSnapshot();
 
-        Brain.Update();
+        LearningTrace? learningTrace = collector?.Options.IncludeLearningTrace == true
+            ? new LearningTrace()
+            : null;
+        Brain.Update(learningTrace);
         if (collector != null)
         {
             if (collector.Options.IncludeBrainSnapshot)
                 collector.Trace.BrainAfter = Brain.CreateSnapshot();
+            collector.Trace.Learning = learningTrace;
             collector.Record(CreatureTickStage.Brain, "Updated brain lobes, tracts, instincts, and modules.");
             collector.Record(CreatureTickStage.Learning, "Learning signals are available through brain and biochemistry traces when enabled.");
         }

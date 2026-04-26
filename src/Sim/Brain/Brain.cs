@@ -43,6 +43,7 @@ public sealed class Brain : IBrainLocusProvider
     // Instinct control
     // -------------------------------------------------------------------------
     private bool _processingInstincts;
+    private int _updateTick;
 
     // -------------------------------------------------------------------------
     // ReadFromGenome — mirroring Brain.cpp:77-158
@@ -126,10 +127,14 @@ public sealed class Brain : IBrainLocusProvider
     // Update — normal or instinct-processing tick
     // -------------------------------------------------------------------------
     public void Update()
+        => Update(null);
+
+    public void Update(LearningTrace? trace)
     {
         if (!_processingInstincts)
         {
-            UpdateComponents();
+            UpdateComponents(trace);
+            _updateTick++;
             return;
         }
 
@@ -137,25 +142,39 @@ public sealed class Brain : IBrainLocusProvider
         if (_instincts.Count > 0)
         {
             Instinct inst = _instincts[_instincts.Count - 1];
+            int remainingBefore = _instincts.Count;
             if (inst.Process())
             {
                 _instincts.RemoveAt(_instincts.Count - 1);
+                trace?.RecordInstinct(new InstinctTrace(_updateTick, remainingBefore - 1, Fired: true));
             }
+            else
+            {
+                trace?.RecordInstinct(new InstinctTrace(_updateTick, remainingBefore, Fired: false));
+            }
+            _updateTick++;
             return;
         }
 
         // No instincts left — back to normal
         _processingInstincts = false;
+        _updateTick++;
     }
 
     public void UpdateComponents()
+        => UpdateComponents(null);
+
+    public void UpdateComponents(LearningTrace? trace)
     {
         foreach (var c in _components)
         {
             // If a registered module shadows this lobe, skip the SVRule update.
             if (c is Lobe lobe && IsLobeTokenShadowed(lobe.Token))
                 continue;
-            c.DoUpdate();
+            if (c is Tract tract)
+                tract.DoUpdate(trace, _updateTick);
+            else
+                c.DoUpdate();
         }
 
         // Run plugged-in modules (after default lobe stack, or as shadow replacements).
@@ -305,6 +324,9 @@ public sealed class Brain : IBrainLocusProvider
 
     public Lobe? GetLobe(int index)
         => (uint)index < (uint)_lobes.Count ? _lobes[index] : null;
+
+    public Tract? GetTract(int index)
+        => (uint)index < (uint)_tracts.Count ? _tracts[index] : null;
 
     public BrainSnapshot CreateSnapshot()
         => CreateSnapshot(new BrainSnapshotOptions());

@@ -72,6 +72,16 @@ public class CreatureTraceTests
         Assert.Equal(creature.Motor.CurrentNoun, trace.MotorNoun);
     }
 
+    [Fact]
+    public void TickWithLearningTrace_ProvidesLearningTraceContainer()
+    {
+        var creature = LoadStarter(seed: 100);
+
+        CreatureTickTrace trace = creature.Tick(new CreatureTraceOptions(IncludeLearningTrace: true));
+
+        Assert.NotNull(trace.Learning);
+    }
+
     private static C LoadStarter(int seed)
         => C.LoadFromFile(Path.GetFullPath(StarterGenomePath), new Rng(seed));
 }

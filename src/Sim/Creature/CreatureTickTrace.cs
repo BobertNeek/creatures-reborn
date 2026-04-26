@@ -19,7 +19,8 @@ public enum CreatureTickStage
 
 public sealed record CreatureTraceOptions(
     bool IncludeBiochemistryTrace = false,
-    bool IncludeBrainSnapshot = false);
+    bool IncludeBrainSnapshot = false,
+    bool IncludeLearningTrace = false);
 
 public sealed record CreatureTickStageRecord(CreatureTickStage Stage, string Detail);
 
@@ -29,6 +30,7 @@ public sealed class CreatureTickTrace
 
     public IReadOnlyList<CreatureTickStageRecord> Stages => _stages;
     public BiochemistryTrace? Biochemistry { get; internal set; }
+    public LearningTrace? Learning { get; internal set; }
     public BrainSnapshot? BrainBefore { get; internal set; }
     public BrainSnapshot? BrainAfter { get; internal set; }
     public int MotorVerb { get; internal set; }
