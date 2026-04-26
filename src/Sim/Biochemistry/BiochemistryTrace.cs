@@ -20,7 +20,10 @@ public enum ChemicalDeltaSource
     Metabolism,
     Fatigue,
     InjuryRecovery,
-    Environment
+    Environment,
+    Respiration,
+    Immune,
+    Toxin
 }
 
 public sealed record ChemicalDelta(

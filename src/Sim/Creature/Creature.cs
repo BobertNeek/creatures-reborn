@@ -198,6 +198,14 @@ public sealed class Creature
         return response;
     }
 
+    public float ApplyAirQuality(float airQuality, BiochemistryTrace? trace = null)
+    {
+        float suffocation = Biochemistry.ApplyAirQuality(airQuality, trace);
+        AddDriveInput(DriveId.Comfort, suffocation);
+        AddDriveInput(DriveId.Fear, suffocation);
+        return suffocation;
+    }
+
     // -------------------------------------------------------------------------
     // Drive level readout
     // -------------------------------------------------------------------------

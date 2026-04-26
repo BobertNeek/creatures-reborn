@@ -46,6 +46,8 @@ public static class ChemID
     public const int Glucose         = 6;
     public const int Adipose         = 7;
     public const int Muscle          = 8;
+    public const int Air             = 29;
+    public const int Oxygen          = 30;
     public const int Reward          = 32;
     public const int Punishment      = 33;
     public const int ReinforcementBase = 34;
@@ -68,8 +70,28 @@ public static class ChemID
     public const int Loneliness      = 60;
     public const int Crowdedness     = 61;
 
+    public const int FirstToxin      = 66;
+    public const int HeavyMetals     = 66;
+    public const int Cyanide         = 67;
+    public const int Belladonna      = 68;
+    public const int Geddonase       = 69;
+    public const int Glycotoxin      = 70;
+    public const int SleepToxin      = 71;
+    public const int FeverToxin      = 72;
+    public const int HistamineA      = 73;
+    public const int HistamineB      = 74;
+    public const int Alcohol         = 75;
+    public const int AtpDecoupler    = 78;
+    public const int CarbonMonoxide  = 79;
+    public const int FearToxin       = 80;
+    public const int MuscleToxin     = 81;
+    public const int LastToxin       = 81;
     public const int FirstAntigen    = 82;
+    public const int Antigen5        = 87;
     public const int LastAntigen     = 89;
+    public const int Wounded         = 90;
+    public const int FirstAntibody   = 102;
+    public const int LastAntibody    = 109;
     public const int Injury          = 127;
     public const int Tiredness       = 154;
     public const int Sleepiness      = 155;
