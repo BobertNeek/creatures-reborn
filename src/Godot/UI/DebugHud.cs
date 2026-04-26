@@ -1,9 +1,15 @@
 using System;
+using System.Text;
 using Godot;
 using CreaturesReborn.Godot;
+using CreaturesReborn.Sim.Agent;
 using CreaturesReborn.Sim.Biochemistry;
+using CreaturesReborn.Sim.Brain;
 using CreaturesReborn.Sim.Creature;
+using CreaturesReborn.Sim.Genome;
+using CreaturesReborn.Sim.World;
 using C = CreaturesReborn.Sim.Creature.Creature;
+using SimAgent = CreaturesReborn.Sim.Agent.Agent;
 
 namespace CreaturesReborn.Godot.UI;
 
@@ -37,23 +43,67 @@ public partial class DebugHud : Control
     // -------------------------------------------------------------------------
     private readonly ProgressBar[] _driveBars  = new ProgressBar[DriveId.NumDrives];
     private Label  _wtaLabel   = null!;
+    private Label  _genomeLabel = null!;
     private Label  _chemLabel  = null!;
+    private Label  _brainSnapshotLabel = null!;
     private Label  _lobeLabel  = null!;
+    private Label  _caLabel = null!;
+    private Label  _affordanceLabel = null!;
 
     // The creature we're watching (set from the scene root or by script)
     private C? _target;
+    private CreatureNode? _targetNode;
+    private WorldNode? _world;
+    private SimAgent? _affordanceTarget;
+    private AgentArchetype? _affordanceArchetype;
+
+    private static readonly int[] ChemicalWatch =
+    {
+        ChemID.ATP,
+        ChemID.Glycogen,
+        ChemID.HungerForCarb,
+        ChemID.HungerForProtein,
+        ChemID.HungerForFat,
+        ChemID.Reward,
+        ChemID.Punishment,
+        ChemID.Pain,
+        ChemID.Tiredness,
+        ChemID.Sleepiness,
+    };
+
+    private static readonly int[] CaWatch =
+    {
+        CaIndex.Temperature,
+        CaIndex.Light,
+        CaIndex.NutrientWater,
+        CaIndex.Minerals,
+        CaIndex.Radiation,
+        CaIndex.Scent0,
+    };
 
     // -------------------------------------------------------------------------
     // Setup
     // -------------------------------------------------------------------------
-    public void SetTarget(C? creature) => _target = creature;
+    public void SetTarget(C? creature)
+    {
+        _target = creature;
+        _targetNode = null;
+    }
+
+    public void SetWorld(WorldNode? world) => _world = world;
+
+    public void SetAffordanceTarget(SimAgent? target, AgentArchetype? archetype = null)
+    {
+        _affordanceTarget = target;
+        _affordanceArchetype = archetype;
+    }
 
     public override void _Ready()
     {
         // Semi-transparent panel background
         var panel = new Panel();
         panel.SetAnchorsPreset(LayoutPreset.TopLeft);
-        panel.Size = new Vector2(260, 680);
+        panel.Size = new Vector2(360, 860);
         var style = new StyleBoxFlat();
         style.BgColor = new Color(0, 0, 0, 0.55f);
         style.ContentMarginLeft = style.ContentMarginTop =
@@ -62,7 +112,7 @@ public partial class DebugHud : Control
         AddChild(panel);
 
         var vbox = new VBoxContainer();
-        vbox.Size = new Vector2(248, 668);
+        vbox.Size = new Vector2(348, 848);
         vbox.Position = new Vector2(6, 6);
         panel.AddChild(vbox);
 
@@ -93,17 +143,41 @@ public partial class DebugHud : Control
         _wtaLabel = MakeLabel("Verb: — | Noun: —");
         vbox.AddChild(_wtaLabel);
 
+        // Genome summary
+        vbox.AddChild(MakeLabel("─── Genome ───", bold: true));
+        _genomeLabel = MakeLabel("—");
+        _genomeLabel.AutowrapMode = TextServer.AutowrapMode.Word;
+        vbox.AddChild(_genomeLabel);
+
         // Chemical concentrations
-        vbox.AddChild(MakeLabel("─── Chems (top 10) ───", bold: true));
+        vbox.AddChild(MakeLabel("─── Chems ───", bold: true));
         _chemLabel = MakeLabel("—");
         _chemLabel.AutowrapMode = TextServer.AutowrapMode.Word;
         vbox.AddChild(_chemLabel);
+
+        // Brain snapshot summary
+        vbox.AddChild(MakeLabel("─── Brain Snapshot ───", bold: true));
+        _brainSnapshotLabel = MakeLabel("—");
+        _brainSnapshotLabel.AutowrapMode = TextServer.AutowrapMode.Word;
+        vbox.AddChild(_brainSnapshotLabel);
 
         // Lobe heatmap (text)
         vbox.AddChild(MakeLabel("─── Lobes ───", bold: true));
         _lobeLabel = MakeLabel("—");
         _lobeLabel.AutowrapMode = TextServer.AutowrapMode.Word;
         vbox.AddChild(_lobeLabel);
+
+        // CA room values
+        vbox.AddChild(MakeLabel("─── Room CA ───", bold: true));
+        _caLabel = MakeLabel("—");
+        _caLabel.AutowrapMode = TextServer.AutowrapMode.Word;
+        vbox.AddChild(_caLabel);
+
+        // Current affordance target
+        vbox.AddChild(MakeLabel("─── Affordance Target ───", bold: true));
+        _affordanceLabel = MakeLabel("—");
+        _affordanceLabel.AutowrapMode = TextServer.AutowrapMode.Word;
+        vbox.AddChild(_affordanceLabel);
     }
 
     // -------------------------------------------------------------------------
@@ -111,23 +185,43 @@ public partial class DebugHud : Control
     // -------------------------------------------------------------------------
     public override void _Process(double delta)
     {
-        // Auto-discover target from scene on first frame
+        DiscoverSceneReferences();
         if (_target == null)
         {
-            // Try both old and new scene structures
-            var sceneRoot = GetTree().Root.GetNodeOrNull<Node>("VerticalSlice")
-                         ?? GetTree().Root.GetNodeOrNull<Node>("NornColony")
-                         ?? GetTree().Root.GetNodeOrNull<Node>("Colony")
-                         ?? GetTree().Root.GetNodeOrNull<Node>("Treehouse");
-            var cn = sceneRoot?.GetNodeOrNull<CreatureNode>("Norn");
-            if (cn?.Creature != null) _target = cn.Creature;
+            UpdateCaValues();
+            UpdateAffordanceTarget();
             return;
         }
 
         UpdateDrives();
         UpdateDecision();
+        UpdateGenomeSummary();
         UpdateChems();
+        UpdateBrainSnapshotSummary();
         UpdateLobes();
+        UpdateCaValues();
+        UpdateAffordanceTarget();
+    }
+
+    private void DiscoverSceneReferences()
+    {
+        if (_world == null && GetTree().CurrentScene is WorldNode currentWorld)
+            _world = currentWorld;
+
+        if (_target != null)
+            return;
+
+        // Try both old and new scene structures.
+        var sceneRoot = GetTree().Root.GetNodeOrNull<Node>("VerticalSlice")
+                     ?? GetTree().Root.GetNodeOrNull<Node>("NornColony")
+                     ?? GetTree().Root.GetNodeOrNull<Node>("Colony")
+                     ?? GetTree().Root.GetNodeOrNull<Node>("Treehouse");
+        var cn = sceneRoot?.GetNodeOrNull<CreatureNode>("Norn");
+        if (cn?.Creature != null)
+        {
+            _targetNode = cn;
+            _target = cn.Creature;
+        }
     }
 
     private void UpdateDrives()
@@ -186,11 +280,53 @@ public partial class DebugHud : Control
             for (int b = a + 1; b < filled; b++)
                 if (top[b].v > top[a].v) { var tmp = top[a]; top[a] = top[b]; top[b] = tmp; }
 
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
+        sb.Append("Watch: ");
+        for (int i = 0; i < ChemicalWatch.Length; i++)
+        {
+            int chem = ChemicalWatch[i];
+            var definition = ChemicalCatalog.Get(chem);
+            sb.Append($"{definition.DisplayName}={_target.GetChemical(chem):F2}  ");
+        }
+        sb.AppendLine();
+        sb.Append("Top: ");
         for (int k = 0; k < filled; k++)
-            sb.Append($"[{top[k].i}]={top[k].v:F3}  ");
+        {
+            var definition = ChemicalCatalog.Get(top[k].i);
+            sb.Append($"{definition.Token}={top[k].v:F3}  ");
+        }
 
         _chemLabel.Text = filled > 0 ? sb.ToString() : "(all zero)";
+    }
+
+    private void UpdateGenomeSummary()
+    {
+        GenomeSummary summary = GenomeSummary.Create(_target!.Genome);
+        _genomeLabel.Text =
+            $"Genes {summary.TotalGenes} | " +
+            $"Brain {summary.Count(GeneType.BRAINGENE)} | " +
+            $"Biochem {summary.Count(GeneType.BIOCHEMISTRYGENE)} | " +
+            $"Creature {summary.Count(GeneType.CREATUREGENE)} | " +
+            $"Organ {summary.Count(GeneType.ORGANGENE)}";
+    }
+
+    private void UpdateBrainSnapshotSummary()
+    {
+        BrainSnapshot snapshot = _target!.Brain.CreateSnapshot(new BrainSnapshotOptions(MaxNeuronsPerLobe: 1, MaxDendritesPerTract: 0));
+        var sb = new StringBuilder();
+        sb.Append($"Lobes {snapshot.Lobes.Count}, tracts {snapshot.Tracts.Count}, modules {snapshot.Modules.Count}");
+        if (snapshot.IsProcessingInstincts)
+            sb.Append($", instincts {snapshot.InstinctsRemaining}");
+
+        sb.AppendLine();
+        int limit = Math.Min(snapshot.Lobes.Count, 4);
+        for (int i = 0; i < limit; i++)
+        {
+            LobeSnapshot lobe = snapshot.Lobes[i];
+            sb.Append($"{lobe.TokenText}:{lobe.WinningNeuronId} ");
+        }
+
+        _brainSnapshotLabel.Text = sb.ToString();
     }
 
     private void UpdateLobes()
@@ -198,7 +334,7 @@ public partial class DebugHud : Control
         var brain = _target!.Brain;
         if (brain.LobeCount == 0) { _lobeLabel.Text = "(no lobes)"; return; }
 
-        var sb = new System.Text.StringBuilder();
+        var sb = new StringBuilder();
         for (int l = 0; l < Math.Min(brain.LobeCount, 8); l++)
         {
             var lobe = brain.GetLobe(l);
@@ -224,6 +360,72 @@ public partial class DebugHud : Control
             sb.AppendLine($"{name} [{n,3}] {bar} {maxAct:F2}");
         }
         _lobeLabel.Text = sb.ToString();
+    }
+
+    private void UpdateCaValues()
+    {
+        if (_world == null)
+        {
+            _caLabel.Text = "(no world)";
+            return;
+        }
+
+        CaSnapshot mapSnapshot = _world.World.Map.CreateCaSnapshot();
+        if (mapSnapshot.Rooms.Count == 0)
+        {
+            _caLabel.Text = "(no rooms)";
+            return;
+        }
+
+        RoomCaSnapshot roomSnapshot = FindTargetRoomSnapshot(mapSnapshot) ?? mapSnapshot.Rooms[0];
+        var sb = new StringBuilder();
+        sb.Append($"Room {roomSnapshot.RoomId}: ");
+        for (int i = 0; i < CaWatch.Length; i++)
+        {
+            int channel = CaWatch[i];
+            CaChannelDefinition definition = CaChannelCatalog.Get(channel);
+            sb.Append($"{definition.Token}={roomSnapshot.GetValue(channel):F2}  ");
+        }
+        _caLabel.Text = sb.ToString();
+    }
+
+    private RoomCaSnapshot? FindTargetRoomSnapshot(CaSnapshot mapSnapshot)
+    {
+        if (_targetNode == null || _world == null)
+            return null;
+
+        Room? room = _world.World.Map.RoomAt(_targetNode.Position.X, _targetNode.Position.Y);
+        if (room == null)
+            return null;
+
+        for (int i = 0; i < mapSnapshot.Rooms.Count; i++)
+            if (mapSnapshot.Rooms[i].RoomId == room.Id)
+                return mapSnapshot.Rooms[i];
+
+        return null;
+    }
+
+    private void UpdateAffordanceTarget()
+    {
+        if (_affordanceTarget == null)
+        {
+            _affordanceLabel.Text = "(none)";
+            return;
+        }
+
+        var affordances = AgentAffordanceCatalog.ForAgent(_affordanceTarget, _affordanceArchetype);
+        if (affordances.Count == 0)
+        {
+            _affordanceLabel.Text = $"{_affordanceTarget.Classifier}: no affordances";
+            return;
+        }
+
+        var sb = new StringBuilder();
+        sb.Append($"{_affordanceTarget.Classifier}: ");
+        int limit = Math.Min(affordances.Count, 6);
+        for (int i = 0; i < limit; i++)
+            sb.Append($"{affordances[i].Token} ");
+        _affordanceLabel.Text = sb.ToString();
     }
 
     // -------------------------------------------------------------------------

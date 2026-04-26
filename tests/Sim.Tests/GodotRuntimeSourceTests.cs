@@ -66,4 +66,19 @@ public class GodotRuntimeSourceTests
         Assert.Contains("MathF.Abs(cn.Position.Y - expectedY)", stairsSource);
         Assert.DoesNotContain("if (cn.Position.Y < expectedY - BelowTol) continue;", stairsSource);
     }
+
+    [Fact]
+    public void DebugHud_ReadsCoreV2SnapshotsAndCatalogsWithoutOwningSimulation()
+    {
+        string debugHud = File.ReadAllText(RepoPath("src", "Godot", "UI", "DebugHud.cs"));
+
+        Assert.Contains("SetWorld", debugHud);
+        Assert.Contains("SetAffordanceTarget", debugHud);
+        Assert.Contains("GenomeSummary.Create", debugHud);
+        Assert.Contains("ChemicalCatalog.Get", debugHud);
+        Assert.Contains("CreateSnapshot", debugHud);
+        Assert.Contains("CreateCaSnapshot", debugHud);
+        Assert.Contains("AgentAffordanceCatalog.ForAgent", debugHud);
+        Assert.DoesNotContain("new GameWorld", debugHud);
+    }
 }
