@@ -117,6 +117,47 @@ public class NornLifeLoopTests
     }
 
     [Fact]
+    public void FatigueMetabolism_RaisesTirednessWhileAwake()
+    {
+        var creature = LoadStarter(seed: 60);
+        creature.SetChemical(ChemID.ATP, 1.0f);
+        creature.SetChemical(ChemID.Tiredness, 0.0f);
+        creature.SetChemical(ChemID.Sleepiness, 0.0f);
+        var trace = new BiochemistryTrace();
+
+        creature.Biochemistry.Update(trace);
+
+        Assert.True(creature.GetChemical(ChemID.Tiredness) > 0.0f);
+        Assert.Equal(0.0f, creature.Biochemistry.GetCreatureLocus((int)CreatureTissue.Sensorimotor, SensorimotorEmitterLocus.Asleep).Value);
+        Assert.Contains(trace.Deltas, d =>
+            d.ChemicalId == ChemID.Tiredness &&
+            d.Source == ChemicalDeltaSource.Fatigue &&
+            d.Amount > 0);
+    }
+
+    [Fact]
+    public void SleepPressure_DerivesAsleepLocusAndRecoversChemistry()
+    {
+        var creature = LoadStarter(seed: 61);
+        creature.SetChemical(ChemID.ATP, 0.0f);
+        creature.SetChemical(ChemID.Tiredness, 0.9f);
+        creature.SetChemical(ChemID.Sleepiness, 0.9f);
+        var trace = new BiochemistryTrace();
+
+        creature.Biochemistry.Update(trace);
+
+        Assert.Equal(1.0f, creature.Biochemistry.GetCreatureLocus((int)CreatureTissue.Sensorimotor, SensorimotorEmitterLocus.Asleep).Value);
+        Assert.Equal(1.0f, creature.Biochemistry.GetCreatureLocus((int)CreatureTissue.Sensorimotor, SensorimotorEmitterLocus.Involuntary0 + 5).Value);
+        Assert.True(creature.GetChemical(ChemID.Tiredness) < 0.9f);
+        Assert.True(creature.GetChemical(ChemID.Sleepiness) < 0.9f);
+        Assert.True(creature.GetChemical(ChemID.ATP) > 0.0f);
+        Assert.Contains(trace.Deltas, d =>
+            d.ChemicalId == ChemID.Sleepiness &&
+            d.Source == ChemicalDeltaSource.Fatigue &&
+            d.Amount < 0);
+    }
+
+    [Fact]
     public void WallBumpStimulus_RaisesPainAndFear()
     {
         var creature = LoadStarter();

@@ -26,6 +26,13 @@ public sealed class Biochemistry
 {
     private const float HungerAdjustmentRate = 0.080f;
     private const float StorageToAtpRate = 0.040f;
+    private const float AwakeTirednessRise = 0.006f;
+    private const float SleepinessRiseRate = 0.020f;
+    private const float SleepThreshold = 0.75f;
+    private const float SleepTirednessRecovery = 0.045f;
+    private const float SleepinessRecovery = 0.060f;
+    private const float SleepAtpRecovery = 0.025f;
+    private const int InvoluntarySleepLocusOffset = 5;
 
     // -------------------------------------------------------------------------
     // State
@@ -408,6 +415,9 @@ public sealed class Biochemistry
 
         // 4. Core metabolism: stores drive hunger and can buffer low ATP.
         UpdateHungerAndEnergyMetabolism();
+
+        // 5. Fatigue and sleep pressure are derived from chemistry.
+        UpdateFatigueAndSleep();
         }
         finally
         {
@@ -467,5 +477,60 @@ public sealed class Biochemistry
             transfer,
             ChemicalDeltaSource.Metabolism,
             $"metabolism:{token}:storage-to-atp");
+    }
+
+    private void UpdateFatigueAndSleep()
+    {
+        float tiredness = _chemConcs[ChemID.Tiredness];
+        float sleepiness = _chemConcs[ChemID.Sleepiness];
+        bool asleep = sleepiness >= SleepThreshold || (sleepiness >= 0.6f && tiredness >= 0.8f);
+        SetSleepLoci(asleep);
+
+        if (asleep)
+        {
+            SubChemical(
+                ChemID.Tiredness,
+                SleepTirednessRecovery,
+                ChemicalDeltaSource.Fatigue,
+                "fatigue:sleep:tiredness-recovery");
+            SubChemical(
+                ChemID.Sleepiness,
+                SleepinessRecovery,
+                ChemicalDeltaSource.Fatigue,
+                "fatigue:sleep:sleepiness-recovery");
+            AddChemical(
+                ChemID.ATP,
+                SleepAtpRecovery,
+                ChemicalDeltaSource.Fatigue,
+                "fatigue:sleep:atp-recovery");
+            return;
+        }
+
+        float atpDeficit = Math.Clamp(0.5f - _chemConcs[ChemID.ATP], 0.0f, 0.5f);
+        AddChemical(
+            ChemID.Tiredness,
+            AwakeTirednessRise + atpDeficit * 0.012f,
+            ChemicalDeltaSource.Fatigue,
+            "fatigue:awake:tiredness-rise");
+
+        float sleepinessRise = Math.Clamp((tiredness - 0.35f) * SleepinessRiseRate, 0.0f, 0.018f);
+        if (sleepinessRise > 0.00001f)
+        {
+            AddChemical(
+                ChemID.Sleepiness,
+                sleepinessRise,
+                ChemicalDeltaSource.Fatigue,
+                "fatigue:awake:sleepiness-rise");
+        }
+    }
+
+    private void SetSleepLoci(bool asleep)
+    {
+        float value = asleep ? 1.0f : 0.0f;
+        _creatureLoci[(int)CreatureTissue.Sensorimotor, SensorimotorEmitterLocus.Asleep].Value = value;
+
+        int involuntarySleep = SensorimotorEmitterLocus.Involuntary0 + InvoluntarySleepLocusOffset;
+        if (involuntarySleep < BiochemConst.MAX_LOCI_PER_TISSUE)
+            _creatureLoci[(int)CreatureTissue.Sensorimotor, involuntarySleep].Value = value;
     }
 }

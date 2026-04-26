@@ -17,7 +17,8 @@ public enum ChemicalDeltaSource
     OrganEnergy,
     Stimulus,
     CreatureInjection,
-    Metabolism
+    Metabolism,
+    Fatigue
 }
 
 public sealed record ChemicalDelta(
