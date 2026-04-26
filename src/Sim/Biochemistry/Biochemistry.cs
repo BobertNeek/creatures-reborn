@@ -24,6 +24,9 @@ namespace CreaturesReborn.Sim.Biochemistry;
 /// </remarks>
 public sealed class Biochemistry
 {
+    private const float HungerAdjustmentRate = 0.080f;
+    private const float StorageToAtpRate = 0.040f;
+
     // -------------------------------------------------------------------------
     // State
     // -------------------------------------------------------------------------
@@ -402,10 +405,67 @@ public sealed class Biochemistry
             _chemConcs[i] = after;
             RecordDelta(i, before, after - before, after, ChemicalDeltaSource.HalfLifeDecay, "half-life decay", null);
         }
+
+        // 4. Core metabolism: stores drive hunger and can buffer low ATP.
+        UpdateHungerAndEnergyMetabolism();
         }
         finally
         {
             _activeTrace = previousTrace;
         }
+    }
+
+    private void UpdateHungerAndEnergyMetabolism()
+    {
+        UpdateMacronutrientMetabolism(ChemID.HungerForCarb, ChemID.Glycogen, "carb");
+        UpdateMacronutrientMetabolism(ChemID.HungerForProtein, ChemID.Muscle, "protein");
+        UpdateMacronutrientMetabolism(ChemID.HungerForFat, ChemID.Adipose, "fat");
+    }
+
+    private void UpdateMacronutrientMetabolism(int hungerChem, int storageChem, string token)
+    {
+        float storage = _chemConcs[storageChem];
+        float hunger = _chemConcs[hungerChem];
+        float targetHunger = Math.Clamp(1.0f - storage, 0.0f, 1.0f);
+        float hungerDelta = Math.Clamp(
+            (targetHunger - hunger) * HungerAdjustmentRate,
+            -HungerAdjustmentRate,
+            HungerAdjustmentRate);
+
+        if (hungerDelta > 0.00001f)
+        {
+            AddChemical(
+                hungerChem,
+                hungerDelta,
+                ChemicalDeltaSource.Metabolism,
+                $"metabolism:{token}:hunger-rise");
+        }
+        else if (hungerDelta < -0.00001f)
+        {
+            SubChemical(
+                hungerChem,
+                -hungerDelta,
+                ChemicalDeltaSource.Metabolism,
+                $"metabolism:{token}:satiety");
+        }
+
+        float atp = _chemConcs[ChemID.ATP];
+        if (atp >= 0.65f || storage <= 0.02f)
+            return;
+
+        float transfer = Math.Min(StorageToAtpRate, Math.Min(storage, (0.65f - atp) * 0.35f));
+        if (transfer <= 0.00001f)
+            return;
+
+        SubChemical(
+            storageChem,
+            transfer,
+            ChemicalDeltaSource.Metabolism,
+            $"metabolism:{token}:storage-to-atp");
+        AddChemical(
+            ChemID.ATP,
+            transfer,
+            ChemicalDeltaSource.Metabolism,
+            $"metabolism:{token}:storage-to-atp");
     }
 }

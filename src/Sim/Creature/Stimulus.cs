@@ -249,6 +249,9 @@ public static class StimulusTable
 
     public static void Apply(Creature creature, int stimId, BiochemistryTrace? trace)
     {
+        if (TryApplyNutritionStimulus(creature, stimId, trace))
+            return;
+
         var def = Get(stimId);
         ApplyChemical(creature, stimId, def.Chem1, def.Amt1, trace);
         ApplyChemical(creature, stimId, def.Chem2, def.Amt2, trace);
@@ -261,4 +264,98 @@ public static class StimulusTable
         if (chem == 0) return;
         creature.Biochemistry.AddChemical(chem, amount, ChemicalDeltaSource.Stimulus, $"stimulus:{stimId}", trace);
     }
+
+    private static bool TryApplyNutritionStimulus(Creature creature, int stimId, BiochemistryTrace? trace)
+    {
+        if (!TryGetNutritionProfile(stimId, out var profile))
+            return false;
+
+        float hunger = creature.GetChemical(profile.HungerChem);
+        float fullness = creature.GetChemical(profile.StorageChem);
+        float hungerRelief = Math.Clamp(
+            profile.HungerRelief * (0.4f + hunger),
+            0.08f,
+            profile.HungerRelief + 0.15f);
+        float storageGain = profile.StorageGain * Math.Clamp(1.0f - fullness * 0.35f, 0.35f, 1.0f);
+        float reward = profile.BaseReward * Math.Clamp(0.25f + hunger * 0.95f - fullness * 0.35f, 0.10f, 1.25f);
+
+        creature.Biochemistry.SubChemical(
+            profile.HungerChem,
+            hungerRelief,
+            ChemicalDeltaSource.Stimulus,
+            $"nutrition:{profile.Token}:hunger",
+            trace);
+        creature.Biochemistry.AddChemical(
+            profile.StorageChem,
+            storageGain,
+            ChemicalDeltaSource.Stimulus,
+            $"nutrition:{profile.Token}:storage",
+            trace);
+        creature.Biochemistry.AddChemical(
+            ChemID.Reward,
+            reward,
+            ChemicalDeltaSource.Stimulus,
+            $"nutrition:{profile.Token}:reward",
+            trace);
+
+        return true;
+    }
+
+    private static bool TryGetNutritionProfile(int stimId, out NutritionProfile profile)
+    {
+        switch (stimId)
+        {
+            case StimulusId.AteFruit:
+                profile = new NutritionProfile(
+                    "ate_fruit",
+                    ChemID.HungerForCarb,
+                    ChemID.Glycogen,
+                    HungerRelief: 0.5f,
+                    StorageGain: 0.4f,
+                    BaseReward: 0.3f);
+                return true;
+
+            case StimulusId.AteProtein:
+                profile = new NutritionProfile(
+                    "ate_protein",
+                    ChemID.HungerForProtein,
+                    ChemID.Muscle,
+                    HungerRelief: 0.5f,
+                    StorageGain: 0.3f,
+                    BaseReward: 0.2f);
+                return true;
+
+            case StimulusId.AteFat:
+                profile = new NutritionProfile(
+                    "ate_fat",
+                    ChemID.HungerForFat,
+                    ChemID.Adipose,
+                    HungerRelief: 0.5f,
+                    StorageGain: 0.3f,
+                    BaseReward: 0.2f);
+                return true;
+
+            case StimulusId.AteFoodSuccess:
+                profile = new NutritionProfile(
+                    "ate_food_success",
+                    ChemID.HungerForCarb,
+                    ChemID.Glycogen,
+                    HungerRelief: 0.4f,
+                    StorageGain: 0.3f,
+                    BaseReward: 0.3f);
+                return true;
+
+            default:
+                profile = default;
+                return false;
+        }
+    }
+
+    private readonly record struct NutritionProfile(
+        string Token,
+        int HungerChem,
+        int StorageChem,
+        float HungerRelief,
+        float StorageGain,
+        float BaseReward);
 }

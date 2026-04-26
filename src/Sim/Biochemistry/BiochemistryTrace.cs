@@ -16,7 +16,8 @@ public enum ChemicalDeltaSource
     OrganInjury,
     OrganEnergy,
     Stimulus,
-    CreatureInjection
+    CreatureInjection,
+    Metabolism
 }
 
 public sealed record ChemicalDelta(

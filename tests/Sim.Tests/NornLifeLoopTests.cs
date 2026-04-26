@@ -53,6 +53,70 @@ public class NornLifeLoopTests
     }
 
     [Fact]
+    public void HungerMetabolism_RaisesHungerWhenStorageIsLowAndTracesChange()
+    {
+        var creature = LoadStarter();
+        creature.SetChemical(ChemID.ATP, 1.0f);
+        creature.SetChemical(ChemID.Glycogen, 0.0f);
+        creature.SetChemical(ChemID.HungerForCarb, 0.0f);
+        var trace = new BiochemistryTrace();
+
+        creature.Biochemistry.Update(trace);
+
+        Assert.True(creature.GetChemical(ChemID.HungerForCarb) > 0.05f);
+        Assert.Contains(trace.Deltas, d =>
+            d.ChemicalId == ChemID.HungerForCarb &&
+            d.Source == ChemicalDeltaSource.Metabolism &&
+            d.Amount > 0);
+    }
+
+    [Fact]
+    public void HungerMetabolism_ConvertsStorageToAtpWhenEnergyIsLow()
+    {
+        var creature = LoadStarter();
+        creature.SetChemical(ChemID.ATP, 0.02f);
+        creature.SetChemical(ChemID.Glycogen, 0.8f);
+        var trace = new BiochemistryTrace();
+
+        creature.Biochemistry.Update(trace);
+
+        Assert.True(creature.GetChemical(ChemID.ATP) > 0.02f);
+        Assert.True(creature.GetChemical(ChemID.Glycogen) < 0.8f);
+        Assert.Contains(trace.Deltas, d =>
+            d.ChemicalId == ChemID.ATP &&
+            d.Source == ChemicalDeltaSource.Metabolism &&
+            d.Amount > 0);
+    }
+
+    [Fact]
+    public void EatingReward_IsStrongerWhenHungryThanWhenFull()
+    {
+        var hungry = LoadStarter(seed: 50);
+        hungry.SetChemical(ChemID.HungerForCarb, 0.9f);
+        hungry.SetChemical(ChemID.Glycogen, 0.0f);
+
+        var full = LoadStarter(seed: 50);
+        full.SetChemical(ChemID.HungerForCarb, 0.05f);
+        full.SetChemical(ChemID.Glycogen, 0.95f);
+
+        var hungryTrace = new BiochemistryTrace();
+        var fullTrace = new BiochemistryTrace();
+
+        StimulusTable.Apply(hungry, StimulusId.AteFruit, hungryTrace);
+        StimulusTable.Apply(full, StimulusId.AteFruit, fullTrace);
+
+        Assert.True(hungry.GetChemical(ChemID.Reward) > full.GetChemical(ChemID.Reward));
+        Assert.Contains(hungryTrace.Deltas, d =>
+            d.ChemicalId == ChemID.Reward &&
+            d.Source == ChemicalDeltaSource.Stimulus &&
+            d.Detail == "nutrition:ate_fruit:reward");
+        Assert.Contains(fullTrace.Deltas, d =>
+            d.ChemicalId == ChemID.HungerForCarb &&
+            d.Source == ChemicalDeltaSource.Stimulus &&
+            d.Detail == "nutrition:ate_fruit:hunger");
+    }
+
+    [Fact]
     public void WallBumpStimulus_RaisesPainAndFear()
     {
         var creature = LoadStarter();
