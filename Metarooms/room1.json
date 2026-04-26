@@ -1,0 +1,875 @@
+{
+  "id": "editor-draft",
+  "name": "Editor Draft",
+  "backgroundPath": "res://art/metaroom/imported/ig_08c5f1f9f59ddea70169ed69df04348199aeebee1a267cc1df.png",
+  "backgroundWidth": 1983,
+  "backgroundHeight": 793,
+  "worldX": 0,
+  "worldY": 0,
+  "worldWidth": 40,
+  "worldHeight": 13.5,
+  "backdropCenterX": 0,
+  "backdropCenterY": 6.75,
+  "paths": [
+    {
+      "id": "floor-1",
+      "name": "Floor 1",
+      "kind": "floor",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": -18.221153,
+          "y": 2.665605
+        },
+        {
+          "x": -14.519231,
+          "y": 2.4721339
+        },
+        {
+          "x": -12.548077,
+          "y": 2.5151274
+        },
+        {
+          "x": -10.769231,
+          "y": 2.8375797
+        }
+      ]
+    },
+    {
+      "id": "floor-2",
+      "name": "Floor 2",
+      "kind": "floor",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": -19.423077,
+          "y": 4.0199046
+        },
+        {
+          "x": -18.221153,
+          "y": 3.9769106
+        },
+        {
+          "x": -16.538462,
+          "y": 4.471338
+        },
+        {
+          "x": -12.019231,
+          "y": 4.471338
+        },
+        {
+          "x": -10.096153,
+          "y": 4.492834
+        },
+        {
+          "x": -8.317307,
+          "y": 4.471338
+        },
+        {
+          "x": -6.2019234,
+          "y": 4.6863055
+        },
+        {
+          "x": -3.990385,
+          "y": 4.557325
+        },
+        {
+          "x": -3.5576935,
+          "y": 4.557325
+        }
+      ]
+    },
+    {
+      "id": "floor-3",
+      "name": "Floor 3",
+      "kind": "floor",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": -13.317308,
+          "y": 6.921974
+        },
+        {
+          "x": -9.567307,
+          "y": 6.835987
+        },
+        {
+          "x": -7.5,
+          "y": 7.0294585
+        }
+      ]
+    },
+    {
+      "id": "floor-4",
+      "name": "Floor 4",
+      "kind": "floor",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": -6.25,
+          "y": 6.4920382
+        },
+        {
+          "x": -1.4423065,
+          "y": 6.4705415
+        }
+      ]
+    },
+    {
+      "id": "floor-5",
+      "name": "Floor 5",
+      "kind": "floor",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": 1.634615,
+          "y": 6.4705415
+        },
+        {
+          "x": 5.3365364,
+          "y": 6.535032
+        }
+      ]
+    },
+    {
+      "id": "floor-6",
+      "name": "Floor 6",
+      "kind": "floor",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": 17.01923,
+          "y": 7.0724525
+        },
+        {
+          "x": 8.798077,
+          "y": 7.0509553
+        },
+        {
+          "x": 8.317308,
+          "y": 7.1584396
+        }
+      ]
+    },
+    {
+      "id": "floor-7",
+      "name": "Floor 7",
+      "kind": "floor",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": 12.403847,
+          "y": 3.740446
+        },
+        {
+          "x": 15.4326935,
+          "y": 3.8049362
+        },
+        {
+          "x": 17.211536,
+          "y": 4.5788217
+        }
+      ]
+    },
+    {
+      "id": "floor-8",
+      "name": "Floor 8",
+      "kind": "floor",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": 12.403847,
+          "y": 3.7619426
+        },
+        {
+          "x": 10.480768,
+          "y": 4.492834
+        },
+        {
+          "x": 8.653847,
+          "y": 4.643312
+        },
+        {
+          "x": 7.259615,
+          "y": 4.535828
+        },
+        {
+          "x": 5.9615364,
+          "y": 4.6863055
+        },
+        {
+          "x": 3.9423084,
+          "y": 4.6648088
+        },
+        {
+          "x": 1.490385,
+          "y": 4.6648088
+        }
+      ]
+    },
+    {
+      "id": "floor-9",
+      "name": "Floor 9",
+      "kind": "floor",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": 19.807693,
+          "y": 3.5469744
+        },
+        {
+          "x": 15.865387,
+          "y": 1.8057325
+        },
+        {
+          "x": 11.201923,
+          "y": 0.5589172
+        },
+        {
+          "x": 7.884615,
+          "y": 0.6878981
+        },
+        {
+          "x": -0.1442318,
+          "y": 3.1815288
+        },
+        {
+          "x": -2.0192318,
+          "y": 2.9665604
+        },
+        {
+          "x": -5.144232,
+          "y": 1.9132166
+        },
+        {
+          "x": -9.951923,
+          "y": 0.2794586
+        }
+      ]
+    },
+    {
+      "id": "stair-10",
+      "name": "Stair 10",
+      "kind": "stair",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": 1.634615,
+          "y": 6.4490447
+        },
+        {
+          "x": -0.38461494,
+          "y": 5.0087576
+        },
+        {
+          "x": -1.3942318,
+          "y": 3.84793
+        }
+      ]
+    },
+    {
+      "id": "stair-11",
+      "name": "Stair 11",
+      "kind": "stair",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": -1.9230766,
+          "y": 6.4705415
+        },
+        {
+          "x": -0.24038506,
+          "y": 5.8686304
+        },
+        {
+          "x": 0.2884636,
+          "y": 5.503185
+        }
+      ]
+    },
+    {
+      "id": "stair-12",
+      "name": "Stair 12",
+      "kind": "stair",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": 1.9711533,
+          "y": 4.621815
+        },
+        {
+          "x": 0.5769234,
+          "y": 3.6544585
+        },
+        {
+          "x": 0.5769234,
+          "y": 3.6544585
+        },
+        {
+          "x": 2.115385,
+          "y": 2.816083
+        }
+      ]
+    },
+    {
+      "id": "stair-13",
+      "name": "Stair 13",
+      "kind": "stair",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": -4.134616,
+          "y": 2.4076433
+        },
+        {
+          "x": -2.5961533,
+          "y": 3.589968
+        },
+        {
+          "x": -3.7980766,
+          "y": 4.535828
+        }
+      ]
+    },
+    {
+      "id": "ramp-14",
+      "name": "Ramp 14",
+      "kind": "ramp",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": -0.19230652,
+          "y": 3.2245224
+        },
+        {
+          "x": -2.6923065,
+          "y": 3.6759555
+        },
+        {
+          "x": -2.9326935,
+          "y": 3.718949
+        }
+      ]
+    },
+    {
+      "id": "ramp-15",
+      "name": "Ramp 15",
+      "kind": "ramp",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": -2.0192318,
+          "y": 3.031051
+        },
+        {
+          "x": -1.2019234,
+          "y": 3.933917
+        }
+      ]
+    },
+    {
+      "id": "ramp-16",
+      "name": "Ramp 16",
+      "kind": "ramp",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": 2.3076916,
+          "y": 2.4076433
+        },
+        {
+          "x": 2.115385,
+          "y": 2.8590765
+        }
+      ]
+    },
+    {
+      "id": "ramp-17",
+      "name": "Ramp 17",
+      "kind": "ramp",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": -0.1442318,
+          "y": 3.267516
+        },
+        {
+          "x": 0.5769234,
+          "y": 3.697452
+        }
+      ]
+    },
+    {
+      "id": "ramp-18",
+      "name": "Ramp 18",
+      "kind": "ramp",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": -0.9615383,
+          "y": 3.84793
+        },
+        {
+          "x": -0.19230652,
+          "y": 3.267516
+        }
+      ]
+    },
+    {
+      "id": "floor-19",
+      "name": "Floor 19",
+      "kind": "floor",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": -18.89423,
+          "y": 5.80414
+        },
+        {
+          "x": -13.653847,
+          "y": 5.653662
+        }
+      ]
+    },
+    {
+      "id": "stair-20",
+      "name": "Stair 20",
+      "kind": "stair",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": -11.009616,
+          "y": 4.5788217
+        },
+        {
+          "x": -13.605769,
+          "y": 5.653662
+        }
+      ]
+    },
+    {
+      "id": "stair-21",
+      "name": "Stair 21",
+      "kind": "stair",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": -10.865384,
+          "y": 2.8590765
+        },
+        {
+          "x": -10.096153,
+          "y": 3.718949
+        },
+        {
+          "x": -10.865384,
+          "y": 4.535828
+        }
+      ]
+    },
+    {
+      "id": "stair-22",
+      "name": "Stair 22",
+      "kind": "stair",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": -7.5480766,
+          "y": 7.0294585
+        },
+        {
+          "x": -6.346154,
+          "y": 6.535032
+        }
+      ]
+    },
+    {
+      "id": "stair-23",
+      "name": "Stair 23",
+      "kind": "stair",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": -2.884615,
+          "y": 6.3415604
+        },
+        {
+          "x": -2.259615,
+          "y": 5.5246816
+        },
+        {
+          "x": -3.5576935,
+          "y": 4.535828
+        }
+      ]
+    },
+    {
+      "id": "stair-24",
+      "name": "Stair 24",
+      "kind": "stair",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": 16.923077,
+          "y": 7.093949
+        },
+        {
+          "x": 18.701923,
+          "y": 6.1050954
+        },
+        {
+          "x": 19.134613,
+          "y": 5.503185
+        }
+      ]
+    },
+    {
+      "id": "stair-25",
+      "name": "Stair 25",
+      "kind": "stair",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": 17.884613,
+          "y": 4.707803
+        },
+        {
+          "x": 19.134613,
+          "y": 5.589172
+        }
+      ]
+    },
+    {
+      "id": "stair-26",
+      "name": "Stair 26",
+      "kind": "stair",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": 19.23077,
+          "y": 3.4394906
+        },
+        {
+          "x": 17.5,
+          "y": 4.621815
+        }
+      ]
+    },
+    {
+      "id": "ramp-27",
+      "name": "Ramp 27",
+      "kind": "ramp",
+      "roomType": "indoorWood",
+      "ceilingOffset": 3,
+      "enabled": true,
+      "points": [
+        {
+          "x": -4.0384617,
+          "y": 2.2786624
+        },
+        {
+          "x": -7.5,
+          "y": 2.7730892
+        }
+      ]
+    }
+  ],
+  "objects": [
+    {
+      "id": "incubator-1",
+      "name": "Incubator",
+      "kind": "incubator",
+      "position": {
+        "x": -18.413462,
+        "y": 4.406847
+      },
+      "scale": 1,
+      "rotationDegrees": 0,
+      "enabled": true,
+      "door": null,
+      "elevator": null,
+      "home": null,
+      "food": null,
+      "gadget": null
+    },
+    {
+      "id": "nornspawn-2",
+      "name": "NornSpawn",
+      "kind": "nornSpawn",
+      "position": {
+        "x": -18.701923,
+        "y": 4.1273885
+      },
+      "scale": 1,
+      "rotationDegrees": 0,
+      "enabled": true,
+      "door": null,
+      "elevator": null,
+      "home": null,
+      "food": null,
+      "gadget": null
+    },
+    {
+      "id": "toy-3",
+      "name": "Toy",
+      "kind": "toy",
+      "position": {
+        "x": -16.25,
+        "y": 4.6863055
+      },
+      "scale": 1,
+      "rotationDegrees": 0,
+      "enabled": true,
+      "door": null,
+      "elevator": null,
+      "home": null,
+      "food": null,
+      "gadget": {
+        "gadgetType": "RobotToy",
+        "scanRadius": 6,
+        "timerInterval": 10
+      }
+    },
+    {
+      "id": "toy-4",
+      "name": "Toy",
+      "kind": "toy",
+      "position": {
+        "x": -5.240384,
+        "y": 4.85828
+      },
+      "scale": 1,
+      "rotationDegrees": 0,
+      "enabled": true,
+      "door": null,
+      "elevator": null,
+      "home": null,
+      "food": null,
+      "gadget": {
+        "gadgetType": "RobotToy",
+        "scanRadius": 6,
+        "timerInterval": 10
+      }
+    },
+    {
+      "id": "toy-5",
+      "name": "Toy",
+      "kind": "toy",
+      "position": {
+        "x": -3.4134617,
+        "y": 6.7070065
+      },
+      "scale": 1,
+      "rotationDegrees": 0,
+      "enabled": true,
+      "door": null,
+      "elevator": null,
+      "home": null,
+      "food": null,
+      "gadget": {
+        "gadgetType": "RobotToy",
+        "scanRadius": 6,
+        "timerInterval": 10
+      }
+    },
+    {
+      "id": "toy-6",
+      "name": "Toy",
+      "kind": "toy",
+      "position": {
+        "x": 3.990385,
+        "y": 6.9434714
+      },
+      "scale": 1,
+      "rotationDegrees": 0,
+      "enabled": true,
+      "door": null,
+      "elevator": null,
+      "home": null,
+      "food": null,
+      "gadget": {
+        "gadgetType": "RobotToy",
+        "scanRadius": 6,
+        "timerInterval": 10
+      }
+    },
+    {
+      "id": "toy-7",
+      "name": "Toy",
+      "kind": "toy",
+      "position": {
+        "x": 12.98077,
+        "y": 4.471338
+      },
+      "scale": 1,
+      "rotationDegrees": 0,
+      "enabled": true,
+      "door": null,
+      "elevator": null,
+      "home": null,
+      "food": null,
+      "gadget": {
+        "gadgetType": "RobotToy",
+        "scanRadius": 6,
+        "timerInterval": 10
+      }
+    },
+    {
+      "id": "fooddispenser-8",
+      "name": "FoodDispenser",
+      "kind": "foodDispenser",
+      "position": {
+        "x": -17.35577,
+        "y": 2.90207
+      },
+      "scale": 1,
+      "rotationDegrees": 0,
+      "enabled": true,
+      "door": null,
+      "elevator": null,
+      "home": null,
+      "food": null,
+      "gadget": {
+        "gadgetType": "RobotToy",
+        "scanRadius": 6,
+        "timerInterval": 10
+      }
+    },
+    {
+      "id": "fooddispenser-9",
+      "name": "FoodDispenser",
+      "kind": "foodDispenser",
+      "position": {
+        "x": 9.134615,
+        "y": 1.2038217
+      },
+      "scale": 1,
+      "rotationDegrees": 0,
+      "enabled": true,
+      "door": null,
+      "elevator": null,
+      "home": null,
+      "food": null,
+      "gadget": {
+        "gadgetType": "RobotToy",
+        "scanRadius": 6,
+        "timerInterval": 10
+      }
+    },
+    {
+      "id": "fooddispenser-10",
+      "name": "FoodDispenser",
+      "kind": "foodDispenser",
+      "position": {
+        "x": 15.961536,
+        "y": 4.707803
+      },
+      "scale": 1,
+      "rotationDegrees": 0,
+      "enabled": true,
+      "door": null,
+      "elevator": null,
+      "home": null,
+      "food": null,
+      "gadget": {
+        "gadgetType": "RobotToy",
+        "scanRadius": 6,
+        "timerInterval": 10
+      }
+    },
+    {
+      "id": "toy-11",
+      "name": "Toy",
+      "kind": "toy",
+      "position": {
+        "x": 11.826923,
+        "y": 7.308917
+      },
+      "scale": 1,
+      "rotationDegrees": 0,
+      "enabled": true,
+      "door": null,
+      "elevator": null,
+      "home": null,
+      "food": null,
+      "gadget": {
+        "gadgetType": "RobotToy",
+        "scanRadius": 6,
+        "timerInterval": 10
+      }
+    },
+    {
+      "id": "home-12",
+      "name": "Home",
+      "kind": "home",
+      "position": {
+        "x": -4.5673075,
+        "y": 6.621019
+      },
+      "scale": 1,
+      "rotationDegrees": 0,
+      "enabled": true,
+      "door": null,
+      "elevator": null,
+      "home": {
+        "radius": 3,
+        "lonelinessSuppress": 0.25,
+        "boredomSuppress": 0.15
+      },
+      "food": null,
+      "gadget": null
+    }
+  ]
+}

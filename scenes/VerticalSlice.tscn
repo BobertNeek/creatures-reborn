@@ -18,7 +18,6 @@ Radius = 4.0
 
 [node name="Norn" parent="." instance=ExtResource("2_norn")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
-Sex = 1
 
 [node name="Norn2" parent="." instance=ExtResource("2_norn")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, 0)
