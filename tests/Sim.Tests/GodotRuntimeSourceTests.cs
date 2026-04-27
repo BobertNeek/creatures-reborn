@@ -132,6 +132,39 @@ public class GodotRuntimeSourceTests
             string uidPath = RepoPath("assets", "models", $"{textureName}.uid");
             Assert.True(File.Exists(uidPath), $"{textureName}.uid keeps norn.glb external resource UIDs valid.");
             Assert.StartsWith("uid://", File.ReadAllText(uidPath).Trim());
+
+            string importPath = RepoPath("assets", "models", $"{textureName}.import");
+            Assert.True(File.Exists(importPath), $"{textureName}.import registers the imported texture UID with Godot.");
+            Assert.Contains(File.ReadAllText(uidPath).Trim(), File.ReadAllText(importPath));
         }
+
+        string glbImportPath = RepoPath("assets", "models", "norn.glb.import");
+        Assert.True(File.Exists(glbImportPath), "norn.glb.import lets clean checkouts load norn.glb as a PackedScene.");
+        Assert.Contains("type=\"PackedScene\"", File.ReadAllText(glbImportPath));
+    }
+
+    [Fact]
+    public void LegacyNornGlbImportMetadata_IsExplicitlyTrackedDespiteGlobalImportIgnore()
+    {
+        string gitignore = File.ReadAllText(RepoPath(".gitignore"));
+
+        Assert.Contains("*.import", gitignore);
+        Assert.Contains("!assets/models/norn.glb.import", gitignore);
+        string[] textureNames =
+        {
+            "norn_Body_F.png",
+            "norn_Ear_F.png",
+            "norn_Feet_F.png",
+            "norn_Head_F.png",
+            "norn_Humerus_F.png",
+            "norn_Radius_F.png",
+            "norn_Shin_F.png",
+            "norn_Thigh_F.png",
+            "norn_Tail_Base_F.png",
+            "norn_Tail_Tip_F.png",
+        };
+
+        foreach (string textureName in textureNames)
+            Assert.Contains($"!assets/models/{textureName}.import", gitignore);
     }
 }

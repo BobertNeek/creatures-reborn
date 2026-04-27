@@ -2,6 +2,17 @@
 .godot/
 .import/
 *.import
+!assets/models/norn.glb.import
+!assets/models/norn_Body_F.png.import
+!assets/models/norn_Ear_F.png.import
+!assets/models/norn_Feet_F.png.import
+!assets/models/norn_Head_F.png.import
+!assets/models/norn_Humerus_F.png.import
+!assets/models/norn_Radius_F.png.import
+!assets/models/norn_Shin_F.png.import
+!assets/models/norn_Tail_Base_F.png.import
+!assets/models/norn_Tail_Tip_F.png.import
+!assets/models/norn_Thigh_F.png.import
 export.cfg
 export_presets.cfg
 .mono/
