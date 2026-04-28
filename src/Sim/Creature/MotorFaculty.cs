@@ -1,5 +1,6 @@
 namespace CreaturesReborn.Sim.Creature;
 
+using CreaturesReborn.Sim.Save;
 using BrainCls = CreaturesReborn.Sim.Brain.Brain;
 
 /// <summary>
@@ -44,6 +45,23 @@ public sealed class MotorFaculty
 
     public void SuggestNoun(int nounId, float strength = 1.0f)
         => _brain.SetInput(_nounToken, nounId, strength);
+
+    public SavedMotorState CreateSaveState()
+        => new()
+        {
+            CurrentVerb = CurrentVerb,
+            CurrentNoun = CurrentNoun,
+            CurrentGait = CurrentGait,
+            CurrentPose = CurrentPose,
+        };
+
+    public void RestoreSaveState(SavedMotorState state)
+    {
+        CurrentVerb = state.CurrentVerb;
+        CurrentNoun = state.CurrentNoun;
+        CurrentGait = state.CurrentGait;
+        CurrentPose = state.CurrentPose;
+    }
 
     private static int VerbToGait(int verb) => verb switch
     {

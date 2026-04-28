@@ -3,6 +3,7 @@ using CreaturesReborn.Sim.Biochemistry;
 using CreaturesReborn.Sim.Brain;
 using CreaturesReborn.Sim.Formats;
 using CreaturesReborn.Sim.Genome;
+using CreaturesReborn.Sim.Save;
 using CreaturesReborn.Sim.Util;
 using CreaturesReborn.Sim.World;
 
@@ -90,6 +91,30 @@ public sealed class Creature
 
     public static Creature CreateFromGenome(G genome, IRng rng)
         => new(genome, rng);
+
+    public static Creature RestoreSnapshot(SavedCreatureState state)
+    {
+        IRng rng = state.RngState.HasValue
+            ? StatefulRng.FromState(state.RngState.Value)
+            : new StatefulRng(0);
+
+        var genome = new G(rng);
+        GenomeReader.Load(
+            genome,
+            state.GenomeBytes,
+            state.Sex,
+            age: 0,
+            state.Variant,
+            state.Moniker);
+
+        var creature = new Creature(genome, rng);
+        creature.Genome.Age = state.Age;
+        creature.Biochemistry.RestoreSaveState(state.Biochemistry);
+        creature.Brain.RestoreSaveState(state.Brain);
+        creature.Motor.RestoreSaveState(state.Motor);
+        creature._ageTickAccumulator = state.AgeTickAccumulator;
+        return creature;
+    }
 
     // -------------------------------------------------------------------------
     // Tick
@@ -236,6 +261,21 @@ public sealed class Creature
         if (Genome.Age == byte.MaxValue)
             _ageTickAccumulator = 0;
     }
+
+    public SavedCreatureState CreateSnapshot()
+        => new()
+        {
+            Moniker = Genome.Moniker,
+            GenomeBytes = GenomeWriter.Serialize(Genome),
+            Sex = Genome.Sex,
+            Age = Genome.Age,
+            Variant = Genome.Variant,
+            AgeTickAccumulator = _ageTickAccumulator,
+            RngState = _rng is StatefulRng stateful ? stateful.CreateState() : null,
+            Biochemistry = Biochemistry.CreateSaveState(),
+            Brain = Brain.CreateSaveState(),
+            Motor = Motor.CreateSaveState(),
+        };
 
     // -------------------------------------------------------------------------
     // Private helpers

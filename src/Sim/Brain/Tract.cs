@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using CreaturesReborn.Sim.Biochemistry;
+using CreaturesReborn.Sim.Save;
 using CreaturesReborn.Sim.Util;
 
 namespace CreaturesReborn.Sim.Brain;
@@ -266,6 +267,44 @@ public sealed class Tract : BrainComponent
             _dendrites.Count,
             STtoLTRate,
             dendrites);
+    }
+
+    public SavedTractState CreateSaveState(int index)
+    {
+        var dendrites = new List<SavedDendriteState>(_dendrites.Count);
+        for (int i = 0; i < _dendrites.Count; i++)
+        {
+            dendrites.Add(new SavedDendriteState
+            {
+                Index = i,
+                Weights = (float[])_dendrites[i].Weights.Clone(),
+            });
+        }
+
+        return new SavedTractState
+        {
+            Index = index,
+            STtoLTRate = STtoLTRate,
+            Dendrites = dendrites,
+        };
+    }
+
+    public void RestoreSaveState(SavedTractState state)
+    {
+        STtoLTRate = state.STtoLTRate;
+        int count = Math.Min(_dendrites.Count, state.Dendrites.Count);
+        for (int i = 0; i < count; i++)
+        {
+            SavedDendriteState saved = state.Dendrites[i];
+            if ((uint)saved.Index >= (uint)_dendrites.Count)
+                continue;
+
+            Array.Clear(_dendrites[saved.Index].Weights);
+            Array.Copy(
+                saved.Weights,
+                _dendrites[saved.Index].Weights,
+                Math.Min(saved.Weights.Length, _dendrites[saved.Index].Weights.Length));
+        }
     }
 
     // -------------------------------------------------------------------------

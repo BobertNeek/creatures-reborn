@@ -41,9 +41,11 @@ public partial class MetaroomRuntimeLoader : Node
     private void LoadDefinitionFiles()
     {
         _definitions.Clear();
-        IReadOnlyList<string> paths = MetaroomEditorSession.DefinitionPaths.Count > 0
-            ? MetaroomEditorSession.DefinitionPaths
-            : DefinitionPaths;
+        IReadOnlyList<string> paths = GameLaunchSession.ActiveMetaroomPaths.Count > 0
+            ? GameLaunchSession.ActiveMetaroomPaths
+            : MetaroomEditorSession.DefinitionPaths.Count > 0
+                ? MetaroomEditorSession.DefinitionPaths
+                : DefinitionPaths;
 
         foreach (string path in paths)
         {

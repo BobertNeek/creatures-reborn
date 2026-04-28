@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using CreaturesReborn.Sim.Biochemistry;
 using CreaturesReborn.Sim.Genome;
+using CreaturesReborn.Sim.Save;
 using CreaturesReborn.Sim.Util;
 
 namespace CreaturesReborn.Sim.Brain;
@@ -390,6 +391,46 @@ public sealed class Brain : IBrainLocusProvider
             moduleSnapshots,
             _instincts.Count,
             _processingInstincts);
+    }
+
+    public SavedBrainState CreateSaveState()
+    {
+        var lobes = new List<SavedLobeState>(_lobes.Count);
+        for (int i = 0; i < _lobes.Count; i++)
+            lobes.Add(_lobes[i].CreateSaveState(i));
+
+        var tracts = new List<SavedTractState>(_tracts.Count);
+        for (int i = 0; i < _tracts.Count; i++)
+            tracts.Add(_tracts[i].CreateSaveState(i));
+
+        return new SavedBrainState
+        {
+            Lobes = lobes,
+            Tracts = tracts,
+            InstinctsRemaining = _instincts.Count,
+            IsProcessingInstincts = _processingInstincts,
+        };
+    }
+
+    public void RestoreSaveState(SavedBrainState state)
+    {
+        int lobeCount = Math.Min(_lobes.Count, state.Lobes.Count);
+        for (int i = 0; i < lobeCount; i++)
+        {
+            SavedLobeState saved = state.Lobes[i];
+            if ((uint)saved.Index < (uint)_lobes.Count)
+                _lobes[saved.Index].RestoreSaveState(saved);
+        }
+
+        int tractCount = Math.Min(_tracts.Count, state.Tracts.Count);
+        for (int i = 0; i < tractCount; i++)
+        {
+            SavedTractState saved = state.Tracts[i];
+            if ((uint)saved.Index < (uint)_tracts.Count)
+                _tracts[saved.Index].RestoreSaveState(saved);
+        }
+
+        _processingInstincts = state.IsProcessingInstincts && _instincts.Count > 0;
     }
 
     // -------------------------------------------------------------------------

@@ -3,6 +3,7 @@ using Godot;
 using CreaturesReborn.Sim.Biochemistry;
 using CreaturesReborn.Sim.Creature;
 using CreaturesReborn.Sim.Genome;
+using CreaturesReborn.Sim.Save;
 using CreaturesReborn.Sim.Util;
 using C = CreaturesReborn.Sim.Creature.Creature;
 
@@ -37,6 +38,7 @@ public partial class CreatureNode : Node3D
     private NornBillboardSprite? _sprite;
     private float _verticalVelocity;
     private bool _heldByHand;
+    private SavedCreatureState? _pendingSavedState;
 
     // Seconds to suppress re-laying egg after one was just laid
     private float _layEggCooldown;
@@ -50,6 +52,11 @@ public partial class CreatureNode : Node3D
     // Public accessors
     // -------------------------------------------------------------------------
     public C? Creature => _creature;
+    public SavedCreatureState? PendingSavedState
+    {
+        get => _pendingSavedState;
+        set => _pendingSavedState = value;
+    }
 
     public void SetHeldByHand(bool held)
     {
@@ -63,20 +70,30 @@ public partial class CreatureNode : Node3D
     // -------------------------------------------------------------------------
     public override void _Ready()
     {
-        string absPath = ProjectSettings.GlobalizePath(GenomePath);
-        if (!System.IO.File.Exists(absPath))
+        if (_pendingSavedState != null)
         {
-            GD.PrintErr($"[CreatureNode] Genome not found: {absPath}");
-            return;
+            RestoreFromSavedState(_pendingSavedState);
+        }
+        else
+        {
+            string absPath = ProjectSettings.GlobalizePath(GenomePath);
+            if (!System.IO.File.Exists(absPath))
+            {
+                GD.PrintErr($"[CreatureNode] Genome not found: {absPath}");
+                return;
+            }
+
+            var rng = new StatefulRng((int)GD.Randi());
+            string moniker = string.IsNullOrWhiteSpace(Moniker)
+                ? Name.ToString()
+                : Moniker;
+            byte age = (byte)Math.Clamp(Age, 0, 255);
+            _creature = C.LoadFromFile(absPath, rng, Sex, age, Variant, moniker);
+            _creature.SetChemical(ChemID.ATP, 1.0f);
         }
 
-        var rng = new Rng((int)GD.Randi());
-        string moniker = string.IsNullOrWhiteSpace(Moniker)
-            ? Name.ToString()
-            : Moniker;
-        byte age = (byte)Math.Clamp(Age, 0, 255);
-        _creature = C.LoadFromFile(absPath, rng, Sex, age, Variant, moniker);
-        _creature.SetChemical(ChemID.ATP, 1.0f);
+        if (_creature == null)
+            return;
 
         _sprite = GetNodeOrNull<NornBillboardSprite>("Sprite");
         _sprite?.UpdateVisuals(_creature);
@@ -96,6 +113,34 @@ public partial class CreatureNode : Node3D
             _sprite.SetClampX(x => treehouse.MetaRoom.ClampX(x));
 
         GD.Print($"[CreatureNode] Loaded creature. Lobes={_creature.Brain.LobeCount}, Tracts={_creature.Brain.TractCount}");
+    }
+
+    public SavedCreatureState CreateSavedState()
+    {
+        if (_creature == null)
+            throw new InvalidOperationException("Cannot save an unloaded creature.");
+
+        SavedCreatureState state = _creature.CreateSnapshot();
+        state.GenomePath = GenomePath;
+        state.X = Position.X;
+        state.Y = Position.Y;
+        state.Z = Position.Z;
+        state.WalkSpeed = WalkSpeed;
+        state.VerticalVelocity = _verticalVelocity;
+        return state;
+    }
+
+    private void RestoreFromSavedState(SavedCreatureState state)
+    {
+        _creature = C.RestoreSnapshot(state);
+        GenomePath = state.GenomePath;
+        Sex = state.Sex;
+        Age = state.Age;
+        Variant = state.Variant;
+        Moniker = state.Moniker;
+        WalkSpeed = state.WalkSpeed;
+        _verticalVelocity = state.VerticalVelocity;
+        Position = new Vector3(state.X, state.Y, state.Z);
     }
 
     public override void _Process(double delta)

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using CreaturesReborn.Sim.Save;
 using G = CreaturesReborn.Sim.Genome.Genome;
 
 namespace CreaturesReborn.Sim.Brain;
@@ -225,5 +226,48 @@ public sealed class Lobe : BrainComponent
             _neurons.Count,
             _winningNeuronId,
             neurons);
+    }
+
+    public SavedLobeState CreateSaveState(int index)
+    {
+        var neurons = new List<SavedNeuronState>(_neurons.Count);
+        for (int i = 0; i < _neurons.Count; i++)
+        {
+            neurons.Add(new SavedNeuronState
+            {
+                Index = i,
+                States = (float[])_neurons[i].States.Clone(),
+            });
+        }
+
+        return new SavedLobeState
+        {
+            Index = index,
+            Token = Token,
+            WinningNeuronId = _winningNeuronId,
+            Neurons = neurons,
+        };
+    }
+
+    public void RestoreSaveState(SavedLobeState state)
+    {
+        int count = Math.Min(_neurons.Count, state.Neurons.Count);
+        for (int i = 0; i < count; i++)
+        {
+            SavedNeuronState saved = state.Neurons[i];
+            if ((uint)saved.Index >= (uint)_neurons.Count)
+                continue;
+
+            Array.Clear(_neurons[saved.Index].States);
+            Array.Copy(
+                saved.States,
+                _neurons[saved.Index].States,
+                Math.Min(saved.States.Length, _neurons[saved.Index].States.Length));
+        }
+
+        _winningNeuronId = Math.Clamp(state.WinningNeuronId, 0, Math.Max(0, _neurons.Count - 1));
+        _spareNeuronVars = _neurons.Count > 0
+            ? _neurons[_winningNeuronId].States
+            : SVRule.InvalidVariables;
     }
 }

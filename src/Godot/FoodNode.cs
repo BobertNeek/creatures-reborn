@@ -2,6 +2,7 @@ using System;
 using Godot;
 using CreaturesReborn.Sim.Agent;
 using CreaturesReborn.Sim.Creature;
+using CreaturesReborn.Sim.Save;
 
 namespace CreaturesReborn.Godot;
 
@@ -72,6 +73,17 @@ public partial class FoodNode : Node3D
         IsConsumed = true;
         QueueFree();
     }
+
+    public SavedFoodState CreateSavedState()
+        => new()
+        {
+            FoodKind = FoodKind.ToString(),
+            X = Position.X,
+            Y = Position.Y,
+            Z = Position.Z,
+            GlycogenAmount = GlycogenAmount,
+            ATPAmount = ATPAmount,
+        };
 
     // ── Visual construction ───────────────────────────────────────────────────
     private static Node3D BuildVisual(FoodKind kind)

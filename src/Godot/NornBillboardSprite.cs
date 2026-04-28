@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Godot;
 using CreaturesReborn.Sim.Creature;
 
@@ -82,10 +83,17 @@ public partial class NornBillboardSprite : Node3D
     }
 
     private bool ShouldUseProceduralModel()
-        => UseProceduralModel || IsHeadlessDisplay();
+        => UseProceduralModel || IsHeadlessDisplay() || !HasImportedLegacyModel();
 
     private static bool IsHeadlessDisplay()
         => string.Equals(DisplayServer.GetName(), "headless", StringComparison.OrdinalIgnoreCase);
+
+    private static bool HasImportedLegacyModel()
+    {
+        string importDirectory = ProjectSettings.GlobalizePath("res://.godot/imported");
+        return Directory.Exists(importDirectory)
+            && Directory.GetFiles(importDirectory, "norn.glb-*.scn").Length > 0;
+    }
 
     private Node3D? LoadLegacyGlbModel()
     {

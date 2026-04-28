@@ -3,6 +3,7 @@ using Godot;
 using CreaturesReborn.Sim.Agent;
 using CreaturesReborn.Sim.Creature;
 using CreaturesReborn.Sim.Genome;
+using CreaturesReborn.Sim.Save;
 
 namespace CreaturesReborn.Godot.Agents;
 
@@ -93,6 +94,44 @@ public partial class EggNode : Node3D
             GD.Print($"[Egg] Hatched! Genome={GenomePath}");
         }
         QueueFree();
+    }
+
+    public SavedEggState CreateSavedState()
+    {
+        byte[] genomeBytes = Array.Empty<byte>();
+        string localPath = ProjectSettings.GlobalizePath(GenomePath);
+        if (!string.IsNullOrWhiteSpace(localPath) && System.IO.File.Exists(localPath))
+            genomeBytes = System.IO.File.ReadAllBytes(localPath);
+
+        return new SavedEggState
+        {
+            GenomePath = GenomePath,
+            GenomeBytes = genomeBytes,
+            Sex = Sex,
+            Age = _age,
+            HatchTime = HatchTime,
+            X = Position.X,
+            Y = Position.Y,
+            Z = Position.Z,
+        };
+    }
+
+    public void RestoreFromSavedState(SavedEggState state)
+    {
+        GenomePath = state.GenomePath;
+        if (state.GenomeBytes.Length > 0)
+        {
+            string restoredPath = System.IO.Path.Combine(
+                ProjectSettings.GlobalizePath("user://"),
+                $"restored_egg_{(ulong)Time.GetTicksMsec()}.gen");
+            System.IO.File.WriteAllBytes(restoredPath, state.GenomeBytes);
+            GenomePath = restoredPath;
+        }
+
+        Sex = state.Sex;
+        _age = state.Age;
+        HatchTime = state.HatchTime;
+        Position = new Vector3(state.X, state.Y, state.Z);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

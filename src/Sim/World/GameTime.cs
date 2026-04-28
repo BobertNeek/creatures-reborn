@@ -1,3 +1,5 @@
+using System;
+
 namespace CreaturesReborn.Sim.World;
 
 /// <summary>
@@ -38,6 +40,16 @@ public sealed class GameTime
     public void Tick()
     {
         WorldTick++;
+        float dayTicks = TicksPerDay;
+        TimeOfDay = (WorldTick % (int)dayTicks) / dayTicks;
+        Day       = (int)(WorldTick / dayTicks);
+        Season    = (int)((WorldTick / TicksPerSeason) % SeasonsPerYear);
+        Year      = (int)(WorldTick / TicksPerYear);
+    }
+
+    public void Restore(int worldTick)
+    {
+        WorldTick = Math.Max(0, worldTick);
         float dayTicks = TicksPerDay;
         TimeOfDay = (WorldTick % (int)dayTicks) / dayTicks;
         Day       = (int)(WorldTick / dayTicks);

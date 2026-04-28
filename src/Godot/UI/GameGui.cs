@@ -2,6 +2,7 @@ using System;
 using Godot;
 using CreaturesReborn.Sim.Creature;
 using CreaturesReborn.Sim.Biochemistry;
+using CreaturesReborn.Sim.Save;
 using C = CreaturesReborn.Sim.Creature.Creature;
 
 namespace CreaturesReborn.Godot.UI;
@@ -32,6 +33,7 @@ public partial class GameGui : Control
     private ProgressBar? _happyBar;
     private Label?       _verbLabel;
     private Label?       _populationLabel;
+    private Panel?       _savePanel;
 
     // ── State ───────────────────────────────────────────────────────────────
     private PointerAgent? _pointer;
@@ -65,6 +67,14 @@ public partial class GameGui : Control
         if (@event is InputEventKey key && key.Pressed && key.Keycode == Key.Tab)
         {
             CycleCreature();
+        }
+
+        if (@event is InputEventKey menuKey && menuKey.Pressed && menuKey.Keycode == Key.Escape)
+        {
+            if (_savePanel == null)
+                ShowSaveOverlay();
+            else
+                CloseSaveOverlay();
         }
     }
 
@@ -206,6 +216,7 @@ public partial class GameGui : Control
         hbox.AddChild(MakeButton("Hatch Egg", () => DoHatchEgg()));
         hbox.AddChild(MakeButton("Feed", () => DoFeed()));
         hbox.AddChild(MakeButton("Breed", () => DoBreed()));
+        hbox.AddChild(MakeButton("Save", ShowSaveOverlay));
         hbox.AddChild(MakeButton("[Tab] Next", () => CycleCreature()));
     }
 
@@ -326,6 +337,56 @@ public partial class GameGui : Control
 
         if (creatures.Count == 0) return;
         _creatureIndex = (_creatureIndex + 1) % creatures.Count;
+    }
+
+    private void ShowSaveOverlay()
+    {
+        if (_savePanel != null)
+            return;
+
+        _savePanel = MakePanel(new Vector2(-360, -300), new Vector2(340, 240));
+        _savePanel.SetAnchorsPreset(LayoutPreset.CenterRight);
+        _savePanel.MouseFilter = MouseFilterEnum.Stop;
+        AddChild(_savePanel);
+
+        var vbox = new VBoxContainer
+        {
+            Position = new Vector2(12, 12),
+            Size = new Vector2(316, 216),
+        };
+        vbox.AddThemeConstantOverride("separation", 8);
+        _savePanel.AddChild(vbox);
+        vbox.AddChild(MakeLabel("Save Game", 16));
+
+        for (int slot = 1; slot <= 5; slot++)
+        {
+            int captured = slot;
+            vbox.AddChild(MakeButton($"Save Slot {slot}", () => SaveToSlot(captured)));
+        }
+
+        vbox.AddChild(MakeButton("Close", CloseSaveOverlay));
+    }
+
+    private void SaveToSlot(int slot)
+    {
+        WorldNode? world = _world ?? FindWorldNode();
+        if (world == null)
+            return;
+
+        var service = new GameSaveService(ProjectSettings.GlobalizePath("user://saves"));
+        GameSaveData save = world.CreateSaveData(slot, $"Slot {slot}");
+        service.Save(save);
+        GD.Print($"[GUI] Saved game to slot {slot}.");
+        CloseSaveOverlay();
+    }
+
+    private void CloseSaveOverlay()
+    {
+        if (_savePanel == null)
+            return;
+        RemoveChild(_savePanel);
+        _savePanel.QueueFree();
+        _savePanel = null;
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

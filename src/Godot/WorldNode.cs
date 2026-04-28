@@ -2,6 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Godot;
+using CreaturesReborn.Godot.Agents;
+using CreaturesReborn.Godot.UI;
+using CreaturesReborn.Sim.Creature;
+using CreaturesReborn.Sim.Save;
+using CreaturesReborn.Sim.Settings;
 using CreaturesReborn.Sim.World;
 using CreaturesReborn.Sim.Agent;
 
@@ -51,14 +56,18 @@ public partial class WorldNode : Node3D
 
     public override void _Ready()
     {
-        World.BreedingLimit      = BreedingLimit;
-        World.TotalPopulationMax = TotalPopulationMax;
+        ApplySettings(GameSettingsStore.Load());
 
         // Dev helper: auto-screenshot-and-quit when launched with
         // --screenshot=<path>. Inert otherwise. See DebugScreenshot.cs.
         AddChild(new DebugScreenshot { Name = "DebugScreenshot" });
 
         RegisterSceneGeometry();
+        if (GameLaunchSession.PendingSaveData != null)
+        {
+            RestoreFromSave(GameLaunchSession.PendingSaveData);
+            GameLaunchSession.ClearPendingSave();
+        }
 
         GD.Print("[WorldNode] Simulation world initialised.");
         GD.Print($"  Tick rate: {TickRate} Hz, Breeding limit: {BreedingLimit}");
@@ -170,6 +179,119 @@ public partial class WorldNode : Node3D
     public int FirstNavigationDirection(Vector3 from, Vector3 target)
         => Navigation?.FirstHorizontalDirection(from.X, from.Y, target.X, target.Y)
            ?? Math.Sign(target.X - from.X);
+
+    public void ApplySettings(GameSettings settings)
+    {
+        settings = settings.Normalize();
+        BreedingLimit = settings.BreedingLimit;
+        TotalPopulationMax = settings.MaxCreatures;
+        TickRate = settings.SimulationSpeed;
+        GravityAcceleration = settings.GravityStrength;
+        World.BreedingLimit = settings.BreedingLimit;
+        World.TotalPopulationMax = settings.MaxCreatures;
+    }
+
+    public GameSaveData CreateSaveData(int slot, string slotName)
+    {
+        var data = new GameSaveData
+        {
+            Slot = slot,
+            SlotName = slotName,
+            WorldLabel = "Creatures Reborn World",
+            SavedAtUtc = DateTimeOffset.UtcNow,
+            MetaroomPaths = CurrentMetaroomPaths().ToList(),
+            WorldTick = World.Time.WorldTick,
+            Day = World.Time.Day,
+            Season = World.Time.Season,
+            Year = World.Time.Year,
+            TimeOfDay = World.Time.TimeOfDay,
+            BreedingLimit = BreedingLimit,
+            TotalPopulationMax = TotalPopulationMax,
+            TickRate = TickRate,
+            GravityAcceleration = GravityAcceleration,
+        };
+
+        foreach (Node child in GetChildren())
+        {
+            if (child is CreatureNode creature && creature.Creature != null)
+                data.Creatures.Add(creature.CreateSavedState());
+            else if (child is FoodNode food && !food.IsConsumed)
+                data.Foods.Add(food.CreateSavedState());
+            else if (child is EggNode egg)
+                data.Eggs.Add(egg.CreateSavedState());
+        }
+
+        return data;
+    }
+
+    public void RestoreFromSave(GameSaveData save)
+    {
+        BreedingLimit = save.BreedingLimit;
+        TotalPopulationMax = save.TotalPopulationMax;
+        TickRate = save.TickRate;
+        GravityAcceleration = save.GravityAcceleration;
+        World.BreedingLimit = save.BreedingLimit;
+        World.TotalPopulationMax = save.TotalPopulationMax;
+        World.Time.Restore(save.WorldTick);
+
+        RemoveRuntimeSaveActors();
+
+        var nornScene = ResourceLoader.Load<PackedScene>("res://scenes/Norn.tscn");
+        if (nornScene != null)
+        {
+            for (int i = 0; i < save.Creatures.Count; i++)
+            {
+                var node = nornScene.Instantiate<CreatureNode>();
+                node.PendingSavedState = save.Creatures[i];
+                AddChild(node);
+            }
+        }
+
+        foreach (SavedFoodState savedFood in save.Foods)
+        {
+            var food = new FoodNode
+            {
+                FoodKind = Enum.TryParse(savedFood.FoodKind, out FoodKind kind) ? kind : FoodKind.Fruit,
+                GlycogenAmount = savedFood.GlycogenAmount,
+                ATPAmount = savedFood.ATPAmount,
+                Position = new Vector3(savedFood.X, savedFood.Y, savedFood.Z),
+            };
+            AddChild(food);
+        }
+
+        foreach (SavedEggState savedEgg in save.Eggs)
+        {
+            var egg = new EggNode();
+            egg.RestoreFromSavedState(savedEgg);
+            AddChild(egg);
+        }
+    }
+
+    private IReadOnlyList<string> CurrentMetaroomPaths()
+    {
+        if (GameLaunchSession.ActiveMetaroomPaths.Count > 0)
+            return GameLaunchSession.ActiveMetaroomPaths;
+        if (MetaroomEditorSession.DefinitionPaths.Count > 0)
+            return MetaroomEditorSession.DefinitionPaths;
+        var loader = GetNodeOrNull<MetaroomRuntimeLoader>("MetaroomRuntimeLoader");
+        return loader?.DefinitionPaths ?? Array.Empty<string>();
+    }
+
+    private void RemoveRuntimeSaveActors()
+    {
+        var toRemove = new List<Node>();
+        foreach (Node child in GetChildren())
+        {
+            if (child is CreatureNode or FoodNode or EggNode)
+                toRemove.Add(child);
+        }
+
+        foreach (Node node in toRemove)
+        {
+            RemoveChild(node);
+            node.QueueFree();
+        }
+    }
 
     private void RegisterSceneGeometry()
     {

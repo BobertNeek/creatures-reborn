@@ -1,4 +1,5 @@
 using System;
+using CreaturesReborn.Sim.Save;
 using CreaturesReborn.Sim.Genome;
 
 namespace CreaturesReborn.Sim.Biochemistry;
@@ -161,6 +162,16 @@ public sealed class Biochemistry
     }
 
     public ReadOnlySpan<float> GetChemicalConcs() => _chemConcs;
+
+    public SavedBiochemistryState CreateSaveState()
+        => new() { Chemicals = (float[])_chemConcs.Clone() };
+
+    public void RestoreSaveState(SavedBiochemistryState state)
+    {
+        Array.Clear(_chemConcs);
+        int count = Math.Min(_chemConcs.Length, state.Chemicals.Length);
+        Array.Copy(state.Chemicals, _chemConcs, count);
+    }
 
     public ChemicalHalfLifeView GetHalfLifeView(int chem)
         => new(chem, ChemicalCatalog.Get(chem), _decayRates[chem]);
