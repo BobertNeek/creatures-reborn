@@ -27,6 +27,11 @@ public partial class WorldNode : Node3D
     [Export] public int   BreedingLimit      = 6;
     [Export] public int   TotalPopulationMax = 16;
     [Export] public float TickRate           = 20.0f;  // Hz
+    [Export] public float GravityAcceleration = 18.0f;
+    [Export] public float TerminalFallSpeed   = 14.0f;
+
+    private const float WalkSurfaceStickDistance = 0.75f;
+    private const float GroundSnapTolerance = 0.04f;
 
     // ── The sim world ───────────────────────────────────────────────────────
     public GameWorld World { get; private set; } = new();
@@ -116,9 +121,46 @@ public partial class WorldNode : Node3D
     public float SnapToWalkableY(float x, float y, float fallback = 0f)
         => Navigation?.SnapToNearestSurface(x, y)?.Y ?? fallback;
 
+    public WalkableSurface? FindWalkableSurfaceBelow(float x, float y)
+        => Navigation?.FindSurfaceBelow(x, y);
+
+    public Vector3 ApplyGravityStep(Vector3 position, float delta, ref float verticalVelocity)
+    {
+        WalkableSurface? support = FindWalkableSurfaceBelow(position.X, position.Y);
+        if (support == null)
+        {
+            verticalVelocity = MathF.Min(verticalVelocity + GravityAcceleration * delta, TerminalFallSpeed);
+            return new Vector3(position.X, position.Y - verticalVelocity * delta, position.Z);
+        }
+
+        float floorY = support.Value.Y;
+        if (position.Y <= floorY + GroundSnapTolerance)
+        {
+            verticalVelocity = 0;
+            return new Vector3(position.X, floorY, position.Z);
+        }
+
+        verticalVelocity = MathF.Min(verticalVelocity + GravityAcceleration * delta, TerminalFallSpeed);
+        float nextY = position.Y - verticalVelocity * delta;
+        if (nextY <= floorY)
+        {
+            verticalVelocity = 0;
+            return new Vector3(position.X, floorY, position.Z);
+        }
+
+        return new Vector3(position.X, nextY, position.Z);
+    }
+
     public Vector3 ProjectWalkStep(Vector3 from, float requestedX)
     {
-        WalkableSurface? surface = Navigation?.ProjectHorizontalStep(from.X, from.Y, requestedX);
+        if (Navigation == null)
+            return new Vector3(ClampX(requestedX), from.Y, from.Z);
+
+        WalkableSurface? support = Navigation.FindSurfaceBelow(from.X, from.Y);
+        if (support == null || from.Y - support.Value.Y > WalkSurfaceStickDistance)
+            return new Vector3(ClampX(requestedX), from.Y, from.Z);
+
+        WalkableSurface? surface = Navigation.ProjectHorizontalStep(from.X, from.Y, requestedX);
         if (surface == null)
             return new Vector3(ClampX(requestedX), from.Y, from.Z);
 

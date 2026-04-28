@@ -35,6 +35,8 @@ public partial class CreatureNode : Node3D
 
     private FoodNode?           _heldFood;
     private NornBillboardSprite? _sprite;
+    private float _verticalVelocity;
+    private bool _heldByHand;
 
     // Seconds to suppress re-laying egg after one was just laid
     private float _layEggCooldown;
@@ -48,6 +50,13 @@ public partial class CreatureNode : Node3D
     // Public accessors
     // -------------------------------------------------------------------------
     public C? Creature => _creature;
+
+    public void SetHeldByHand(bool held)
+    {
+        _heldByHand = held;
+        if (held)
+            _verticalVelocity = 0;
+    }
 
     // -------------------------------------------------------------------------
     // Godot lifecycle
@@ -77,7 +86,7 @@ public partial class CreatureNode : Node3D
         var mm       = GetParent()?.GetNodeOrNull<MetaroomNode>("Metaroom");
         var colony   = GetParent()?.GetNodeOrNull<ColonyMetaroomNode>("Metaroom");
         var treehouse = GetParent()?.GetNodeOrNull<TreehouseMetaroomNode>("Metaroom");
-        if (GetParent() is WorldNode worldNode && treehouse != null && _sprite != null)
+        if (GetParent() is WorldNode worldNode && _sprite != null)
             _sprite.SetWalkSurface(worldNode.ProjectWalkStep);
         else if (mm != null && _sprite != null)
             _sprite.SetClampX(x => mm.Sim.ClampX(x));
@@ -103,6 +112,7 @@ public partial class CreatureNode : Node3D
         }
 
         // Update visual every render frame (smooth interpolation)
+        ApplyGravity((float)delta);
         _sprite?.UpdateVisuals(_creature);
 
         // Keep held food above our hand
@@ -230,6 +240,14 @@ public partial class CreatureNode : Node3D
         }
 
         Position = new Vector3(newX, Position.Y, Position.Z);
+    }
+
+    private void ApplyGravity(float delta)
+    {
+        if (_heldByHand || GetParent() is not WorldNode world)
+            return;
+
+        Position = world.ApplyGravityStep(Position, delta, ref _verticalVelocity);
     }
 
     private void DoSleep()

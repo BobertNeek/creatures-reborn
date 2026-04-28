@@ -62,6 +62,24 @@ public class GodotRuntimeSourceTests
     }
 
     [Fact]
+    public void NornRuntime_UsesWorldNavigationForJsonMetaroomWalkingAndGravity()
+    {
+        string creatureSource = File.ReadAllText(RepoPath("src", "Godot", "CreatureNode.cs"));
+        string pointerSource = File.ReadAllText(RepoPath("src", "Godot", "PointerAgent.cs"));
+        string worldSource = File.ReadAllText(RepoPath("src", "Godot", "WorldNode.cs"));
+
+        Assert.Contains("GetParent() is WorldNode worldNode && _sprite != null", creatureSource);
+        Assert.DoesNotContain("worldNode && treehouse != null", creatureSource);
+        Assert.Contains("ApplyGravity", creatureSource);
+        Assert.Contains("ApplyGravityStep", worldSource);
+        Assert.Contains("SetHeldByHand", creatureSource);
+        Assert.Contains("SetHeldByHand(true)", pointerSource);
+        Assert.Contains("SetHeldByHand(false)", pointerSource);
+        Assert.Contains("FindWalkableSurfaceBelow", worldSource);
+        Assert.Contains("WalkSurfaceStickDistance", worldSource);
+    }
+
+    [Fact]
     public void StairsNode_OnlyCapturesCreaturesNearRampSurface()
     {
         string stairsSource = File.ReadAllText(RepoPath("src", "Godot", "StairsNode.cs"));

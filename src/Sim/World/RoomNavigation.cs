@@ -81,6 +81,37 @@ public sealed class RoomNavigation
         return best;
     }
 
+    public WalkableSurface? FindSurfaceBelow(float x, float y, float horizontalTolerance = SurfaceGapTolerance)
+    {
+        WalkableSurface? best = null;
+        float bestY = float.NegativeInfinity;
+        float bestDistance = float.MaxValue;
+
+        for (int i = 0; i < _map.AllRooms.Count; i++)
+        {
+            Room room = _map.AllRooms[i];
+            if (x < room.XLeft - horizontalTolerance || x > room.XRight + horizontalTolerance)
+                continue;
+
+            float sx = Math.Clamp(x, room.XLeft, room.XRight);
+            float sy = room.FloorYAtX(sx);
+            if (sy > y + SurfaceTouchTolerance)
+                continue;
+
+            float dx = sx - x;
+            float dy = sy - y;
+            float distance = dx * dx + dy * dy;
+            if (sy > bestY || MathF.Abs(sy - bestY) <= 0.001f && distance < bestDistance)
+            {
+                bestY = sy;
+                bestDistance = distance;
+                best = new WalkableSurface(room, sx, sy, distance);
+            }
+        }
+
+        return best;
+    }
+
     public WalkableSurface? ProjectHorizontalStep(float fromX, float fromY, float requestedX)
     {
         WalkableSurface? current = SnapToNearestSurface(fromX, fromY);

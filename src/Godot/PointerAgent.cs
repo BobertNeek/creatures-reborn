@@ -212,6 +212,7 @@ public partial class PointerAgent : Node3D
     private void PickUpCreature(CreatureNode creature)
     {
         _carriedCreature = creature;
+        creature.SetHeldByHand(true);
         _carriedCreatureOffset = creature.Position - Position;
         if (creature.Creature != null)
             StimulusTable.Apply(creature.Creature, StimulusId.HandHeldCreature);
@@ -222,14 +223,15 @@ public partial class PointerAgent : Node3D
     {
         if (_carriedCreature == null) return;
 
-        // Snap to the nearest treehouse floor Y so they don't hang in mid-air.
-        // Falls back to Y=0 in non-treehouse scenes.
+        // Snap to the nearest authored floor so they don't hang in mid-air.
+        // Falls back to Y=0 in scenes without registered geometry.
         var world  = GetParent() as WorldNode;
         float dropX = Position.X;
         if (world != null) dropX = world.ClampX(dropX);
         float dropY = SnapToNearestFloorY(dropX, Position.Y + _carriedCreatureOffset.Y);
 
         _carriedCreature.Position = new Vector3(dropX, dropY, _carriedCreature.Position.Z);
+        _carriedCreature.SetHeldByHand(false);
 
         if (_carriedCreature.Creature != null)
             StimulusTable.Apply(_carriedCreature.Creature, StimulusId.HandDroppedCreature);
@@ -238,8 +240,7 @@ public partial class PointerAgent : Node3D
         _carriedCreature = null;
     }
 
-    /// <summary>If a treehouse metaroom exists, snap to its nearest floor Y;
-    /// otherwise return 0 (the conventional ground plane).</summary>
+    /// <summary>Snap to the active world's nearest authored floor, if available.</summary>
     private float SnapToNearestFloorY(float x, float y)
     {
         var world = GetParent() as WorldNode;

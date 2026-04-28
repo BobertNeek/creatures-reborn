@@ -40,6 +40,40 @@ public class WorldNavigationTests
     }
 
     [Fact]
+    public void FindSurfaceBelow_ReturnsHighestWalkableSurfaceUnderPoint()
+    {
+        var map = new GameMap();
+        var metaRoom = map.AddMetaRoom(0, 0, 20, 20, "test");
+        var lower = map.AddRoom(metaRoom.Id, 0, 10, 4, 4, 1, 1);
+        var upper = map.AddRoom(metaRoom.Id, 0, 10, 10, 10, 7, 7);
+
+        var nav = new RoomNavigation(map);
+        var fromAboveUpper = nav.FindSurfaceBelow(5, 12);
+        var fromBelowUpper = nav.FindSurfaceBelow(5, 6);
+
+        Assert.NotNull(fromAboveUpper);
+        Assert.Same(upper, fromAboveUpper.Value.Room);
+        Assert.Equal(7, fromAboveUpper.Value.Y, precision: 3);
+
+        Assert.NotNull(fromBelowUpper);
+        Assert.Same(lower, fromBelowUpper.Value.Room);
+        Assert.Equal(1, fromBelowUpper.Value.Y, precision: 3);
+    }
+
+    [Fact]
+    public void FindSurfaceBelow_DoesNotSnapHorizontallyOntoDistantLedges()
+    {
+        var map = new GameMap();
+        var metaRoom = map.AddMetaRoom(0, 0, 40, 20, "test");
+        map.AddRoom(metaRoom.Id, 0, 10, 4, 4, 1, 1);
+
+        var nav = new RoomNavigation(map);
+        var surface = nav.FindSurfaceBelow(20, 10);
+
+        Assert.Null(surface);
+    }
+
+    [Fact]
     public void FindRoute_CanTraverseStairAndElevatorLinks()
     {
         var map = new GameMap();
