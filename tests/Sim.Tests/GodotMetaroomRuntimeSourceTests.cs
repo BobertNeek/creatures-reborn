@@ -19,6 +19,17 @@ public class GodotMetaroomRuntimeSourceTests
     }
 
     [Fact]
+    public void RuntimeLoader_PrefersMenuSelectedMetaroomOverSceneDefaults()
+    {
+        string source = File.ReadAllText(RepoPath("src", "Godot", "MetaroomRuntimeLoader.cs"));
+
+        Assert.Contains("MetaroomEditorSession.DefinitionPaths.Count > 0", source);
+        Assert.Contains("? MetaroomEditorSession.DefinitionPaths", source);
+        Assert.Contains(": DefinitionPaths", source);
+        Assert.DoesNotContain("? DefinitionPaths", source);
+    }
+
+    [Fact]
     public void DoorNode_TeleportsCreaturesAndMovesCameraFocus()
     {
         string source = File.ReadAllText(RepoPath("src", "Godot", "DoorNode.cs"));
