@@ -194,9 +194,9 @@ public partial class AdvancedToolsOverlay : Control
             SizeFlagsVertical = SizeFlags.ExpandFill,
         };
         workbench.AddThemeConstantOverride("separation", 8);
-        workbench.AddChild(Section("Brain Monitor", BuildBrainWorkbench(), new Vector2(450, 560)));
-        workbench.AddChild(Section("Genetics Kit", BuildGeneticsWorkbench(), new Vector2(520, 560)));
-        workbench.AddChild(Section("Validation", BuildRightRail(), new Vector2(220, 560)));
+        workbench.AddChild(Section("Brain Monitor", BuildBrainWorkbench(), new Vector2(410, 560)));
+        workbench.AddChild(Section("Genetics Kit", BuildGeneticsWorkbench(), new Vector2(590, 560)));
+        workbench.AddChild(Section("Validation", BuildRightRail(), new Vector2(190, 560)));
         shell.AddChild(workbench);
         return shell;
     }
@@ -215,20 +215,20 @@ public partial class AdvancedToolsOverlay : Control
         mapRow.AddThemeConstantOverride("separation", 6);
         _brainMap = new BrainMapView
         {
-            CustomMinimumSize = new Vector2(330, 300),
+            CustomMinimumSize = new Vector2(292, 300),
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
             SizeFlagsVertical = SizeFlags.ExpandFill,
         };
         mapRow.AddChild(_brainMap);
-        var legend = RichText(new Vector2(88, 300));
+        var legend = RichText(new Vector2(78, 300));
         legend.Text = "[b]ACTIVATION[/b]\n[color=#24d9ff]1.00[/color] High\n[color=#1caac9]0.50[/color]\n[color=#145f74]0.00[/color] Low\n\n[b]TRACT OVERLAY[/b]\n[color=#51d46d]Excitatory[/color]\n[color=#ffcf3a]Selected[/color]\n[color=#38aee8]All[/color]\n\n[b]DISPLAY[/b]\nLobe labels\nHeat map\nWinning neuron";
         mapRow.AddChild(legend);
         box.AddChild(mapRow);
 
         var lower = new HBoxContainer();
         lower.AddThemeConstantOverride("separation", 6);
-        _brainCharts = RichText(new Vector2(240, 190));
-        _brainTables = RichText(new Vector2(180, 190));
+        _brainCharts = RichText(new Vector2(210, 190));
+        _brainTables = RichText(new Vector2(160, 190));
         lower.AddChild(_brainCharts);
         lower.AddChild(_brainTables);
         box.AddChild(lower);
@@ -246,7 +246,7 @@ public partial class AdvancedToolsOverlay : Control
 
         var genePane = new VBoxContainer
         {
-            CustomMinimumSize = new Vector2(225, 0),
+            CustomMinimumSize = new Vector2(218, 0),
             SizeFlagsVertical = SizeFlags.ExpandFill,
         };
         genePane.AddThemeConstantOverride("separation", 6);
@@ -254,7 +254,7 @@ public partial class AdvancedToolsOverlay : Control
         genePane.AddChild(BuildGeneFilters());
         _geneList = new ItemList
         {
-            CustomMinimumSize = new Vector2(230, 330),
+            CustomMinimumSize = new Vector2(218, 330),
             SizeFlagsVertical = SizeFlags.ExpandFill,
         };
         _geneList.ItemSelected += OnGeneSelected;
@@ -279,13 +279,13 @@ public partial class AdvancedToolsOverlay : Control
         };
         box.AddThemeConstantOverride("separation", 8);
 
-        _validationSummary = RichText(new Vector2(240, 128));
+        _validationSummary = RichText(new Vector2(170, 128));
         box.AddChild(_validationSummary);
         box.AddChild(Label("PHENOTYPE SUMMARY", 10, bold: true));
-        _genomeSummary = RichText(new Vector2(240, 210));
+        _genomeSummary = RichText(new Vector2(170, 210));
         box.AddChild(_genomeSummary);
         box.AddChild(Label("DIFF", 10, bold: true));
-        _diffSummary = RichText(new Vector2(240, 160));
+        _diffSummary = RichText(new Vector2(170, 160));
         box.AddChild(_diffSummary);
         return box;
     }
@@ -427,7 +427,7 @@ public partial class AdvancedToolsOverlay : Control
         var sexRow = new HBoxContainer();
         sexRow.AddChild(_flagMale);
         sexRow.AddChild(_flagFemale);
-        sexRow.AddChild(Button("Apply Header", ApplyHeaderEdit, new Vector2(104, 28)));
+        sexRow.AddChild(Button("Apply", ApplyHeaderEdit, new Vector2(64, 28)));
         box.AddChild(sexRow);
 
         _typedEditor = TextEditor(new Vector2(210, 145), readOnly: true);
@@ -435,26 +435,34 @@ public partial class AdvancedToolsOverlay : Control
         box.AddChild(_typedEditor);
 
         var fieldRow = new HBoxContainer();
-        _typedFieldName = new LineEdit { PlaceholderText = "field", CustomMinimumSize = new Vector2(82, 0) };
-        _typedFieldValue = new LineEdit { PlaceholderText = "value", CustomMinimumSize = new Vector2(82, 0) };
+        _typedFieldName = new LineEdit { PlaceholderText = "field", CustomMinimumSize = new Vector2(90, 0) };
+        _typedFieldValue = new LineEdit { PlaceholderText = "value", CustomMinimumSize = new Vector2(90, 0) };
         fieldRow.AddChild(_typedFieldName);
         fieldRow.AddChild(_typedFieldValue);
-        fieldRow.AddChild(Button("Apply Typed Field", ApplyTypedFieldEdit));
         box.AddChild(fieldRow);
+        box.AddChild(Button("Apply Typed Field", ApplyTypedFieldEdit, new Vector2(150, 28)));
 
         box.AddChild(Label("Raw Payload", 10, bold: true));
         _rawEditor = TextEditor(new Vector2(210, 120), readOnly: false);
         box.AddChild(_rawEditor);
 
         var opRow = new GridContainer { Columns = 3 };
-        opRow.AddChild(Button("Apply Raw", ApplyRawPayloadEdit));
-        opRow.AddChild(Button("Duplicate", DuplicateSelectedGene));
+        opRow.AddChild(Button("Raw", ApplyRawPayloadEdit));
+        opRow.AddChild(Button("Dup", DuplicateSelectedGene));
         opRow.AddChild(Button("Delete", DeleteSelectedGene));
         opRow.AddChild(Button("Undo", Undo));
         opRow.AddChild(Button("Redo", Redo));
         box.AddChild(opRow);
 
-        return box;
+        var scroll = new ScrollContainer
+        {
+            HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled,
+            VerticalScrollMode = ScrollContainer.ScrollMode.Auto,
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            SizeFlagsVertical = SizeFlags.ExpandFill,
+        };
+        scroll.AddChild(box);
+        return scroll;
     }
 
     private Control BuildSummaryPanel()
@@ -872,13 +880,18 @@ public partial class AdvancedToolsOverlay : Control
 
     private static string Spark(IReadOnlyList<float> values)
     {
-        const string blocks = "▁▂▃▄▅▆▇█";
         if (values.Count == 0)
             return "";
-        return new string(values.Select(value =>
+        return new string(values.TakeLast(24).Select(value =>
         {
-            int index = Math.Clamp((int)MathF.Round(Math.Clamp(value, 0, 1) * (blocks.Length - 1)), 0, blocks.Length - 1);
-            return blocks[index];
+            float clamped = Math.Clamp(value, 0, 1);
+            return clamped switch
+            {
+                >= 0.75f => '#',
+                >= 0.50f => '=',
+                >= 0.25f => '-',
+                _ => '.'
+            };
         }).ToArray());
     }
 
