@@ -158,31 +158,136 @@ public partial class AdvancedToolsOverlay : Control
     private Control BuildToolbar()
     {
         var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 8);
+        row.AddThemeConstantOverride("separation", 10);
 
         _targetLabel = Label("Selected: none", 12);
-        _targetLabel.CustomMinimumSize = new Vector2(360, 28);
-        row.AddChild(_targetLabel);
-        row.AddChild(Button(_paused ? "Resume" : "Pause", TogglePause));
-        row.AddChild(Button("Sample -", () => AdjustSampleInterval(0.05f)));
-        row.AddChild(Button("Sample +", () => AdjustSampleInterval(-0.05f)));
-        row.AddChild(Button("Export", ExportWorkingGenome));
-        row.AddChild(Button("Hatch Egg", HatchEditedEgg));
-        row.AddChild(Button("Live Apply", LiveApply));
-        row.AddChild(Button("Close", Close));
+        _targetLabel.CustomMinimumSize = new Vector2(270, 34);
+        row.AddChild(ToolbarCell("CREATURE", _targetLabel, new Vector2(280, 46)));
+        row.AddChild(Button("PAUSE", TogglePause, new Vector2(78, 38), accent: true));
+        row.AddChild(Button("RESUME", TogglePause, new Vector2(82, 38)));
+        row.AddChild(ToolbarCell("SAMPLING RATE", Label("5 Hz", 11), new Vector2(94, 46)));
+        row.AddChild(ToolbarCell("BUFFER", Label($"{BrainHistoryCapacity}", 11), new Vector2(88, 46)));
+        row.AddChild(Button("EXPORT", ExportWorkingGenome, new Vector2(82, 38)));
+        row.AddChild(Button("HATCH EGG", HatchEditedEgg, new Vector2(100, 38)));
+        row.AddChild(Button("LIVE APPLY", LiveApply, new Vector2(100, 38), warning: true));
+        row.AddChild(Button("X", Close, new Vector2(32, 38)));
         return row;
     }
 
     private Control BuildTabs()
     {
-        _tabs = new TabContainer
+        var shell = new VBoxContainer
         {
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
             SizeFlagsVertical = SizeFlags.ExpandFill,
         };
-        _tabs.AddChild(BuildBrainTab());
-        _tabs.AddChild(BuildGeneticsTab());
-        return _tabs;
+        shell.AddThemeConstantOverride("separation", 6);
+
+        _tabs = new TabContainer { Visible = false };
+        _tabs.AddChild(new Control { Name = "Brain Monitor" });
+        _tabs.AddChild(new Control { Name = "Genetics Kit" });
+        shell.AddChild(_tabs);
+
+        var workbench = new HBoxContainer
+        {
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            SizeFlagsVertical = SizeFlags.ExpandFill,
+        };
+        workbench.AddThemeConstantOverride("separation", 8);
+        workbench.AddChild(Section("Brain Monitor", BuildBrainWorkbench(), new Vector2(450, 560)));
+        workbench.AddChild(Section("Genetics Kit", BuildGeneticsWorkbench(), new Vector2(520, 560)));
+        workbench.AddChild(Section("Validation", BuildRightRail(), new Vector2(220, 560)));
+        shell.AddChild(workbench);
+        return shell;
+    }
+
+    private Control BuildBrainWorkbench()
+    {
+        var box = new VBoxContainer
+        {
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            SizeFlagsVertical = SizeFlags.ExpandFill,
+        };
+        box.AddThemeConstantOverride("separation", 6);
+        box.AddChild(SegmentedHeader("Lobes", "Tracts"));
+
+        var mapRow = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
+        mapRow.AddThemeConstantOverride("separation", 6);
+        _brainMap = new BrainMapView
+        {
+            CustomMinimumSize = new Vector2(330, 300),
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            SizeFlagsVertical = SizeFlags.ExpandFill,
+        };
+        mapRow.AddChild(_brainMap);
+        var legend = RichText(new Vector2(88, 300));
+        legend.Text = "[b]ACTIVATION[/b]\n[color=#24d9ff]1.00[/color] High\n[color=#1caac9]0.50[/color]\n[color=#145f74]0.00[/color] Low\n\n[b]TRACT OVERLAY[/b]\n[color=#51d46d]Excitatory[/color]\n[color=#ffcf3a]Selected[/color]\n[color=#38aee8]All[/color]\n\n[b]DISPLAY[/b]\nLobe labels\nHeat map\nWinning neuron";
+        mapRow.AddChild(legend);
+        box.AddChild(mapRow);
+
+        var lower = new HBoxContainer();
+        lower.AddThemeConstantOverride("separation", 6);
+        _brainCharts = RichText(new Vector2(240, 190));
+        _brainTables = RichText(new Vector2(180, 190));
+        lower.AddChild(_brainCharts);
+        lower.AddChild(_brainTables);
+        box.AddChild(lower);
+        return box;
+    }
+
+    private Control BuildGeneticsWorkbench()
+    {
+        var box = new HBoxContainer
+        {
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            SizeFlagsVertical = SizeFlags.ExpandFill,
+        };
+        box.AddThemeConstantOverride("separation", 8);
+
+        var genePane = new VBoxContainer
+        {
+            CustomMinimumSize = new Vector2(225, 0),
+            SizeFlagsVertical = SizeFlags.ExpandFill,
+        };
+        genePane.AddThemeConstantOverride("separation", 6);
+        genePane.AddChild(SegmentedHeader("Genes", "Typed Editor", "Raw Payload"));
+        genePane.AddChild(BuildGeneFilters());
+        _geneList = new ItemList
+        {
+            CustomMinimumSize = new Vector2(230, 330),
+            SizeFlagsVertical = SizeFlags.ExpandFill,
+        };
+        _geneList.ItemSelected += OnGeneSelected;
+        StyleList(_geneList);
+        genePane.AddChild(_geneList);
+        genePane.AddChild(BuildGenomeActions());
+        box.AddChild(genePane);
+
+        var editorPane = BuildGeneEditor();
+        editorPane.CustomMinimumSize = new Vector2(210, 0);
+        editorPane.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        box.AddChild(editorPane);
+        return box;
+    }
+
+    private Control BuildRightRail()
+    {
+        var box = new VBoxContainer
+        {
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            SizeFlagsVertical = SizeFlags.ExpandFill,
+        };
+        box.AddThemeConstantOverride("separation", 8);
+
+        _validationSummary = RichText(new Vector2(240, 128));
+        box.AddChild(_validationSummary);
+        box.AddChild(Label("PHENOTYPE SUMMARY", 10, bold: true));
+        _genomeSummary = RichText(new Vector2(240, 210));
+        box.AddChild(_genomeSummary);
+        box.AddChild(Label("DIFF", 10, bold: true));
+        _diffSummary = RichText(new Vector2(240, 160));
+        box.AddChild(_diffSummary);
+        return box;
     }
 
     private Control BuildBrainTab()
@@ -250,10 +355,10 @@ public partial class AdvancedToolsOverlay : Control
         _familyFilter = new OptionButton();
         foreach (string label in new[] { "All", "Brain", "Biochemistry", "Creature", "Organ" })
             _familyFilter.AddItem(label);
-        _familyFilter.CustomMinimumSize = new Vector2(128, 0);
+        _familyFilter.CustomMinimumSize = new Vector2(84, 0);
         _familyFilter.ItemSelected += _ => RefreshGeneList();
         row.AddChild(_familyFilter);
-        _geneSearch = new LineEdit { PlaceholderText = "search", CustomMinimumSize = new Vector2(170, 0) };
+        _geneSearch = new LineEdit { PlaceholderText = "search", CustomMinimumSize = new Vector2(118, 0) };
         _geneSearch.TextChanged += _ => RefreshGeneList();
         row.AddChild(_geneSearch);
         box.AddChild(row);
@@ -273,7 +378,7 @@ public partial class AdvancedToolsOverlay : Control
     {
         var box = new VBoxContainer();
         var importRow = new HBoxContainer();
-        _importPath = new LineEdit { PlaceholderText = ".gen path", CustomMinimumSize = new Vector2(210, 0) };
+        _importPath = new LineEdit { PlaceholderText = ".gen path", CustomMinimumSize = new Vector2(140, 0) };
         importRow.AddChild(_importPath);
         importRow.AddChild(Button("Import", ImportGenome));
         box.AddChild(importRow);
@@ -300,7 +405,7 @@ public partial class AdvancedToolsOverlay : Control
         var box = new VBoxContainer();
         box.AddThemeConstantOverride("separation", 6);
 
-        var headerGrid = new GridContainer { Columns = 4 };
+        var headerGrid = new GridContainer { Columns = 2 };
         _idSpin = AddSpin(headerGrid, "Id", 0, 255, 0);
         _generationSpin = AddSpin(headerGrid, "Generation", 0, 255, 0);
         _switchOnSpin = AddSpin(headerGrid, "Switch", 0, 255, 0);
@@ -317,28 +422,31 @@ public partial class AdvancedToolsOverlay : Control
         flagRow.AddChild(_flagMutable);
         flagRow.AddChild(_flagDuplicate);
         flagRow.AddChild(_flagCut);
-        flagRow.AddChild(_flagMale);
-        flagRow.AddChild(_flagFemale);
-        flagRow.AddChild(Button("Apply Header", ApplyHeaderEdit));
         box.AddChild(flagRow);
 
-        _typedEditor = TextEditor(new Vector2(450, 160), readOnly: true);
+        var sexRow = new HBoxContainer();
+        sexRow.AddChild(_flagMale);
+        sexRow.AddChild(_flagFemale);
+        sexRow.AddChild(Button("Apply Header", ApplyHeaderEdit, new Vector2(104, 28)));
+        box.AddChild(sexRow);
+
+        _typedEditor = TextEditor(new Vector2(210, 145), readOnly: true);
         box.AddChild(Label("Typed Editor", 10, bold: true));
         box.AddChild(_typedEditor);
 
         var fieldRow = new HBoxContainer();
-        _typedFieldName = new LineEdit { PlaceholderText = "field", CustomMinimumSize = new Vector2(120, 0) };
-        _typedFieldValue = new LineEdit { PlaceholderText = "value", CustomMinimumSize = new Vector2(120, 0) };
+        _typedFieldName = new LineEdit { PlaceholderText = "field", CustomMinimumSize = new Vector2(82, 0) };
+        _typedFieldValue = new LineEdit { PlaceholderText = "value", CustomMinimumSize = new Vector2(82, 0) };
         fieldRow.AddChild(_typedFieldName);
         fieldRow.AddChild(_typedFieldValue);
         fieldRow.AddChild(Button("Apply Typed Field", ApplyTypedFieldEdit));
         box.AddChild(fieldRow);
 
         box.AddChild(Label("Raw Payload", 10, bold: true));
-        _rawEditor = TextEditor(new Vector2(450, 140), readOnly: false);
+        _rawEditor = TextEditor(new Vector2(210, 120), readOnly: false);
         box.AddChild(_rawEditor);
 
-        var opRow = new HBoxContainer();
+        var opRow = new GridContainer { Columns = 3 };
         opRow.AddChild(Button("Apply Raw", ApplyRawPayloadEdit));
         opRow.AddChild(Button("Duplicate", DuplicateSelectedGene));
         opRow.AddChild(Button("Delete", DeleteSelectedGene));
@@ -774,25 +882,97 @@ public partial class AdvancedToolsOverlay : Control
         }).ToArray());
     }
 
-    private static Label Label(string text, int size = 10, bool bold = false)
+    private static Label Label(string text, int size = 10, bool bold = false, bool accent = false)
     {
         var label = new Label
         {
             Text = bold ? text.ToUpperInvariant() : text,
-            Modulate = new Color(0.88f, 0.93f, 0.98f),
+            Modulate = accent ? new Color(0.18f, 0.90f, 1.0f) : new Color(0.88f, 0.93f, 0.98f),
         };
         label.AddThemeFontSizeOverride("font_size", size);
         return label;
     }
 
-    private static Button Button(string text, Action action)
+    private static Control ToolbarCell(string title, Control content, Vector2 minSize)
     {
-        var button = new Button { Text = text, CustomMinimumSize = new Vector2(74, 28) };
+        var box = new VBoxContainer { CustomMinimumSize = minSize };
+        box.AddThemeConstantOverride("separation", 2);
+        box.AddChild(Label(title, 9, bold: true));
+        content.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        box.AddChild(content);
+        return box;
+    }
+
+    private static Control Section(string title, Control body, Vector2 minSize)
+    {
+        var panel = new Panel
+        {
+            CustomMinimumSize = minSize,
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            SizeFlagsVertical = SizeFlags.ExpandFill,
+            ClipContents = true,
+        };
+        panel.AddThemeStyleboxOverride("panel", PanelStyle(new Color(0.020f, 0.040f, 0.044f, 0.98f), border: true));
+
+        var box = new VBoxContainer
+        {
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            SizeFlagsVertical = SizeFlags.ExpandFill,
+        };
+        box.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        box.OffsetLeft = 8;
+        box.OffsetTop = 6;
+        box.OffsetRight = -8;
+        box.OffsetBottom = -8;
+        box.AddThemeConstantOverride("separation", 6);
+        panel.AddChild(box);
+        box.AddChild(Label(title, 16, bold: false, accent: true));
+        body.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        body.SizeFlagsVertical = SizeFlags.ExpandFill;
+        box.AddChild(body);
+        return panel;
+    }
+
+    private static Control SegmentedHeader(params string[] labels)
+    {
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 3);
+        for (int i = 0; i < labels.Length; i++)
+        {
+            var label = Label(labels[i], 10);
+            label.HorizontalAlignment = HorizontalAlignment.Center;
+            label.CustomMinimumSize = new Vector2(labels.Length > 2 ? 76 : 112, 24);
+            label.AddThemeStyleboxOverride("normal", PanelStyle(
+                i == 0 ? new Color(0.035f, 0.20f, 0.24f, 0.95f) : new Color(0.035f, 0.050f, 0.056f, 0.95f),
+                border: true));
+            row.AddChild(label);
+        }
+
+        return row;
+    }
+
+    private static void StyleList(ItemList list)
+    {
+        list.AddThemeFontSizeOverride("font_size", 11);
+        list.AddThemeColorOverride("font_color", new Color(0.78f, 0.84f, 0.86f));
+        list.AddThemeColorOverride("font_selected_color", new Color(0.92f, 1.00f, 1.00f));
+        list.AddThemeStyleboxOverride("panel", PanelStyle(new Color(0.018f, 0.026f, 0.032f, 0.98f), border: true));
+        list.AddThemeStyleboxOverride("selected", PanelStyle(new Color(0.035f, 0.18f, 0.23f, 0.90f)));
+    }
+
+    private static Button Button(string text, Action action, Vector2? minSize = null, bool accent = false, bool warning = false)
+    {
+        var button = new Button { Text = text, CustomMinimumSize = minSize ?? new Vector2(74, 28) };
         button.Pressed += action;
         button.AddThemeFontSizeOverride("font_size", 11);
-        button.AddThemeStyleboxOverride("normal", PanelStyle(new Color(0.13f, 0.17f, 0.23f, 1.0f)));
-        button.AddThemeStyleboxOverride("hover", PanelStyle(new Color(0.18f, 0.25f, 0.32f, 1.0f)));
-        button.AddThemeStyleboxOverride("pressed", PanelStyle(new Color(0.08f, 0.40f, 0.50f, 1.0f)));
+        Color normal = warning
+            ? new Color(0.20f, 0.13f, 0.04f, 1.0f)
+            : accent
+                ? new Color(0.02f, 0.35f, 0.48f, 1.0f)
+                : new Color(0.10f, 0.14f, 0.20f, 1.0f);
+        button.AddThemeStyleboxOverride("normal", PanelStyle(normal, border: true));
+        button.AddThemeStyleboxOverride("hover", PanelStyle(new Color(0.05f, 0.32f, 0.40f, 1.0f), border: true));
+        button.AddThemeStyleboxOverride("pressed", PanelStyle(new Color(0.02f, 0.50f, 0.62f, 1.0f), border: true));
         return button;
     }
 
@@ -854,19 +1034,31 @@ public partial class AdvancedToolsOverlay : Control
         return editor;
     }
 
-    private static StyleBoxFlat PanelStyle(Color color)
-        => new()
+    private static StyleBoxFlat PanelStyle(Color color, bool border = false)
+    {
+        var style = new StyleBoxFlat
         {
             BgColor = color,
-            CornerRadiusBottomLeft = 5,
-            CornerRadiusBottomRight = 5,
-            CornerRadiusTopLeft = 5,
-            CornerRadiusTopRight = 5,
+            CornerRadiusBottomLeft = 3,
+            CornerRadiusBottomRight = 3,
+            CornerRadiusTopLeft = 3,
+            CornerRadiusTopRight = 3,
             ContentMarginLeft = 8,
             ContentMarginRight = 8,
             ContentMarginTop = 8,
             ContentMarginBottom = 8,
         };
+        if (border)
+        {
+            style.BorderColor = new Color(0.10f, 0.32f, 0.36f, 0.90f);
+            style.BorderWidthBottom = 1;
+            style.BorderWidthLeft = 1;
+            style.BorderWidthRight = 1;
+            style.BorderWidthTop = 1;
+        }
+
+        return style;
+    }
 
     private sealed partial class BrainMapView : Control
     {
@@ -886,28 +1078,50 @@ public partial class AdvancedToolsOverlay : Control
             DrawRect(new Rect2(Vector2.Zero, Size), new Color(0.018f, 0.026f, 0.032f, 0.96f), filled: true);
             int maxX = Math.Max(1, _frame.Lobes.Max(lobe => lobe.X + lobe.Width));
             int maxY = Math.Max(1, _frame.Lobes.Max(lobe => lobe.Y + lobe.Height));
-            float xScale = Math.Max(1.0f, (Size.X - 24.0f) / (maxX + 2));
-            float yScale = Math.Max(1.0f, (Size.Y - 24.0f) / (maxY + 2));
+            float xScale = Math.Max(1.0f, (Size.X - 40.0f) / (maxX + 2));
+            float yScale = Math.Max(1.0f, (Size.Y - 40.0f) / (maxY + 2));
             var origin = new Vector2(12, 12);
             var centers = new Dictionary<int, Vector2>();
 
             foreach (BrainLobeMonitorRow lobe in _frame.Lobes)
             {
+                float visualWidth = Math.Clamp(lobe.Width * xScale * 0.45f, 46.0f, 148.0f);
+                float visualHeight = Math.Clamp(lobe.Height * yScale * 4.0f, 28.0f, 86.0f);
                 var rect = new Rect2(
                     origin + new Vector2(lobe.X * xScale, lobe.Y * yScale),
-                    new Vector2(Math.Max(2, lobe.Width * xScale), Math.Max(2, lobe.Height * yScale)));
+                    new Vector2(visualWidth, visualHeight));
                 float heat = Math.Clamp(lobe.Activation, 0, 1);
-                DrawRect(rect, new Color(0.05f, 0.10f + heat * 0.35f, 0.13f + heat * 0.45f, 0.72f), filled: true);
-                DrawRect(rect, new Color(0.35f, 0.88f, 0.90f, 0.85f), filled: false, width: 1.2f);
-                DrawString(ThemeDB.FallbackFont, rect.Position + new Vector2(4, 14), lobe.TokenText, HorizontalAlignment.Left, -1, 11, new Color(0.86f, 0.94f, 0.95f));
+                DrawRect(rect, new Color(0.035f, 0.055f + heat * 0.12f, 0.060f + heat * 0.16f, 0.92f), filled: true);
+                DrawRect(rect, new Color(0.45f, 0.92f, 0.95f, 0.75f), filled: false, width: 1.2f);
+                DrawString(ThemeDB.FallbackFont, rect.Position + new Vector2(5, 13), lobe.TokenText, HorizontalAlignment.Left, -1, 10, new Color(0.86f, 0.94f, 0.95f));
+                DrawString(ThemeDB.FallbackFont, rect.Position + new Vector2(5, 25), $"{lobe.Width}x{lobe.Height}", HorizontalAlignment.Left, -1, 8, new Color(0.60f, 0.72f, 0.74f));
                 centers[lobe.Token] = rect.GetCenter();
+
+                int cols = Math.Clamp(lobe.Width, 4, 12);
+                int rows = Math.Clamp(lobe.Height, 3, 8);
+                Vector2 cell = new(Math.Max(3, (rect.Size.X - 12) / cols), Math.Max(3, (rect.Size.Y - 34) / rows));
+                for (int y = 0; y < rows; y++)
+                {
+                    for (int x = 0; x < cols; x++)
+                    {
+                        float pulse = ((x * 17 + y * 11 + lobe.WinningNeuronId) % 100) / 100.0f;
+                        float alpha = Math.Clamp(0.18f + heat * 0.55f + pulse * 0.20f, 0.16f, 0.88f);
+                        var cellRect = new Rect2(
+                            rect.Position + new Vector2(6 + x * cell.X, 30 + y * cell.Y),
+                            new Vector2(Math.Max(2, cell.X - 2), Math.Max(2, cell.Y - 2)));
+                        if (cellRect.End.X < rect.End.X - 3 && cellRect.End.Y < rect.End.Y - 3)
+                            DrawRect(cellRect, new Color(0.00f, 0.58f, 0.78f, alpha), filled: true);
+                    }
+                }
 
                 if (lobe.NeuronCount > 0)
                 {
                     int x = lobe.WinningNeuronId % Math.Max(1, lobe.Width);
                     int y = lobe.WinningNeuronId / Math.Max(1, lobe.Width);
-                    Vector2 p = origin + new Vector2((lobe.X + x + 0.5f) * xScale, (lobe.Y + y + 0.5f) * yScale);
-                    DrawCircle(p, Math.Clamp(MathF.Min(xScale, yScale) * 0.24f, 2.0f, 6.0f), new Color(1.0f, 0.82f, 0.25f));
+                    Vector2 p = rect.Position + new Vector2(
+                        Math.Clamp((x + 0.5f) / Math.Max(1, lobe.Width) * rect.Size.X, 7, rect.Size.X - 7),
+                        Math.Clamp(30 + (y + 0.5f) / Math.Max(1, lobe.Height) * Math.Max(1, rect.Size.Y - 32), 7, rect.Size.Y - 7));
+                    DrawRect(new Rect2(p - new Vector2(5, 5), new Vector2(10, 10)), new Color(1.0f, 0.82f, 0.18f, 0.95f), filled: false, width: 1.5f);
                 }
             }
 
@@ -915,8 +1129,11 @@ public partial class AdvancedToolsOverlay : Control
             {
                 if (!centers.TryGetValue(tract.SourceToken, out Vector2 a) || !centers.TryGetValue(tract.DestinationToken, out Vector2 b))
                     continue;
-                float alpha = Math.Clamp(0.15f + tract.DendriteCount / 300.0f, 0.18f, 0.7f);
-                DrawLine(a, b, new Color(0.25f, 0.75f, 1.0f, alpha), 1.0f);
+                float alpha = Math.Clamp(0.10f + tract.DendriteCount / 440.0f, 0.15f, 0.62f);
+                Color line = tract.Index % 3 == 0
+                    ? new Color(0.40f, 0.95f, 0.50f, alpha)
+                    : new Color(0.25f, 0.75f, 1.0f, alpha);
+                DrawLine(a, b, line, tract.Index % 7 == 0 ? 1.6f : 1.0f);
             }
         }
     }
