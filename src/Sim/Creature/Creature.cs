@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using CreaturesReborn.Sim.Biochemistry;
 using CreaturesReborn.Sim.Brain;
 using CreaturesReborn.Sim.Formats;
@@ -40,13 +41,18 @@ public sealed class Creature
     // Construction
     // -------------------------------------------------------------------------
     private Creature(G genome, IRng rng)
+        : this(genome, rng, BiochemistryCompatibilityMode.ModernExtensions)
+    {
+    }
+
+    private Creature(G genome, IRng rng, BiochemistryCompatibilityMode biochemistryMode)
     {
         Genome = genome;
         _rng   = rng;
 
         // Biochemistry (owns the chemical array)
-        Biochemistry = new BC();
-        Biochemistry.ReadFromGenome(genome);
+        Biochemistry = new BC(biochemistryMode);
+        Biochemistry.LoadFromGenome(genome, biochemistryMode);
 
         float[] chemicals = Biochemistry.GetChemicalArray();
 
@@ -91,6 +97,15 @@ public sealed class Creature
 
     public static Creature CreateFromGenome(G genome, IRng rng)
         => new(genome, rng);
+
+    public static Creature CreateFromGenome(G genome, IRng rng, CreatureImportOptions options)
+    {
+        genome.Sex = options.Sex;
+        genome.Age = options.Age;
+        genome.Variant = options.Variant;
+        genome.Moniker = options.Moniker;
+        return new Creature(genome, rng, options.BiochemistryMode);
+    }
 
     public static Creature RestoreSnapshot(SavedCreatureState state)
     {
@@ -246,6 +261,19 @@ public sealed class Creature
     }
 
     public CreatureAgeStage AgeStage => CreatureAge.StageFromAge(Genome.Age);
+
+    public GeneExpressionTrace ApplyGeneExpressionStage(byte newAge)
+    {
+        byte previousAge = Genome.Age;
+        Genome.Age = newAge;
+        var expressionPlan = new GenomeExpressionPlan(GeneDecoder.Decode(Genome));
+        return new GeneExpressionTrace(
+            previousAge,
+            newAge,
+            expressionPlan.GenesEligibleAt(newAge, Genome.Sex, Genome.Variant)
+                .Select(record => record.Identity)
+                .ToArray());
+    }
 
     public void AdvanceAge(int tickCount)
     {

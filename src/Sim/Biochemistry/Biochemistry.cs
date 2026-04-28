@@ -4,6 +4,12 @@ using CreaturesReborn.Sim.Genome;
 
 namespace CreaturesReborn.Sim.Biochemistry;
 
+public enum BiochemistryCompatibilityMode
+{
+    C3DS = 0,
+    ModernExtensions = 1
+}
+
 /// <summary>
 /// Container for all biochemistry: 256-chemical array, organs (reactions + receptors + emitters),
 /// neuroemitters, and half-life decay rates.
@@ -71,6 +77,8 @@ public sealed class Biochemistry
     private bool _respirationSignalActive;
     private float _lastAirQuality = 1.0f;
 
+    public BiochemistryCompatibilityMode CompatibilityMode { get; }
+
     /// <summary>
     /// Pluggable brain locus provider.  Set this when the Brain is constructed so that
     /// neuroemitters and emitters can read real neuron outputs.
@@ -88,7 +96,14 @@ public sealed class Biochemistry
     // Construction
     // -------------------------------------------------------------------------
     public Biochemistry()
+        : this(BiochemistryCompatibilityMode.ModernExtensions)
     {
+    }
+
+    public Biochemistry(BiochemistryCompatibilityMode compatibilityMode)
+    {
+        CompatibilityMode = compatibilityMode;
+
         // Initialise creature locus table.
         for (int t = 0; t < (int)CreatureTissue.Count; t++)
             for (int l = 0; l < BiochemConst.MAX_LOCI_PER_TISSUE; l++)
@@ -526,6 +541,14 @@ public sealed class Biochemistry
         while (geneFound);
     }
 
+    public void LoadFromGenome(Genome.Genome genome, BiochemistryCompatibilityMode mode)
+    {
+        if (mode != CompatibilityMode)
+            throw new InvalidOperationException("Create Biochemistry with the requested compatibility mode before loading a genome.");
+
+        ReadFromGenome(genome);
+    }
+
     // -------------------------------------------------------------------------
     // Update — called every world tick.
     // Mirrors c2e Biochemistry::Update (Biochemistry.cpp:320-352).
@@ -576,17 +599,20 @@ public sealed class Biochemistry
             RecordDelta(i, before, after - before, after, ChemicalDeltaSource.HalfLifeDecay, "half-life decay", null);
         }
 
-        // 4. Respiration, immune, and toxin hooks perturb core chemistry.
-        UpdateRespirationImmuneAndToxinHooks();
+        if (CompatibilityMode == BiochemistryCompatibilityMode.ModernExtensions)
+        {
+            // 4. Respiration, immune, and toxin hooks perturb core chemistry.
+            UpdateRespirationImmuneAndToxinHooks();
 
-        // 5. Core metabolism: stores drive hunger and can buffer low ATP.
-        UpdateHungerAndEnergyMetabolism();
+            // 5. Core metabolism: stores drive hunger and can buffer low ATP.
+            UpdateHungerAndEnergyMetabolism();
 
-        // 6. Fatigue and sleep pressure are derived from chemistry.
-        UpdateFatigueAndSleep();
+            // 6. Fatigue and sleep pressure are derived from chemistry.
+            UpdateFatigueAndSleep();
 
-        // 7. Pain reflects injury, while energy and endorphins support recovery.
-        UpdatePainInjuryAndRecovery();
+            // 7. Pain reflects injury, while energy and endorphins support recovery.
+            UpdatePainInjuryAndRecovery();
+        }
         }
         finally
         {
