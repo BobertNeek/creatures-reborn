@@ -28,12 +28,17 @@ public partial class AdvancedToolsOverlay : Control
     private GenomeEditSession? _genomeSession;
     private int _selectedGeneIndex;
     private bool _paused;
+    private bool _showTractMode;
     private float _sampleTimer;
     private float _sampleInterval = 0.20f;
 
     private Label _targetLabel = null!;
     private Label _statusLabel = null!;
     private TabContainer _tabs = null!;
+    private Button _pauseButton = null!;
+    private Button _resumeButton = null!;
+    private Button _lobesButton = null!;
+    private Button _tractsButton = null!;
     private BrainMapView _brainMap = null!;
     private RichTextLabel _brainTables = null!;
     private RichTextLabel _brainCharts = null!;
@@ -163,14 +168,17 @@ public partial class AdvancedToolsOverlay : Control
         _targetLabel = Label("Selected: none", 12);
         _targetLabel.CustomMinimumSize = new Vector2(270, 34);
         row.AddChild(ToolbarCell("CREATURE", _targetLabel, new Vector2(280, 46)));
-        row.AddChild(Button("PAUSE", TogglePause, new Vector2(78, 38), accent: true));
-        row.AddChild(Button("RESUME", TogglePause, new Vector2(82, 38)));
+        _pauseButton = Button("PAUSE", PauseMonitor, new Vector2(78, 38));
+        _resumeButton = Button("RESUME", ResumeMonitor, new Vector2(82, 38));
+        row.AddChild(_pauseButton);
+        row.AddChild(_resumeButton);
         row.AddChild(ToolbarCell("SAMPLING RATE", Label("5 Hz", 11), new Vector2(94, 46)));
         row.AddChild(ToolbarCell("BUFFER", Label($"{BrainHistoryCapacity}", 11), new Vector2(88, 46)));
         row.AddChild(Button("EXPORT", ExportWorkingGenome, new Vector2(82, 38)));
         row.AddChild(Button("HATCH EGG", HatchEditedEgg, new Vector2(100, 38)));
         row.AddChild(Button("LIVE APPLY", LiveApply, new Vector2(100, 38), warning: true));
         row.AddChild(Button("X", Close, new Vector2(32, 38)));
+        UpdatePauseButtons();
         return row;
     }
 
@@ -209,7 +217,7 @@ public partial class AdvancedToolsOverlay : Control
             SizeFlagsVertical = SizeFlags.ExpandFill,
         };
         box.AddThemeConstantOverride("separation", 6);
-        box.AddChild(SegmentedHeader("Lobes", "Tracts"));
+        box.AddChild(BuildBrainModeHeader());
 
         var mapRow = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill };
         mapRow.AddThemeConstantOverride("separation", 6);
@@ -219,6 +227,7 @@ public partial class AdvancedToolsOverlay : Control
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
             SizeFlagsVertical = SizeFlags.ExpandFill,
         };
+        _brainMap.SetShowTracts(_showTractMode);
         mapRow.AddChild(_brainMap);
         var legend = RichText(new Vector2(78, 300));
         legend.Text = "[b]ACTIVATION[/b]\n[color=#24d9ff]1.00[/color] High\n[color=#1caac9]0.50[/color]\n[color=#145f74]0.00[/color] Low\n\n[b]TRACT OVERLAY[/b]\n[color=#51d46d]Excitatory[/color]\n[color=#ffcf3a]Selected[/color]\n[color=#38aee8]All[/color]\n\n[b]DISPLAY[/b]\nLobe labels\nHeat map\nWinning neuron";
@@ -233,6 +242,19 @@ public partial class AdvancedToolsOverlay : Control
         lower.AddChild(_brainTables);
         box.AddChild(lower);
         return box;
+    }
+
+    private Control BuildBrainModeHeader()
+    {
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 3);
+
+        _lobesButton = Button("Lobes", () => SetBrainMapMode(false), new Vector2(112, 24));
+        _tractsButton = Button("Tracts", () => SetBrainMapMode(true), new Vector2(112, 24));
+        row.AddChild(_lobesButton);
+        row.AddChild(_tractsButton);
+        UpdateBrainModeButtons();
+        return row;
     }
 
     private Control BuildGeneticsWorkbench()
@@ -430,7 +452,7 @@ public partial class AdvancedToolsOverlay : Control
         sexRow.AddChild(Button("Apply", ApplyHeaderEdit, new Vector2(64, 28)));
         box.AddChild(sexRow);
 
-        _typedEditor = TextEditor(new Vector2(210, 145), readOnly: true);
+        _typedEditor = TextEditor(new Vector2(210, 105), readOnly: true);
         box.AddChild(Label("Typed Editor", 10, bold: true));
         box.AddChild(_typedEditor);
 
@@ -443,7 +465,7 @@ public partial class AdvancedToolsOverlay : Control
         box.AddChild(Button("Apply Typed Field", ApplyTypedFieldEdit, new Vector2(150, 28)));
 
         box.AddChild(Label("Raw Payload", 10, bold: true));
-        _rawEditor = TextEditor(new Vector2(210, 120), readOnly: false);
+        _rawEditor = TextEditor(new Vector2(210, 72), readOnly: false);
         box.AddChild(_rawEditor);
 
         var opRow = new GridContainer { Columns = 3 };
@@ -814,10 +836,44 @@ public partial class AdvancedToolsOverlay : Control
         SetStatus("Breed Pair created a staged child genome.");
     }
 
-    private void TogglePause()
+    private void PauseMonitor()
     {
-        _paused = !_paused;
-        SetStatus(_paused ? "Brain monitor paused." : "Brain monitor resumed.");
+        _paused = true;
+        UpdatePauseButtons();
+        SetStatus("Brain monitor paused.");
+    }
+
+    private void ResumeMonitor()
+    {
+        _paused = false;
+        UpdatePauseButtons();
+        SetStatus("Brain monitor resumed.");
+    }
+
+    private void SetBrainMapMode(bool showTracts)
+    {
+        _showTractMode = showTracts;
+        _brainMap?.SetShowTracts(showTracts);
+        UpdateBrainModeButtons();
+        SetStatus(showTracts ? "Brain map showing tracts." : "Brain map showing lobes.");
+    }
+
+    private void UpdatePauseButtons()
+    {
+        if (_pauseButton == null || _resumeButton == null)
+            return;
+
+        StyleButton(_pauseButton, active: !_paused);
+        StyleButton(_resumeButton, active: _paused);
+    }
+
+    private void UpdateBrainModeButtons()
+    {
+        if (_lobesButton == null || _tractsButton == null)
+            return;
+
+        StyleButton(_lobesButton, active: !_showTractMode);
+        StyleButton(_tractsButton, active: _showTractMode);
     }
 
     private void AdjustSampleInterval(float delta)
@@ -882,17 +938,15 @@ public partial class AdvancedToolsOverlay : Control
     {
         if (values.Count == 0)
             return "";
-        return new string(values.TakeLast(24).Select(value =>
+
+        const string bars = "▁▂▃▄▅▆▇█";
+        string trace = new(values.TakeLast(24).Select(value =>
         {
             float clamped = Math.Clamp(value, 0, 1);
-            return clamped switch
-            {
-                >= 0.75f => '#',
-                >= 0.50f => '=',
-                >= 0.25f => '-',
-                _ => '.'
-            };
+            int index = Math.Clamp((int)MathF.Round(clamped * (bars.Length - 1)), 0, bars.Length - 1);
+            return bars[index];
         }).ToArray());
+        return $"[color=#edf8fb]{trace}[/color]";
     }
 
     private static Label Label(string text, int size = 10, bool bold = false, bool accent = false)
@@ -978,15 +1032,31 @@ public partial class AdvancedToolsOverlay : Control
         var button = new Button { Text = text, CustomMinimumSize = minSize ?? new Vector2(74, 28) };
         button.Pressed += action;
         button.AddThemeFontSizeOverride("font_size", 11);
+        StyleButton(button, active: accent, warning: warning);
+        return button;
+    }
+
+    private static void StyleButton(Button button, bool active = false, bool warning = false)
+    {
         Color normal = warning
             ? new Color(0.20f, 0.13f, 0.04f, 1.0f)
-            : accent
+            : active
                 ? new Color(0.02f, 0.35f, 0.48f, 1.0f)
-                : new Color(0.10f, 0.14f, 0.20f, 1.0f);
+                : new Color(0.07f, 0.11f, 0.16f, 1.0f);
+        Color hover = warning
+            ? new Color(0.28f, 0.17f, 0.05f, 1.0f)
+            : new Color(0.05f, 0.32f, 0.40f, 1.0f);
+        Color font = active || warning
+            ? new Color(0.94f, 0.99f, 1.0f, 1.0f)
+            : new Color(0.74f, 0.84f, 0.88f, 0.82f);
+
+        button.Modulate = active || warning ? Colors.White : new Color(1, 1, 1, 0.76f);
+        button.AddThemeColorOverride("font_color", font);
+        button.AddThemeColorOverride("font_hover_color", new Color(0.94f, 0.99f, 1.0f, 1.0f));
+        button.AddThemeColorOverride("font_pressed_color", new Color(0.94f, 0.99f, 1.0f, 1.0f));
         button.AddThemeStyleboxOverride("normal", PanelStyle(normal, border: true));
-        button.AddThemeStyleboxOverride("hover", PanelStyle(new Color(0.05f, 0.32f, 0.40f, 1.0f), border: true));
+        button.AddThemeStyleboxOverride("hover", PanelStyle(hover, border: true));
         button.AddThemeStyleboxOverride("pressed", PanelStyle(new Color(0.02f, 0.50f, 0.62f, 1.0f), border: true));
-        return button;
     }
 
     private static CheckBox Check(string text, Action? changed)
@@ -1076,10 +1146,17 @@ public partial class AdvancedToolsOverlay : Control
     private sealed partial class BrainMapView : Control
     {
         private BrainMonitorFrame? _frame;
+        private bool _showTracts;
 
         public void SetFrame(BrainMonitorFrame frame)
         {
             _frame = frame;
+            QueueRedraw();
+        }
+
+        public void SetShowTracts(bool showTracts)
+        {
+            _showTracts = showTracts;
             QueueRedraw();
         }
 
@@ -1089,20 +1166,15 @@ public partial class AdvancedToolsOverlay : Control
                 return;
 
             DrawRect(new Rect2(Vector2.Zero, Size), new Color(0.018f, 0.026f, 0.032f, 0.96f), filled: true);
-            int maxX = Math.Max(1, _frame.Lobes.Max(lobe => lobe.X + lobe.Width));
-            int maxY = Math.Max(1, _frame.Lobes.Max(lobe => lobe.Y + lobe.Height));
-            float xScale = Math.Max(1.0f, (Size.X - 40.0f) / (maxX + 2));
-            float yScale = Math.Max(1.0f, (Size.Y - 40.0f) / (maxY + 2));
-            var origin = new Vector2(12, 12);
             var centers = new Dictionary<int, Vector2>();
+            Dictionary<int, BrainNeuronMonitorRow[]> neuronsByLobe = _frame.Neurons
+                .GroupBy(neuron => neuron.LobeIndex)
+                .ToDictionary(group => group.Key, group => group.ToArray());
 
-            foreach (BrainLobeMonitorRow lobe in _frame.Lobes)
+            for (int i = 0; i < _frame.Lobes.Count; i++)
             {
-                float visualWidth = Math.Clamp(lobe.Width * xScale * 0.45f, 46.0f, 148.0f);
-                float visualHeight = Math.Clamp(lobe.Height * yScale * 4.0f, 28.0f, 86.0f);
-                var rect = new Rect2(
-                    origin + new Vector2(lobe.X * xScale, lobe.Y * yScale),
-                    new Vector2(visualWidth, visualHeight));
+                BrainLobeMonitorRow lobe = _frame.Lobes[i];
+                Rect2 rect = ResolveLobeRect(lobe, i, _frame.Lobes.Count, Size);
                 float heat = Math.Clamp(lobe.Activation, 0, 1);
                 DrawRect(rect, new Color(0.035f, 0.055f + heat * 0.12f, 0.060f + heat * 0.16f, 0.92f), filled: true);
                 DrawRect(rect, new Color(0.45f, 0.92f, 0.95f, 0.75f), filled: false, width: 1.2f);
@@ -1110,20 +1182,32 @@ public partial class AdvancedToolsOverlay : Control
                 DrawString(ThemeDB.FallbackFont, rect.Position + new Vector2(5, 25), $"{lobe.Width}x{lobe.Height}", HorizontalAlignment.Left, -1, 8, new Color(0.60f, 0.72f, 0.74f));
                 centers[lobe.Token] = rect.GetCenter();
 
-                int cols = Math.Clamp(lobe.Width, 4, 12);
-                int rows = Math.Clamp(lobe.Height, 3, 8);
+                int cols = Math.Clamp(lobe.Width, 4, 8);
+                int rows = Math.Clamp(lobe.Height, 3, 6);
                 Vector2 cell = new(Math.Max(3, (rect.Size.X - 12) / cols), Math.Max(3, (rect.Size.Y - 34) / rows));
+                BrainNeuronMonitorRow[] sampled = neuronsByLobe.TryGetValue(lobe.Index, out BrainNeuronMonitorRow[]? rowsForLobe)
+                    ? rowsForLobe
+                    : [];
                 for (int y = 0; y < rows; y++)
                 {
                     for (int x = 0; x < cols; x++)
                     {
-                        float pulse = ((x * 17 + y * 11 + lobe.WinningNeuronId) % 100) / 100.0f;
-                        float alpha = Math.Clamp(0.18f + heat * 0.55f + pulse * 0.20f, 0.16f, 0.88f);
+                        int cellIndex = y * cols + x;
+                        float neuronHeat = ResolveCellHeat(lobe, sampled, cellIndex, cols * rows);
                         var cellRect = new Rect2(
                             rect.Position + new Vector2(6 + x * cell.X, 30 + y * cell.Y),
                             new Vector2(Math.Max(2, cell.X - 2), Math.Max(2, cell.Y - 2)));
-                        if (cellRect.End.X < rect.End.X - 3 && cellRect.End.Y < rect.End.Y - 3)
-                            DrawRect(cellRect, new Color(0.00f, 0.58f, 0.78f, alpha), filled: true);
+                        if (cellRect.End.X >= rect.End.X - 3 || cellRect.End.Y >= rect.End.Y - 3)
+                            continue;
+
+                        Color color = neuronHeat switch
+                        {
+                            >= 0.88f => new Color(1.00f, 0.86f, 0.20f, 0.96f),
+                            >= 0.62f => new Color(0.28f, 0.98f, 0.82f, 0.96f),
+                            >= 0.30f => new Color(0.02f, 0.82f, 0.96f, 0.90f),
+                            _ => new Color(0.00f, 0.30f, 0.40f, 0.68f)
+                        };
+                        DrawRect(cellRect, color, filled: true);
                     }
                 }
 
@@ -1138,16 +1222,87 @@ public partial class AdvancedToolsOverlay : Control
                 }
             }
 
+            if (!_showTracts)
+                return;
+
             foreach (BrainTractMonitorRow tract in _frame.Tracts.Take(90))
             {
                 if (!centers.TryGetValue(tract.SourceToken, out Vector2 a) || !centers.TryGetValue(tract.DestinationToken, out Vector2 b))
                     continue;
-                float alpha = Math.Clamp(0.10f + tract.DendriteCount / 440.0f, 0.15f, 0.62f);
+                float alpha = Math.Clamp(0.20f + tract.DendriteCount / 440.0f, 0.26f, 0.80f);
                 Color line = tract.Index % 3 == 0
                     ? new Color(0.40f, 0.95f, 0.50f, alpha)
                     : new Color(0.25f, 0.75f, 1.0f, alpha);
-                DrawLine(a, b, line, tract.Index % 7 == 0 ? 1.6f : 1.0f);
+                DrawLine(a, b, line, 1.6f);
+                if (tract.Index % 11 == 0)
+                {
+                    Vector2 mid = a.Lerp(b, 0.5f);
+                    DrawCircle(mid, 3.0f, new Color(1.0f, 0.82f, 0.18f, 0.90f));
+                }
             }
         }
+
+        private static Rect2 ResolveLobeRect(BrainLobeMonitorRow lobe, int index, int total, Vector2 available)
+        {
+            Rect2 design = index < LobeSlots.Length ? LobeSlots[index] : FallbackSlot(index - LobeSlots.Length, total);
+            float xScale = Math.Max(0.1f, (available.X - 18.0f) / 520.0f);
+            float yScale = Math.Max(0.1f, (available.Y - 18.0f) / 330.0f);
+            var offset = new Vector2(9, 9);
+            float width = Math.Clamp(design.Size.X * xScale, 38.0f, Math.Max(38.0f, available.X * 0.30f));
+            float height = Math.Clamp(design.Size.Y * yScale, 30.0f, Math.Max(30.0f, available.Y * 0.25f));
+            return new Rect2(
+                offset + new Vector2(design.Position.X * xScale, design.Position.Y * yScale),
+                new Vector2(width, height));
+        }
+
+        private static Rect2 FallbackSlot(int index, int total)
+        {
+            int col = index % 5;
+            int row = index / 5;
+            float y = 238 + row * 44;
+            if (y > 286)
+                y = 286 - (total % 3) * 3;
+            return new Rect2(18 + col * 96, y, 78, 40);
+        }
+
+        private static float ResolveCellHeat(BrainLobeMonitorRow lobe, IReadOnlyList<BrainNeuronMonitorRow> sampled, int cellIndex, int cellCount)
+        {
+            float pulse = ((cellIndex * 17 + lobe.Index * 13 + lobe.WinningNeuronId) % 100) / 100.0f;
+            float fallback = Math.Clamp(lobe.Activation * 1.35f + pulse * 0.24f, 0.0f, 1.0f);
+            if (sampled.Count > 0)
+            {
+                int sampleIndex = Math.Clamp((int)MathF.Floor(cellIndex / Math.Max(1.0f, (float)cellCount) * sampled.Count), 0, sampled.Count - 1);
+                BrainNeuronMonitorRow neuron = sampled[sampleIndex];
+                float observed = MathF.Max(Math.Abs(neuron.State), Math.Abs(neuron.Output));
+                return Math.Clamp(MathF.Max(fallback, observed * 3.6f), 0.0f, 1.0f);
+            }
+
+            int winningBucket = lobe.NeuronCount <= 0
+                ? -1
+                : Math.Clamp((int)MathF.Floor(lobe.WinningNeuronId / Math.Max(1.0f, (float)lobe.NeuronCount) * cellCount), 0, cellCount - 1);
+            if (cellIndex == winningBucket)
+                return Math.Clamp(MathF.Max(0.78f, lobe.Activation), 0.0f, 1.0f);
+
+            return fallback;
+        }
+
+        private static readonly Rect2[] LobeSlots =
+        [
+            new(new Vector2(16, 34), new Vector2(68, 52)),
+            new(new Vector2(98, 28), new Vector2(108, 76)),
+            new(new Vector2(224, 28), new Vector2(108, 76)),
+            new(new Vector2(350, 28), new Vector2(72, 58)),
+            new(new Vector2(420, 92), new Vector2(78, 70)),
+            new(new Vector2(24, 116), new Vector2(76, 58)),
+            new(new Vector2(110, 126), new Vector2(76, 70)),
+            new(new Vector2(194, 126), new Vector2(76, 70)),
+            new(new Vector2(284, 126), new Vector2(108, 70)),
+            new(new Vector2(38, 218), new Vector2(72, 56)),
+            new(new Vector2(72, 286), new Vector2(76, 48)),
+            new(new Vector2(154, 270), new Vector2(88, 62)),
+            new(new Vector2(274, 270), new Vector2(116, 62)),
+            new(new Vector2(404, 270), new Vector2(92, 62)),
+            new(new Vector2(430, 198), new Vector2(72, 56)),
+        ];
     }
 }

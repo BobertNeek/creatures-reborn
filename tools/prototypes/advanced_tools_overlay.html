@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Advanced Tools Overlay Prototype</title>
+  <style>
+    :root {
+      --bg: #020608;
+      --panel: #061316;
+      --panel2: #081d22;
+      --line: rgba(42, 201, 225, .55);
+      --line-dim: rgba(88, 154, 162, .34);
+      --text: #d9e8ea;
+      --muted: #89a4a8;
+      --cyan: #18d7f6;
+      --yellow: #ffd33d;
+      --green: #5fe270;
+      --red: #ff5252;
+      --button: #102230;
+      --button-active: #087494;
+      --warning: #3a2505;
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      width: 1280px;
+      height: 720px;
+      overflow: hidden;
+      background: #010305;
+      color: var(--text);
+      font-size: 12px;
+    }
+
+    .overlay {
+      width: 1280px;
+      height: 720px;
+      padding: 18px;
+      background: linear-gradient(180deg, rgba(4, 10, 13, .98), rgba(2, 7, 10, .98));
+    }
+
+    .topbar {
+      height: 62px;
+      display: grid;
+      grid-template-columns: 292px 76px 76px 88px 88px 88px 112px 118px 34px;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .cell-label, .section-title, .subhead {
+      color: #a8c4ca;
+      text-transform: uppercase;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .06em;
+    }
+
+    .creature-name { font-size: 13px; margin-top: 6px; color: #f1fbff; white-space: nowrap; }
+
+    button, .button {
+      height: 30px;
+      border: 1px solid var(--line);
+      background: var(--button);
+      color: #edf8fb;
+      font-size: 11px;
+      letter-spacing: .02em;
+      border-radius: 3px;
+    }
+
+    .topbar button { height: 50px; }
+    button.active { background: var(--button-active); box-shadow: inset 0 0 18px rgba(25, 226, 255, .16); }
+    button.warn { background: var(--warning); border-color: rgba(255, 184, 45, .7); color: #ffd65b; }
+    button.inactive { opacity: .52; }
+
+    .main {
+      height: 596px;
+      display: grid;
+      grid-template-columns: 440px 572px 220px;
+      gap: 8px;
+    }
+
+    .section {
+      border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(4, 22, 26, .95), rgba(2, 11, 14, .98));
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      padding: 8px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      text-transform: none;
+      letter-spacing: 0;
+      color: var(--cyan);
+      margin-bottom: 8px;
+    }
+
+    .tabs { display: flex; gap: 3px; margin-bottom: 8px; }
+    .tabs button { width: 112px; height: 30px; }
+
+    .brain-grid {
+      display: grid;
+      grid-template-columns: 332px 78px;
+      gap: 8px;
+      height: 366px;
+      min-height: 0;
+    }
+
+    .map {
+      position: relative;
+      border: 1px solid rgba(31, 142, 160, .25);
+      background: radial-gradient(circle at 50% 48%, rgba(8, 58, 64, .25), rgba(1, 6, 8, .95) 60%);
+      overflow: hidden;
+    }
+
+    .tract-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .lobe {
+      position: absolute;
+      border: 1px solid #55dce9;
+      background: rgba(4, 24, 29, .88);
+      border-radius: 2px;
+      padding: 4px;
+      box-shadow: inset 0 0 16px rgba(9, 77, 88, .45);
+    }
+
+    .lobe .name { font-size: 10px; color: #effcff; line-height: 1; }
+    .lobe .size { font-size: 8px; color: var(--muted); }
+    .heat {
+      display: grid;
+      grid-template-columns: repeat(var(--cols), 1fr);
+      gap: 2px;
+      margin-top: 4px;
+    }
+    .heat span {
+      width: 100%;
+      aspect-ratio: 1;
+      background: rgba(0, 83, 105, .45);
+    }
+    .heat span.hot { background: #ffe349; box-shadow: 0 0 8px #ffe349; }
+    .heat span.warm { background: #25e6d3; box-shadow: 0 0 6px #18d7f6; }
+    .heat span.mid { background: #08a9c7; }
+    .winner { outline: 2px solid var(--yellow); }
+
+    .legend {
+      border: 1px solid rgba(31, 142, 160, .25);
+      padding: 8px;
+      color: #d9f6f9;
+      line-height: 1.45;
+      overflow: hidden;
+    }
+    .legend b { color: #fff; }
+    .legend .cyan { color: var(--cyan); }
+    .legend .green { color: var(--green); }
+    .legend .yellow { color: var(--yellow); }
+
+    .brain-bottom {
+      height: 164px;
+      display: grid;
+      grid-template-columns: 230px 178px;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .table-panel {
+      border: 1px solid rgba(31, 142, 160, .22);
+      background: rgba(2, 8, 10, .78);
+      padding: 8px;
+      overflow: hidden;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 76px 42px 1fr;
+      gap: 6px;
+      height: 17px;
+      align-items: center;
+      border-bottom: 1px solid rgba(82, 138, 146, .15);
+    }
+    .spark {
+      height: 12px;
+      background:
+        linear-gradient(90deg, transparent 0 10%, rgba(255,255,255,.25) 10% 11%, transparent 11% 20%),
+        linear-gradient(90deg, rgba(255,255,255,.95), rgba(31, 215, 246, .70));
+      clip-path: polygon(0 60%, 10% 48%, 18% 64%, 28% 36%, 40% 52%, 51% 38%, 63% 58%, 74% 28%, 88% 44%, 100% 35%, 100% 70%, 0 70%);
+    }
+
+    .genetics-grid {
+      display: grid;
+      grid-template-columns: 300px 244px;
+      gap: 8px;
+      height: 536px;
+      min-height: 0;
+    }
+    .filters { display: grid; grid-template-columns: 92px 1fr 32px; gap: 6px; margin-bottom: 6px; }
+    .input, select {
+      height: 28px;
+      border: 1px solid rgba(31, 142, 160, .35);
+      background: rgba(255,255,255,.055);
+      color: var(--text);
+      padding: 0 8px;
+      border-radius: 2px;
+    }
+    .checks { display: flex; gap: 14px; margin: 6px 0; color: #cce4e6; font-size: 12px; }
+    .box { width: 13px; height: 13px; display: inline-block; border: 1px solid #35565c; margin-right: 5px; vertical-align: -2px; }
+    .box.on { background: rgba(24, 215, 246, .18); box-shadow: inset 0 0 0 2px #061316; }
+
+    .gene-table {
+      height: 346px;
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+    .gene-row {
+      display: grid;
+      grid-template-columns: 38px 1fr 38px 30px;
+      height: 19px;
+      border-bottom: 1px solid rgba(82, 138, 146, .18);
+      align-items: center;
+      padding: 0 6px;
+      color: #cfe0e2;
+      font-size: 11px;
+    }
+    .gene-row.selected { background: rgba(5, 111, 137, .36); color: #fff; }
+    .gene-actions { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-top: 6px; }
+    .mut-row { display: grid; grid-template-columns: 1fr 44px 1fr 44px; gap: 5px; align-items: center; margin-top: 8px; }
+
+    .editor {
+      border: 1px solid rgba(31, 142, 160, .35);
+      padding: 8px;
+      min-width: 0;
+      overflow: hidden;
+    }
+    .selected-gene { color: var(--cyan); font-size: 15px; margin-bottom: 8px; }
+    .fields { display: grid; grid-template-columns: 72px 1fr; gap: 6px 8px; align-items: center; }
+    .flags { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 10px 0; }
+    .typed-table, .raw {
+      border: 1px solid rgba(80, 139, 146, .28);
+      background: rgba(0,0,0,.22);
+      margin: 6px 0;
+      padding: 6px;
+      font-family: Consolas, monospace;
+      font-size: 11px;
+      line-height: 1.45;
+    }
+    .raw { height: 58px; overflow: hidden; color: #d8eef1; }
+
+    .rail-block {
+      border: 1px solid rgba(31, 142, 160, .28);
+      padding: 8px;
+      margin-bottom: 8px;
+      background: rgba(0,0,0,.16);
+    }
+    .counters { display: grid; grid-template-columns: 1fr 1fr 1fr; text-align: center; }
+    .counter b { display: block; font-size: 20px; margin-top: 3px; }
+    .good { color: var(--green); } .warnc { color: var(--yellow); } .bad { color: var(--red); }
+    .rail-line { display: flex; justify-content: space-between; border-bottom: 1px solid rgba(82,138,146,.17); line-height: 22px; }
+    .footer {
+      height: 48px;
+      margin-top: 8px;
+      border: 1px solid rgba(31, 142, 160, .30);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 18px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <main class="overlay">
+    <div class="topbar">
+      <div><div class="cell-label">Creature</div><div class="creature-name">Selected: NornSpawn age=128</div></div>
+      <button class="active" id="pause">Pause</button>
+      <button class="inactive" id="resume">Resume</button>
+      <div><div class="cell-label">Sampling Rate</div><div class="creature-name">5 Hz</div></div>
+      <div><div class="cell-label">Buffer</div><div class="creature-name">180</div></div>
+      <button>Export</button>
+      <button>Hatch Egg</button>
+      <button class="warn">Live Apply</button>
+      <button>X</button>
+    </div>
+
+    <div class="main">
+      <section class="section">
+        <div class="section-title">Brain Monitor</div>
+        <div class="tabs"><button class="active" id="lobesTab">Lobes</button><button id="tractsTab">Tracts</button></div>
+        <div class="brain-grid">
+          <div class="map" id="brainMap">
+            <svg class="tract-svg" viewBox="0 0 332 366">
+              <path d="M70 95 C145 126 230 80 286 132" stroke="#63ef7a" fill="none" opacity=".6"/>
+              <path d="M74 250 C132 188 190 210 250 232" stroke="#2fd9ff" fill="none" opacity=".65"/>
+              <path d="M154 108 C190 160 226 165 292 170" stroke="#2fd9ff" fill="none" opacity=".45"/>
+              <path d="M80 280 C120 310 215 300 280 260" stroke="#63ef7a" fill="none" opacity=".48"/>
+            </svg>
+          </div>
+          <div class="legend">
+            <b>ACTIVATION</b><br><span class="cyan">1.00</span> High<br><span class="cyan">0.50</span><br><span class="cyan">0.00</span> Low<br><br>
+            <b>TRACT OVERLAY</b><br><span class="green">Excitatory</span><br><span class="yellow">Selected</span><br><span class="cyan">All</span><br><br>
+            <b>DISPLAY</b><br>Lobe labels<br>Heat map<br>Winning neuron
+          </div>
+        </div>
+        <div class="brain-bottom">
+          <div class="table-panel">
+            <b>Drives</b>
+            <div class="row"><span>Hunger</span><span>0.42</span><span class="spark"></span></div>
+            <div class="row"><span>Thirst</span><span>0.28</span><span class="spark"></span></div>
+            <div class="row"><span>Sleep</span><span>0.64</span><span class="spark"></span></div>
+            <div class="row"><span>Social</span><span>0.31</span><span class="spark"></span></div>
+            <div class="row"><span>Energy</span><span>0.71</span><span class="spark"></span></div>
+            <div class="row"><span>Pain</span><span>0.12</span><span class="spark"></span></div>
+          </div>
+          <div class="table-panel">
+            <b>Neuron State</b><br>Total 8,192<br>Active 1,276<br>Inactive 3,392<br>Winning: CTX B (7,11)<br>Activation 0.82<br>Inputs 48
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">Genetics Kit</div>
+        <div class="genetics-grid">
+          <div>
+            <div class="tabs"><button class="active">Genes</button><button>Typed Editor</button><button>Raw Payload</button></div>
+            <div class="filters"><select><option>All</option></select><input class="input" value="search genes..."><button>F</button></div>
+            <div class="checks"><span><i class="box"></i>Mutable</span><span><i class="box"></i>Sex linked</span><span><i class="box"></i>Invalid</span></div>
+            <div class="gene-table">
+              <div class="gene-row"><b>ID</b><b>Gene Name</b><b>Type</b><b>Size</b></div>
+              <div class="gene-row"><span>000</span><span>Creature/Genus</span><span>B</span><span>77</span></div>
+              <div class="gene-row"><span>001</span><span>Organ/Organ</span><span>B</span><span>17</span></div>
+              <div class="gene-row selected"><span>011</span><span>Biochemistry/Receptor</span><span>B</span><span>20</span></div>
+              <div class="gene-row"><span>012</span><span>Biochemistry/Receptor</span><span>B</span><span>20</span></div>
+              <div class="gene-row"><span>013</span><span>Biochemistry/Receptor</span><span>B</span><span>20</span></div>
+              <div class="gene-row"><span>014</span><span>Biochemistry/Receptor</span><span>B</span><span>20</span></div>
+              <div class="gene-row"><span>015</span><span>Biochemistry/Receptor</span><span>B</span><span>20</span></div>
+              <div class="gene-row"><span>016</span><span>Biochemistry/Receptor</span><span>B</span><span>20</span></div>
+              <div class="gene-row"><span>017</span><span>Biochemistry/Receptor</span><span>B</span><span>20</span></div>
+              <div class="gene-row"><span>018</span><span>Biochemistry/Receptor</span><span>B</span><span>20</span></div>
+            </div>
+            <div class="gene-actions"><button>Import .gen</button><button>Save Variant</button><button>Compare</button></div>
+            <div class="mut-row"><span>Mutation Chance</span><input class="input" value="4"><span>Degree</span><input class="input" value="4"></div>
+          </div>
+          <div class="editor">
+            <div class="selected-gene">011 Biochemistry/Receptor <span class="good" style="float:right">Active</span></div>
+            <div class="fields">
+              <span>Id</span><input class="input" value="11">
+              <span>Generation</span><input class="input" value="0">
+              <span>Mutability</span><input class="input" value="128">
+              <span>Variant</span><input class="input" value="0">
+            </div>
+            <div class="flags"><span><i class="box on"></i>Mutable</span><span><i class="box"></i>Duplicate</span><span><i class="box"></i>Cut</span></div>
+            <button style="width:100%">Apply Header</button>
+            <div class="subhead" style="margin-top:10px">Typed Editor</div>
+            <div class="typed-table">Chemical Id&nbsp;&nbsp;24<br>Affinity&nbsp;&nbsp;&nbsp;&nbsp;0.82<br>Threshold&nbsp;&nbsp;&nbsp;0.25<br>Decay Rate&nbsp;&nbsp;0.15</div>
+            <button style="width:100%">Apply Typed Field</button>
+            <div class="subhead" style="margin-top:10px">Raw Payload</div>
+            <div class="raw">00&nbsp;4E&nbsp;65&nbsp;78&nbsp;00&nbsp;15&nbsp;2A&nbsp;09<br>10&nbsp;04&nbsp;26&nbsp;20&nbsp;01&nbsp;00&nbsp;00&nbsp;00</div>
+            <button style="width:100%">Apply Raw</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-title">Validation</div>
+        <div class="rail-block counters">
+          <div class="counter good">Valid<b>42</b></div>
+          <div class="counter warnc">Warnings<b>2</b></div>
+          <div class="counter bad">Errors<b>1</b></div>
+        </div>
+        <div class="rail-block">
+          <div class="rail-line"><span>All gene sizes valid</span><span class="good">ok</span></div>
+          <div class="rail-line"><span>Duplicate IDs</span><span class="good">ok</span></div>
+          <div class="rail-line"><span>Neuron count</span><span class="warnc">warn</span></div>
+          <div class="rail-line"><span>Smell sensitivity</span><span class="bad">err</span></div>
+        </div>
+        <div class="rail-block">
+          <div class="subhead">Phenotype Summary</div>
+          <div class="rail-line"><span>Body Size</span><span>1.08x</span></div>
+          <div class="rail-line"><span>Metabolic Rate</span><span>1.22x</span></div>
+          <div class="rail-line"><span>Neural Complexity</span><span>1.15x</span></div>
+          <div class="rail-line"><span>Lifespan</span><span class="good">+13%</span></div>
+        </div>
+        <div class="rail-block">
+          <div class="subhead">Diff</div>
+          <div class="rail-line"><span>Added</span><span class="good">3</span></div>
+          <div class="rail-line"><span>Modified</span><span class="warnc">12</span></div>
+          <div class="rail-line"><span>Removed</span><span class="bad">0</span></div>
+        </div>
+      </section>
+    </div>
+    <footer class="footer"><span>Tools<br>Advanced Tools Overlay</span><span>Build: 0.9.0-dev&nbsp;&nbsp;|&nbsp;&nbsp;Session: 01:23:45</span></footer>
+  </main>
+  <script>
+    const lobes = [
+      ['OLF','16x8',24,36,74,52,8,4], ['CTX A','16x16',108,30,104,76,12,6], ['CTX B','16x16',235,30,104,76,12,6],
+      ['PAR','12x12',352,30,72,56,8,5], ['VIS','16x12',426,84,76,70,9,5], ['AON','12x8',32,124,74,54,8,4],
+      ['HPC','12x12',114,132,72,68,8,5], ['THL','12x12',198,132,72,68,8,5], ['STR','16x12',286,132,104,68,12,5],
+      ['AMY','12x8',46,232,74,54,8,4], ['HYP','12x8',92,306,74,54,8,4], ['CEA','12x8',176,292,80,62,8,4],
+      ['MB','16x8',290,292,110,62,12,4], ['CBL','16x8',416,292,86,62,9,4], ['AIB','12x8',438,206,70,52,8,4]
+    ];
+    const map = document.getElementById('brainMap');
+    lobes.forEach((lobe, index) => {
+      const [name, size, x, y, w, h, cols, rows] = lobe;
+      const el = document.createElement('div');
+      el.className = 'lobe';
+      el.style.cssText = `left:${x*.65}px;top:${y*.78}px;width:${w*.68}px;height:${h*.75}px`;
+      const cells = Array.from({length: cols * rows}, (_, i) => {
+        const heat = (i * 17 + index * 9) % 31;
+        return `<span class="${heat > 26 ? 'hot winner' : heat > 20 ? 'warm' : heat > 13 ? 'mid' : ''}"></span>`;
+      }).join('');
+      el.innerHTML = `<div class="name">${name}</div><div class="size">${size}</div><div class="heat" style="--cols:${cols}">${cells}</div>`;
+      map.appendChild(el);
+    });
+    document.getElementById('pause').onclick = () => { pause.classList.add('active'); resume.classList.remove('active'); resume.classList.add('inactive'); };
+    document.getElementById('resume').onclick = () => { resume.classList.add('active'); resume.classList.remove('inactive'); pause.classList.remove('active'); };
+    document.getElementById('lobesTab').onclick = () => { lobesTab.classList.add('active'); tractsTab.classList.remove('active'); };
+    document.getElementById('tractsTab').onclick = () => { tractsTab.classList.add('active'); lobesTab.classList.remove('active'); };
+  </script>
+</body>
+</html>

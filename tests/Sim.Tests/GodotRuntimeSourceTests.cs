@@ -134,6 +134,13 @@ public class GodotRuntimeSourceTests
         Assert.Contains("BrainMonitorHistory", overlay);
         Assert.Contains("GenomeEditSession", overlay);
         Assert.Contains("GenePayloadCodec.Decode", overlay);
+        Assert.Contains("BuildBrainModeHeader", overlay);
+        Assert.Contains("SetBrainMapMode", overlay);
+        Assert.Contains("SetShowTracts", overlay);
+        Assert.Contains("PauseMonitor", overlay);
+        Assert.Contains("ResumeMonitor", overlay);
+        Assert.Contains("▁▂▃▄▅▆▇█", overlay);
+        Assert.DoesNotContain(">= 0.75f => '#'", overlay);
         Assert.Contains("Live Apply", overlay);
         Assert.Contains("Hatch Egg", overlay);
         Assert.DoesNotContain("new GameWorld", overlay);
