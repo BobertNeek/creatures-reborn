@@ -31,7 +31,7 @@ public class MetaroomEditorSceneTests
         Assert.Contains("Exit Game", source);
         Assert.Contains("StartBundledWorld", source);
         Assert.Contains("ShowSaveSlotBrowser", source);
-        Assert.Contains("ShowSettingsOverlay", source);
+        Assert.Contains("ShowSharedSettingsOverlay", source);
         Assert.Contains("res://data/metarooms/treehouse.json", launchSource);
         Assert.Contains("res://data/metarooms/forest.json", launchSource);
         Assert.DoesNotContain("Play Treehouse", source);
@@ -44,6 +44,7 @@ public class MetaroomEditorSceneTests
         string applierSource = File.ReadAllText(RepoPath("src", "Godot", "UI", "GameSettingsApplier.cs"));
         string worldSource = File.ReadAllText(RepoPath("src", "Godot", "WorldNode.cs"));
         string guiSource = File.ReadAllText(RepoPath("src", "Godot", "UI", "GameGui.cs"));
+        string overlaySource = File.ReadAllText(RepoPath("src", "Godot", "UI", "SettingsOverlay.cs"));
 
         Assert.Contains("ConfigFile", settingsSource);
         Assert.Contains("DisplayServer.WindowSetMode", applierSource);
@@ -55,6 +56,31 @@ public class MetaroomEditorSceneTests
         Assert.Contains("CreateSaveData", worldSource);
         Assert.Contains("GameSaveService", guiSource);
         Assert.Contains("Save Slot", guiSource);
+        Assert.Contains("\"Save\"", overlaySource);
+        Assert.Contains("\"Reset\"", overlaySource);
+        Assert.Contains("\"OK\"", overlaySource);
+        Assert.Contains("\"Cancel\"", overlaySource);
+        Assert.DoesNotContain("Save Settings", overlaySource);
+        Assert.DoesNotContain("Reset Settings", overlaySource);
+    }
+
+    [Fact]
+    public void InGameGui_EscapePausesAndShowsSaveLoadSettingsMenu()
+    {
+        string guiSource = File.ReadAllText(RepoPath("src", "Godot", "UI", "GameGui.cs"));
+
+        Assert.Contains("ProcessModeEnum.Always", guiSource);
+        Assert.Contains("ShowPauseOverlay", guiSource);
+        Assert.Contains("ClosePauseOverlay", guiSource);
+        Assert.Contains("GetTree().Paused = true", guiSource);
+        Assert.Contains("GetTree().Paused = false", guiSource);
+        Assert.Contains("\"Resume\"", guiSource);
+        Assert.Contains("\"Save Game\"", guiSource);
+        Assert.Contains("\"Load Game\"", guiSource);
+        Assert.Contains("\"Settings\"", guiSource);
+        Assert.Contains("ShowSaveOverlay", guiSource);
+        Assert.Contains("ShowLoadOverlay", guiSource);
+        Assert.Contains("SettingsOverlay", guiSource);
     }
 
     [Fact]
