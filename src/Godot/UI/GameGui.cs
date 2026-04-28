@@ -3,6 +3,7 @@ using Godot;
 using CreaturesReborn.Sim.Creature;
 using CreaturesReborn.Sim.Biochemistry;
 using CreaturesReborn.Sim.Save;
+using CreaturesReborn.Sim.Settings;
 using C = CreaturesReborn.Sim.Creature.Creature;
 
 namespace CreaturesReborn.Godot.UI;
@@ -33,7 +34,9 @@ public partial class GameGui : Control
     private ProgressBar? _happyBar;
     private Label?       _verbLabel;
     private Label?       _populationLabel;
-    private Panel?       _savePanel;
+    private Control?     _pauseOverlay;
+    private VBoxContainer? _pauseContent;
+    private SettingsOverlay? _settingsOverlay;
 
     // ── State ───────────────────────────────────────────────────────────────
     private PointerAgent? _pointer;
@@ -42,6 +45,7 @@ public partial class GameGui : Control
 
     public override void _Ready()
     {
+        ProcessMode = ProcessModeEnum.Always;
         MouseFilter = MouseFilterEnum.Ignore;
         BuildWorldInfoPanel();
         BuildCreaturePanel();
@@ -71,10 +75,12 @@ public partial class GameGui : Control
 
         if (@event is InputEventKey menuKey && menuKey.Pressed && menuKey.Keycode == Key.Escape)
         {
-            if (_savePanel == null)
-                ShowSaveOverlay();
+            if (_settingsOverlay != null)
+                CloseSettingsOverlay();
+            else if (_pauseOverlay == null)
+                ShowPauseOverlay();
             else
-                CloseSaveOverlay();
+                ClosePauseOverlay();
         }
     }
 
@@ -339,32 +345,158 @@ public partial class GameGui : Control
         _creatureIndex = (_creatureIndex + 1) % creatures.Count;
     }
 
-    private void ShowSaveOverlay()
+    private void ShowPauseOverlay()
     {
-        if (_savePanel != null)
+        if (_pauseOverlay != null)
+        {
+            ShowPauseMainMenu();
+            return;
+        }
+
+        GetTree().Paused = true;
+
+        var root = new Control
+        {
+            ProcessMode = ProcessModeEnum.Always,
+            AnchorRight = 1,
+            AnchorBottom = 1,
+            MouseFilter = MouseFilterEnum.Stop,
+        };
+        root.AddChild(new ColorRect
+        {
+            AnchorRight = 1,
+            AnchorBottom = 1,
+            Color = new Color(0.0f, 0.0f, 0.0f, 0.50f),
+        });
+
+        var panel = new Panel
+        {
+            AnchorLeft = 0.5f,
+            AnchorTop = 0.5f,
+            AnchorRight = 0.5f,
+            AnchorBottom = 0.5f,
+            OffsetLeft = -220,
+            OffsetTop = -190,
+            OffsetRight = 220,
+            OffsetBottom = 190,
+            MouseFilter = MouseFilterEnum.Stop,
+        };
+        panel.AddThemeStyleboxOverride("panel", PausePanelStyle());
+        root.AddChild(panel);
+
+        _pauseContent = new VBoxContainer
+        {
+            AnchorRight = 1,
+            AnchorBottom = 1,
+            OffsetLeft = 24,
+            OffsetTop = 22,
+            OffsetRight = -24,
+            OffsetBottom = -22,
+        };
+        _pauseContent.AddThemeConstantOverride("separation", 10);
+        panel.AddChild(_pauseContent);
+
+        _pauseOverlay = root;
+        AddChild(root);
+        ShowPauseMainMenu();
+    }
+
+    private void ClosePauseOverlay()
+    {
+        CloseSettingsOverlay();
+
+        if (_pauseOverlay != null)
+        {
+            RemoveChild(_pauseOverlay);
+            _pauseOverlay.QueueFree();
+            _pauseOverlay = null;
+            _pauseContent = null;
+        }
+
+        GetTree().Paused = false;
+    }
+
+    private void ShowPauseMainMenu()
+    {
+        if (_pauseOverlay == null)
+            ShowPauseOverlay();
+        if (_pauseContent == null)
             return;
 
-        _savePanel = MakePanel(new Vector2(-360, -300), new Vector2(340, 240));
-        _savePanel.SetAnchorsPreset(LayoutPreset.CenterRight);
-        _savePanel.MouseFilter = MouseFilterEnum.Stop;
-        AddChild(_savePanel);
+        ClearChildren(_pauseContent);
+        _pauseContent.AddChild(MakePauseHeading("Paused"));
+        _pauseContent.AddChild(MakeButton("Resume", ClosePauseOverlay));
+        _pauseContent.AddChild(MakeButton("Save Game", ShowSaveOverlay));
+        _pauseContent.AddChild(MakeButton("Load Game", ShowLoadOverlay));
+        _pauseContent.AddChild(MakeButton("Settings", ShowPauseSettingsOverlay));
+    }
 
-        var vbox = new VBoxContainer
-        {
-            Position = new Vector2(12, 12),
-            Size = new Vector2(316, 216),
-        };
-        vbox.AddThemeConstantOverride("separation", 8);
-        _savePanel.AddChild(vbox);
-        vbox.AddChild(MakeLabel("Save Game", 16));
+    private void ShowSaveOverlay()
+    {
+        if (_pauseOverlay == null)
+            ShowPauseOverlay();
+        if (_pauseContent == null)
+            return;
+
+        ClearChildren(_pauseContent);
+        _pauseContent.AddChild(MakePauseHeading("Save Game"));
 
         for (int slot = 1; slot <= 5; slot++)
         {
             int captured = slot;
-            vbox.AddChild(MakeButton($"Save Slot {slot}", () => SaveToSlot(captured)));
+            _pauseContent.AddChild(MakeButton($"Save Slot {slot}", () => SaveToSlot(captured)));
         }
 
-        vbox.AddChild(MakeButton("Close", CloseSaveOverlay));
+        _pauseContent.AddChild(MakeButton("Back", ShowPauseMainMenu));
+    }
+
+    private void ShowLoadOverlay()
+    {
+        if (_pauseOverlay == null)
+            ShowPauseOverlay();
+        if (_pauseContent == null)
+            return;
+
+        ClearChildren(_pauseContent);
+        _pauseContent.AddChild(MakePauseHeading("Load Game"));
+
+        var service = new GameSaveService(ProjectSettings.GlobalizePath("user://saves"));
+        var slots = service.ListSlots();
+        if (slots.Count == 0)
+            _pauseContent.AddChild(MakeLabel("No saved games found.", 12));
+
+        foreach (SaveSlotSummary slot in slots)
+        {
+            string label = slot.IsValid
+                ? $"Slot {slot.Slot}: {slot.SlotName}  Creatures: {slot.CreatureCount}"
+                : $"{slot.SlotName}: invalid save";
+            Button button = MakeButton(label, () => LoadFromSlot(slot.Path));
+            button.Disabled = !slot.IsValid;
+            _pauseContent.AddChild(button);
+        }
+
+        _pauseContent.AddChild(MakeButton("Back", ShowPauseMainMenu));
+    }
+
+    private void ShowPauseSettingsOverlay()
+    {
+        CloseSettingsOverlay();
+        var overlay = SettingsOverlay.Create(
+            GameSettingsStore.Load(),
+            settings => (_world ?? FindWorldNode())?.ApplySettings(settings),
+            CloseSettingsOverlay);
+        _settingsOverlay = overlay;
+        AddChild(overlay);
+    }
+
+    private void CloseSettingsOverlay()
+    {
+        if (_settingsOverlay == null)
+            return;
+
+        RemoveChild(_settingsOverlay);
+        _settingsOverlay.QueueFree();
+        _settingsOverlay = null;
     }
 
     private void SaveToSlot(int slot)
@@ -377,16 +509,13 @@ public partial class GameGui : Control
         GameSaveData save = world.CreateSaveData(slot, $"Slot {slot}");
         service.Save(save);
         GD.Print($"[GUI] Saved game to slot {slot}.");
-        CloseSaveOverlay();
+        ShowPauseMainMenu();
     }
 
-    private void CloseSaveOverlay()
+    private void LoadFromSlot(string savePath)
     {
-        if (_savePanel == null)
-            return;
-        RemoveChild(_savePanel);
-        _savePanel.QueueFree();
-        _savePanel = null;
+        GetTree().Paused = false;
+        GameLaunchSession.StartSavedGame(GetTree(), savePath);
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
@@ -505,6 +634,23 @@ public partial class GameGui : Control
         bar.AddThemeStyleboxOverride("fill", fill);
     }
 
+    private static Label MakePauseHeading(string text)
+    {
+        var label = MakeLabel(text, 18);
+        label.HorizontalAlignment = HorizontalAlignment.Center;
+        label.CustomMinimumSize = new Vector2(1, 36);
+        return label;
+    }
+
+    private static void ClearChildren(Node parent)
+    {
+        foreach (Node child in parent.GetChildren())
+        {
+            parent.RemoveChild(child);
+            child.QueueFree();
+        }
+    }
+
     private static Button MakeButton(string text, Action onClick)
     {
         var btn = new Button
@@ -533,4 +679,23 @@ public partial class GameGui : Control
         btn.AddThemeStyleboxOverride("hover", hoverStyle);
         return btn;
     }
+
+    private static StyleBoxFlat PausePanelStyle()
+        => new()
+        {
+            BgColor = new Color(0.045f, 0.041f, 0.060f, 0.96f),
+            BorderColor = new Color(0.56f, 0.42f, 0.22f, 0.95f),
+            BorderWidthBottom = 2,
+            BorderWidthLeft = 2,
+            BorderWidthRight = 2,
+            BorderWidthTop = 2,
+            CornerRadiusBottomLeft = 6,
+            CornerRadiusBottomRight = 6,
+            CornerRadiusTopLeft = 6,
+            CornerRadiusTopRight = 6,
+            ContentMarginLeft = 12,
+            ContentMarginRight = 12,
+            ContentMarginTop = 12,
+            ContentMarginBottom = 12,
+        };
 }

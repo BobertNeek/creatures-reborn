@@ -14,20 +14,6 @@ public partial class MainMenu : Control
     private Control? _activeOverlay;
     private GameSettings _settings = GameSettings.Defaults;
 
-    private OptionButton? _windowMode;
-    private CheckButton? _vsync;
-    private SpinBox? _fpsCap;
-    private HSlider? _uiScale;
-    private HSlider? _textScale;
-    private CheckButton? _highContrast;
-    private CheckButton? _reducedMotion;
-    private HSlider? _masterVolume;
-    private CheckButton? _mute;
-    private SpinBox? _maxCreatures;
-    private SpinBox? _breedingLimit;
-    private SpinBox? _simulationSpeed;
-    private SpinBox? _gravityStrength;
-
     public override void _Ready()
     {
         AddChild(new DebugScreenshot { Name = "DebugScreenshot" });
@@ -89,7 +75,7 @@ public partial class MainMenu : Control
             GetTree().ChangeSceneToFile("res://scenes/MetaroomEditor.tscn");
         }));
         vbox.AddChild(MakeMenuButton("Load Metaroom", ShowLoadMetaroomDialog));
-        vbox.AddChild(MakeMenuButton("Settings", () => ShowSettingsOverlay(_settings)));
+        vbox.AddChild(MakeMenuButton("Settings", ShowSharedSettingsOverlay));
         vbox.AddChild(new Control { CustomMinimumSize = new Vector2(1, 14) });
         vbox.AddChild(MakeMenuButton("Exit Game", () => GetTree().Quit(), danger: true));
 
@@ -184,88 +170,16 @@ public partial class MainMenu : Control
         list.AddChild(MakeOverlayButton("Cancel", CloseOverlay));
     }
 
-    private void ShowSettingsOverlay(GameSettings draft)
+    private void ShowSharedSettingsOverlay()
     {
         CloseOverlay();
-        var panel = OverlayPanel("Settings", new Vector2(720, 620));
-        var grid = new GridContainer { Columns = 2 };
-        grid.AddThemeConstantOverride("h_separation", 18);
-        grid.AddThemeConstantOverride("v_separation", 9);
-        panel.AddChild(grid);
-
-        _windowMode = new OptionButton();
-        _windowMode.AddItem("Windowed", (int)GameWindowMode.Windowed);
-        _windowMode.AddItem("Fullscreen", (int)GameWindowMode.Fullscreen);
-        _windowMode.AddItem("Borderless", (int)GameWindowMode.Borderless);
-        _windowMode.Selected = (int)draft.WindowMode;
-        AddSetting(grid, "Display Mode", _windowMode);
-
-        _vsync = Check(draft.VSync);
-        AddSetting(grid, "VSync", _vsync);
-        _fpsCap = Spin(draft.FpsCap, 0, 240, 1);
-        AddSetting(grid, "FPS Cap", _fpsCap);
-        _uiScale = Slider(draft.UiScale, 0.75, 2.0, 0.05);
-        AddSetting(grid, "UI Scale", _uiScale);
-        _textScale = Slider(draft.TextScale, 0.85, 2.0, 0.05);
-        AddSetting(grid, "Text Scale", _textScale);
-        _highContrast = Check(draft.HighContrast);
-        AddSetting(grid, "High Contrast", _highContrast);
-        _reducedMotion = Check(draft.ReducedMotion);
-        AddSetting(grid, "Reduced Motion", _reducedMotion);
-        _masterVolume = Slider(draft.MasterVolume, 0, 1, 0.01);
-        AddSetting(grid, "Master Volume", _masterVolume);
-        _mute = Check(draft.Mute);
-        AddSetting(grid, "Mute", _mute);
-        _maxCreatures = Spin(draft.MaxCreatures, 1, 128, 1);
-        AddSetting(grid, "Max Creatures", _maxCreatures);
-        _breedingLimit = Spin(draft.BreedingLimit, 0, 64, 1);
-        AddSetting(grid, "Breeding Limit", _breedingLimit);
-        _simulationSpeed = Spin(draft.SimulationSpeed, 1, 120, 1);
-        AddSetting(grid, "Simulation Speed", _simulationSpeed);
-        _gravityStrength = Spin(draft.GravityStrength, 0, 80, 0.5);
-        AddSetting(grid, "Gravity Strength", _gravityStrength);
-
-        var hardware = MakeOverlayLabel($"Hardware Acceleration: {GameSettingsApplier.HardwareStatus()}\nRendering backend changes require relaunch/project configuration.", 12);
-        hardware.AutowrapMode = TextServer.AutowrapMode.Word;
-        panel.AddChild(hardware);
-
-        var buttons = new HBoxContainer();
-        buttons.AddThemeConstantOverride("separation", 10);
-        panel.AddChild(buttons);
-        buttons.AddChild(MakeOverlayButton("Save Settings", SaveSettingsDraft));
-        buttons.AddChild(MakeOverlayButton("Reset Settings", () => ShowSettingsOverlay(GameSettings.Defaults)));
-        buttons.AddChild(MakeOverlayButton("OK", () =>
-        {
-            SaveSettingsDraft();
-            CloseOverlay();
-        }));
-        buttons.AddChild(MakeOverlayButton("Cancel", CloseOverlay));
+        SettingsOverlay overlay = SettingsOverlay.Create(
+            _settings,
+            settings => _settings = settings,
+            CloseOverlay);
+        _activeOverlay = overlay;
+        AddChild(overlay);
     }
-
-    private void SaveSettingsDraft()
-    {
-        _settings = ReadSettingsDraft();
-        GameSettingsStore.Save(_settings);
-        GameSettingsApplier.Apply(_settings);
-    }
-
-    private GameSettings ReadSettingsDraft()
-        => new GameSettings()
-        {
-            WindowMode = (GameWindowMode)(_windowMode?.Selected ?? 0),
-            VSync = _vsync?.ButtonPressed ?? true,
-            FpsCap = (int)(_fpsCap?.Value ?? 0),
-            UiScale = (float)(_uiScale?.Value ?? 1.0),
-            TextScale = (float)(_textScale?.Value ?? 1.0),
-            HighContrast = _highContrast?.ButtonPressed ?? false,
-            ReducedMotion = _reducedMotion?.ButtonPressed ?? false,
-            MasterVolume = (float)(_masterVolume?.Value ?? 1.0),
-            Mute = _mute?.ButtonPressed ?? false,
-            MaxCreatures = (int)(_maxCreatures?.Value ?? 16),
-            BreedingLimit = (int)(_breedingLimit?.Value ?? 6),
-            SimulationSpeed = (float)(_simulationSpeed?.Value ?? 20.0),
-            GravityStrength = (float)(_gravityStrength?.Value ?? 18.0),
-        }.Normalize();
 
     private VBoxContainer OverlayPanel(string title, Vector2 size)
     {
@@ -324,35 +238,6 @@ public partial class MainMenu : Control
         _activeOverlay.QueueFree();
         _activeOverlay = null;
     }
-
-    private static void AddSetting(GridContainer grid, string label, Control control)
-    {
-        grid.AddChild(MakeOverlayLabel(label, 13));
-        control.CustomMinimumSize = new Vector2(280, 34);
-        grid.AddChild(control);
-    }
-
-    private static CheckButton Check(bool value) => new() { ButtonPressed = value };
-
-    private static HSlider Slider(double value, double min, double max, double step)
-        => new()
-        {
-            MinValue = min,
-            MaxValue = max,
-            Step = step,
-            Value = value,
-            SizeFlagsHorizontal = SizeFlags.ExpandFill,
-        };
-
-    private static SpinBox Spin(double value, double min, double max, double step)
-        => new()
-        {
-            MinValue = min,
-            MaxValue = max,
-            Step = step,
-            Value = value,
-            SizeFlagsHorizontal = SizeFlags.ExpandFill,
-        };
 
     private Button MakeMenuButton(string text, Action onClick, bool primary = false, bool danger = false)
     {
