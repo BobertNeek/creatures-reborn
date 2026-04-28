@@ -220,6 +220,8 @@ public sealed class Lobe : BrainComponent
             Token,
             Brain.TokenToString(Token),
             _tissueId,
+            _x,
+            _y,
             Width,
             Height,
             UpdateAtTime,

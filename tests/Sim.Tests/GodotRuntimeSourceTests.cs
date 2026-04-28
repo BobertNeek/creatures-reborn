@@ -116,6 +116,30 @@ public class GodotRuntimeSourceTests
     }
 
     [Fact]
+    public void AdvancedToolsOverlay_ProvidesBrainMonitorAndGeneticsKitWithoutOwningSimulation()
+    {
+        string gameGui = File.ReadAllText(RepoPath("src", "Godot", "UI", "GameGui.cs"));
+        string overlayPath = RepoPath("src", "Godot", "UI", "AdvancedToolsOverlay.cs");
+
+        Assert.True(File.Exists(overlayPath), "AdvancedToolsOverlay keeps editor UI out of GameGui.");
+        string overlay = File.ReadAllText(overlayPath);
+
+        Assert.Contains("ShowAdvancedToolsOverlay", gameGui);
+        Assert.Contains("AdvancedToolsOverlay", gameGui);
+        Assert.Contains("Tools", gameGui);
+        Assert.Contains("TabContainer", overlay);
+        Assert.Contains("Brain Monitor", overlay);
+        Assert.Contains("Genetics Kit", overlay);
+        Assert.Contains("BrainMonitorFrame.Create", overlay);
+        Assert.Contains("BrainMonitorHistory", overlay);
+        Assert.Contains("GenomeEditSession", overlay);
+        Assert.Contains("GenePayloadCodec.Decode", overlay);
+        Assert.Contains("Live Apply", overlay);
+        Assert.Contains("Hatch Egg", overlay);
+        Assert.DoesNotContain("new GameWorld", overlay);
+    }
+
+    [Fact]
     public void DebugScreenshot_UsesFallbackBeforeReadingViewportTextureInHeadlessMode()
     {
         string screenshotSource = File.ReadAllText(RepoPath("src", "Godot", "DebugScreenshot.cs"));

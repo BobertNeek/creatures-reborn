@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Godot;
 using CreaturesReborn.Sim.Creature;
 using CreaturesReborn.Sim.Biochemistry;
@@ -34,6 +35,7 @@ public partial class GameGui : Control
     private Label?       _verbLabel;
     private Label?       _populationLabel;
     private Panel?       _savePanel;
+    private AdvancedToolsOverlay? _advancedToolsOverlay;
 
     // ── State ───────────────────────────────────────────────────────────────
     private PointerAgent? _pointer;
@@ -46,6 +48,9 @@ public partial class GameGui : Control
         BuildWorldInfoPanel();
         BuildCreaturePanel();
         BuildActionBar();
+
+        if (ShouldOpenAdvancedToolsOnStartup())
+            GetTree().CreateTimer(0.25).Timeout += ShowAdvancedToolsOverlay;
     }
 
     public override void _Process(double delta)
@@ -69,9 +74,17 @@ public partial class GameGui : Control
             CycleCreature();
         }
 
+        if (@event is InputEventKey toolsKey && toolsKey.Pressed && !toolsKey.Echo && toolsKey.Keycode == Key.F2)
+        {
+            ShowAdvancedToolsOverlay();
+            GetViewport().SetInputAsHandled();
+        }
+
         if (@event is InputEventKey menuKey && menuKey.Pressed && menuKey.Keycode == Key.Escape)
         {
-            if (_savePanel == null)
+            if (_advancedToolsOverlay != null)
+                CloseAdvancedToolsOverlay();
+            else if (_savePanel == null)
                 ShowSaveOverlay();
             else
                 CloseSaveOverlay();
@@ -216,6 +229,7 @@ public partial class GameGui : Control
         hbox.AddChild(MakeButton("Hatch Egg", () => DoHatchEgg()));
         hbox.AddChild(MakeButton("Feed", () => DoFeed()));
         hbox.AddChild(MakeButton("Breed", () => DoBreed()));
+        hbox.AddChild(MakeButton("Tools", ShowAdvancedToolsOverlay));
         hbox.AddChild(MakeButton("Save", ShowSaveOverlay));
         hbox.AddChild(MakeButton("[Tab] Next", () => CycleCreature()));
     }
@@ -337,6 +351,44 @@ public partial class GameGui : Control
 
         if (creatures.Count == 0) return;
         _creatureIndex = (_creatureIndex + 1) % creatures.Count;
+    }
+
+    private void ShowAdvancedToolsOverlay()
+    {
+        if (_advancedToolsOverlay != null)
+        {
+            _advancedToolsOverlay.MoveToFront();
+            return;
+        }
+
+        WorldNode? world = _world ?? FindWorldNode();
+        _world = world;
+
+        var overlay = new AdvancedToolsOverlay
+        {
+            ZIndex = 100,
+        };
+        overlay.Configure(world, GetSelectedCreatureNode);
+        overlay.TreeExited += () =>
+        {
+            if (ReferenceEquals(_advancedToolsOverlay, overlay))
+                _advancedToolsOverlay = null;
+        };
+
+        _advancedToolsOverlay = overlay;
+        AddChild(overlay);
+        overlay.MoveToFront();
+    }
+
+    private void CloseAdvancedToolsOverlay()
+    {
+        if (_advancedToolsOverlay == null)
+            return;
+
+        AdvancedToolsOverlay overlay = _advancedToolsOverlay;
+        _advancedToolsOverlay = null;
+        RemoveChild(overlay);
+        overlay.QueueFree();
     }
 
     private void ShowSaveOverlay()
@@ -504,6 +556,9 @@ public partial class GameGui : Control
         fill.BgColor = new Color(r, g, 0.1f, 0.85f);
         bar.AddThemeStyleboxOverride("fill", fill);
     }
+
+    private static bool ShouldOpenAdvancedToolsOnStartup()
+        => OS.GetCmdlineArgs().Any(arg => string.Equals(arg, "--open-advanced-tools", StringComparison.OrdinalIgnoreCase));
 
     private static Button MakeButton(string text, Action onClick)
     {

@@ -17,6 +17,8 @@ public sealed record LobeSnapshot(
     int Token,
     string TokenText,
     int TissueId,
+    int X,
+    int Y,
     int Width,
     int Height,
     int UpdateAtTime,

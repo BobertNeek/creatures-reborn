@@ -1,6 +1,7 @@
 using System;
 using Godot;
 using CreaturesReborn.Sim.Biochemistry;
+using CreaturesReborn.Sim.Formats;
 using CreaturesReborn.Sim.Creature;
 using CreaturesReborn.Sim.Genome;
 using CreaturesReborn.Sim.Save;
@@ -128,6 +129,41 @@ public partial class CreatureNode : Node3D
         state.WalkSpeed = WalkSpeed;
         state.VerticalVelocity = _verticalVelocity;
         return state;
+    }
+
+    public void ReplaceCreatureGenome(byte[] genomeFileBytes, int? sex = null, byte? age = null, int? variant = null, string? moniker = null)
+    {
+        if (genomeFileBytes.Length < 4)
+        {
+            GD.PrintErr("[CreatureNode] Live apply refused: genome byte array is too short.");
+            return;
+        }
+
+        int resolvedSex = sex ?? _creature?.Genome.Sex ?? Sex;
+        byte resolvedAge = age ?? _creature?.Genome.Age ?? (byte)Math.Clamp(Age, 0, 255);
+        int resolvedVariant = variant ?? _creature?.Genome.Variant ?? Variant;
+        string resolvedMoniker = string.IsNullOrWhiteSpace(moniker)
+            ? (_creature?.Genome.Moniker ?? Moniker)
+            : moniker!;
+
+        var rng = new StatefulRng((int)GD.Randi());
+        var genome = new CreaturesReborn.Sim.Genome.Genome(rng);
+        try
+        {
+            GenomeReader.Load(genome, genomeFileBytes, resolvedSex, age: 0, resolvedVariant, resolvedMoniker);
+            _creature = C.CreateFromGenome(genome, rng);
+            _creature.Genome.Age = resolvedAge;
+            Sex = resolvedSex;
+            Age = resolvedAge;
+            Variant = resolvedVariant;
+            Moniker = resolvedMoniker;
+            _sprite?.UpdateVisuals(_creature);
+            GD.Print($"[CreatureNode] Live-applied genome to {Name}.");
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr($"[CreatureNode] Live apply refused: {ex.Message}");
+        }
     }
 
     private void RestoreFromSavedState(SavedCreatureState state)
