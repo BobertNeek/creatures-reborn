@@ -139,27 +139,7 @@ public static class GenomeSimulationSafetyValidator
         MinimumBiologyInterfaceSpec spec,
         List<GenomeSimulationSafetyIssue> issues)
     {
-        bool hasOrgan = expressed.Any(record => record.Payload.Kind is GenePayloadKind.Organ or GenePayloadKind.BrainOrgan);
-        bool hasEnergyReaction = expressed
-            .Where(record => record.Payload.Kind == GenePayloadKind.BiochemistryReaction)
-            .Any(ReactionMentionsEnergy);
-        bool hasDeathOrInjuryRoute = expressed
-            .Where(record => record.Payload.Kind is GenePayloadKind.BiochemistryReaction or GenePayloadKind.BiochemistryReceptor or GenePayloadKind.BiochemistryEmitter)
-            .Any(record => PayloadMentions(record, ChemID.Injury)
-                           || PayloadMentions(record, ChemID.Wounded)
-                           || PayloadMentions(record, ChemID.Pain)
-                           || PayloadMentions(record, ChemID.ATP)
-                           || PayloadMentions(record, ChemID.ADP));
-
-        if ((spec.RequireOrgan && !hasOrgan)
-            || (spec.RequireEnergyReaction && !hasEnergyReaction)
-            || (spec.RequireDeathOrInjuryRoute && !hasDeathOrInjuryRoute))
-        {
-            issues.Add(new(
-                GenomeSimulationSafetySeverity.HardInvalid,
-                GenomeSimulationSafetyCode.NoFallibleLifeSupport,
-                "Genome has no conservative evidence of fallible life-support chemistry."));
-        }
+        issues.AddRange(FallibleBiologyValidator.Validate(expressed, spec).Issues);
     }
 
     private static bool ReactionMentionsEnergy(GeneRecord record)
