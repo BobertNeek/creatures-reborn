@@ -12,21 +12,23 @@
 
 ## Stage Order
 
-- [ ] Compatibility baseline lock.
-- [ ] Genome simulation safety model.
-- [ ] Stillborn hatch outcome.
+- [x] Compatibility baseline lock.
+- [x] Genome simulation safety model.
+- [x] Stillborn hatch outcome.
 - [ ] C3/DS biology parity pass.
-- [ ] Chemical reinforcement bus.
-- [ ] Brain learning integration.
-- [ ] Minimum simulatable brain interface.
-- [ ] Fallible biology and immortal-vegetable prevention.
-- [ ] Larger hand-wired brain blueprint.
-- [ ] Genetic control of modern extensions.
-- [ ] In-game natural selection metrics.
-- [ ] Accelerated ecology runner.
-- [ ] Chemical RL training schema.
-- [ ] Debugging and observability.
-- [ ] Documentation.
+- [x] Chemical reinforcement bus.
+- [x] Brain learning integration.
+- [x] Minimum simulatable brain interface.
+- [x] Fallible biology and immortal-vegetable prevention.
+- [x] Larger hand-wired brain blueprint.
+- [x] Genetic control of modern extensions.
+- [x] In-game natural selection metrics.
+- [x] Accelerated ecology runner.
+- [x] Chemical RL training schema.
+- [x] Debugging and observability.
+- [x] Documentation.
+
+Current C3/DS parity note: late inject and half-life expression are implemented. Late receptor, emitter, organ, neuroemitter, lobe, and tract expression still need incremental runtime application work.
 
 ## Execution Rules
 
@@ -38,4 +40,3 @@
 - Allow weak but simulatable organisms to hatch.
 - Keep modern learning and RL systems opt-in and inspectable.
 - Do not use `_archive\Darwinbots Unity`.
-
