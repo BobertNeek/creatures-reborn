@@ -21,7 +21,8 @@ public sealed record CreatureTraceOptions(
     bool IncludeBiochemistryTrace = false,
     bool IncludeBrainSnapshot = false,
     bool IncludeLearningTrace = false,
-    bool IncludeChemicalReinforcementTrace = false);
+    bool IncludeChemicalReinforcementTrace = false,
+    BrainLearningMode LearningMode = BrainLearningMode.ClassicOnly);
 
 public sealed record CreatureTickStageRecord(CreatureTickStage Stage, string Detail);
 

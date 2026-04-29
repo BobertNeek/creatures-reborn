@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using CreaturesReborn.Sim.Biochemistry;
+using CreaturesReborn.Sim.Brain;
 using CreaturesReborn.Sim.Creature;
 using CreaturesReborn.Sim.Util;
 using Xunit;
@@ -94,6 +95,22 @@ public class CreatureTraceTests
         Assert.NotNull(trace.Biochemistry);
         Assert.NotNull(trace.ChemicalReinforcement);
         Assert.Contains(trace.ChemicalReinforcement!.Signals, signal => signal.Domain == ChemicalReinforcementDomain.Hunger);
+    }
+
+    [Fact]
+    public void TickWithChemicalLearningMode_RecordsChemicalSignalsOnLearningTrace()
+    {
+        var creature = LoadStarter(seed: 102);
+        creature.SetChemical(ChemID.HungerForCarb, 0.8f);
+        creature.SetChemical(ChemID.Glycogen, 1.0f);
+
+        CreatureTickTrace trace = creature.Tick(new CreatureTraceOptions(
+            IncludeLearningTrace: true,
+            IncludeChemicalReinforcementTrace: true,
+            LearningMode: BrainLearningMode.ChemicalBusClassic));
+
+        Assert.NotNull(trace.Learning);
+        Assert.Contains(trace.Learning!.ChemicalSignals, signal => signal.Domain == ChemicalReinforcementDomain.Hunger);
     }
 
     private static C LoadStarter(int seed)

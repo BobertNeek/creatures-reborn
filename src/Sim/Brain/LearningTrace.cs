@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using CreaturesReborn.Sim.Biochemistry;
 
 namespace CreaturesReborn.Sim.Brain;
 
@@ -28,13 +29,18 @@ public sealed class LearningTrace
 {
     private readonly List<ReinforcementTrace> _reinforcements = new();
     private readonly List<InstinctTrace> _instincts = new();
+    private readonly List<ChemicalReinforcementSignal> _chemicalSignals = new();
 
     public IReadOnlyList<ReinforcementTrace> Reinforcements => _reinforcements;
     public IReadOnlyList<InstinctTrace> Instincts => _instincts;
+    public IReadOnlyList<ChemicalReinforcementSignal> ChemicalSignals => _chemicalSignals;
 
     public void RecordReinforcement(ReinforcementTrace trace)
         => _reinforcements.Add(trace);
 
     public void RecordInstinct(InstinctTrace trace)
         => _instincts.Add(trace);
+
+    public void RecordChemicalReinforcement(BrainReinforcementInput input)
+        => _chemicalSignals.AddRange(input.Signals);
 }

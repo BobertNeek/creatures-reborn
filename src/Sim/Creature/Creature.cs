@@ -190,6 +190,14 @@ public sealed class Creature
         LearningTrace? learningTrace = collector?.Options.IncludeLearningTrace == true
             ? new LearningTrace()
             : null;
+        if (learningTrace != null && collector?.Trace.ChemicalReinforcement != null)
+        {
+            BrainReinforcementInput reinforcementInput = ChemicalLearningAdapter.ToBrainInput(
+                collector.Trace.ChemicalReinforcement,
+                collector.Options.LearningMode);
+            learningTrace.RecordChemicalReinforcement(reinforcementInput);
+        }
+
         Brain.Update(learningTrace);
         if (collector != null)
         {
