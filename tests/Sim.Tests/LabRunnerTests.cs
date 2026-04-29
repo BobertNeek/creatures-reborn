@@ -84,6 +84,34 @@ public class LabRunnerTests
     }
 
     [Fact]
+    public void LabRunner_RecordsNaturalSelectionJournalEventsInOrder()
+    {
+        LabRunConfig config = CreateConfig(seed: 145, ticks: 5) with
+        {
+            BreedFirstPairOnStart = true
+        };
+
+        LabRunMetrics metrics = new LabRunner().Run(config);
+
+        Assert.Contains(metrics.EvolutionJournal.Events, e => e.Kind == NaturalSelectionEventKind.Birth && e.Detail == "founder");
+        Assert.Contains(metrics.EvolutionJournal.Events, e => e.Kind == NaturalSelectionEventKind.Reproduction);
+        Assert.Contains(metrics.EvolutionJournal.Events, e => e.Kind == NaturalSelectionEventKind.Crossover);
+        Assert.Contains(metrics.EvolutionJournal.Events, e => e.Kind == NaturalSelectionEventKind.Mutation);
+        Assert.Contains(metrics.EvolutionJournal.Events, e => e.Kind == NaturalSelectionEventKind.EggHatched);
+        Assert.Equal(5, metrics.EvolutionJournal.SurvivalFrames.Count);
+        Assert.Single(metrics.EvolutionJournal.ReproductionFrames);
+
+        int reproductionIndex = metrics.EvolutionJournal.Events.ToList().FindIndex(e => e.Kind == NaturalSelectionEventKind.Reproduction);
+        int hatchIndex = metrics.EvolutionJournal.Events.ToList().FindIndex(e => e.Kind == NaturalSelectionEventKind.EggHatched);
+        Assert.True(reproductionIndex >= 0);
+        Assert.True(hatchIndex > reproductionIndex);
+
+        LineageOutcomeSummary summary = metrics.EvolutionJournal.CreateSummary();
+        Assert.Equal(3, summary.Births);
+        Assert.Equal(1, summary.ReproductionEvents);
+    }
+
+    [Fact]
     public void LabRunner_RecordsWorldPresetAndEnvironmentEffects()
     {
         LabRunConfig config = CreateConfig(seed: 143, ticks: 3) with

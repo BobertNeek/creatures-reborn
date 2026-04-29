@@ -125,7 +125,8 @@ public sealed record LabRunMetrics(
     IReadOnlyList<StillbornRecord> Stillborns,
     IReadOnlyList<LabCreatureMetrics> Creatures,
     IReadOnlyList<CrossoverReport> CrossoverReports,
-    IReadOnlyList<MutationReport> MutationReports);
+    IReadOnlyList<MutationReport> MutationReports,
+    WorldEvolutionJournal EvolutionJournal);
 
 public sealed class LabRunner
 {
@@ -161,15 +162,16 @@ public sealed class LabRunner
         var stillborns = new List<StillbornRecord>();
         var crossoverReports = new List<CrossoverReport>();
         var mutationReports = new List<MutationReport>();
+        var evolutionJournal = new WorldEvolutionJournal();
 
-        LoadFounders(config, states, lineage);
+        LoadFounders(config, states, lineage, evolutionJournal);
         int initialPopulation = states.Count;
         int births = 0;
 
-        if (config.BreedFirstPairOnStart && TryBreedFirstPair(config, states, lineage, stillborns, crossoverReports, mutationReports))
+        if (config.BreedFirstPairOnStart && TryBreedFirstPair(config, states, lineage, stillborns, crossoverReports, mutationReports, evolutionJournal))
             births++;
 
-        int deaths = Tick(config, worldPreset, world, states);
+        int deaths = Tick(config, worldPreset, world, states, stillborns, evolutionJournal);
         IReadOnlyList<LabCreatureMetrics> creatureMetrics = states.Select(CreateMetrics).ToArray();
 
         return new LabRunMetrics(
@@ -185,13 +187,15 @@ public sealed class LabRunner
             Stillborns: stillborns,
             Creatures: creatureMetrics,
             CrossoverReports: crossoverReports,
-            MutationReports: mutationReports);
+            MutationReports: mutationReports,
+            EvolutionJournal: evolutionJournal);
     }
 
     private static void LoadFounders(
         LabRunConfig config,
         List<CreatureRunState> states,
-        List<LineageRecord> lineage)
+        List<LineageRecord> lineage,
+        WorldEvolutionJournal evolutionJournal)
     {
         for (int i = 0; i < config.Population.Count; i++)
         {
@@ -218,6 +222,11 @@ public sealed class LabRunner
                 BirthTick: 0,
                 Generation: 0,
                 GenomeMoniker: creature.Genome.Moniker));
+            evolutionJournal.Record(new NaturalSelectionEvent(
+                Tick: 0,
+                NaturalSelectionEventKind.Birth,
+                moniker,
+                Detail: "founder"));
         }
     }
 
@@ -227,7 +236,8 @@ public sealed class LabRunner
         List<LineageRecord> lineage,
         List<StillbornRecord> stillborns,
         List<CrossoverReport> crossoverReports,
-        List<MutationReport> mutationReports)
+        List<MutationReport> mutationReports,
+        WorldEvolutionJournal evolutionJournal)
     {
         if (states.Count < 2)
             return false;
@@ -252,6 +262,22 @@ public sealed class LabRunner
 
         crossoverReports.Add(CrossoverReport.Create(childMoniker, mother.Genome, father.Genome, childGenome));
         mutationReports.Add(MutationReport.FromParentAndChild(mother.Genome, childGenome));
+        evolutionJournal.Record(new NaturalSelectionEvent(
+            Tick: 0,
+            NaturalSelectionEventKind.Reproduction,
+            mother.Genome.Moniker,
+            father.Genome.Moniker,
+            $"child:{childMoniker}"));
+        evolutionJournal.Record(new NaturalSelectionEvent(
+            Tick: 0,
+            NaturalSelectionEventKind.Crossover,
+            childMoniker,
+            Detail: "first-pair breeding"));
+        evolutionJournal.Record(new NaturalSelectionEvent(
+            Tick: 0,
+            NaturalSelectionEventKind.Mutation,
+            childMoniker,
+            Detail: "first-pair breeding"));
 
         byte[] childGenomeBytes = childGenome.AsSpan().ToArray();
         HatchResult hatch = CreatureHatchService.AttemptHatch(
@@ -280,6 +306,21 @@ public sealed class LabRunner
                 Generation: 1,
                 GenomeMoniker: child.Genome.Moniker,
                 Outcome: LineageBirthOutcome.Living));
+            evolutionJournal.Record(new NaturalSelectionEvent(
+                Tick: 0,
+                NaturalSelectionEventKind.Birth,
+                childMoniker,
+                Detail: "offspring"));
+            evolutionJournal.Record(new NaturalSelectionEvent(
+                Tick: 0,
+                NaturalSelectionEventKind.EggHatched,
+                childMoniker,
+                Detail: "living child"));
+            evolutionJournal.RecordReproductionFrame(new ReproductionMetricFrame(
+                Tick: 0,
+                Births: 1,
+                Stillbirths: 0,
+                LivingChildren: 1));
             return true;
         }
 
@@ -296,6 +337,16 @@ public sealed class LabRunner
                 Outcome: hatch.Outcome == HatchOutcome.Quarantined
                     ? LineageBirthOutcome.Quarantined
                     : LineageBirthOutcome.Stillborn));
+            evolutionJournal.Record(new NaturalSelectionEvent(
+                Tick: 0,
+                NaturalSelectionEventKind.Stillbirth,
+                childMoniker,
+                Detail: hatch.Stillborn.Reason.ToString()));
+            evolutionJournal.RecordReproductionFrame(new ReproductionMetricFrame(
+                Tick: 0,
+                Births: 1,
+                Stillbirths: 1,
+                LivingChildren: 0));
             return true;
         }
 
@@ -306,7 +357,9 @@ public sealed class LabRunner
         LabRunConfig config,
         LabWorldPreset worldPreset,
         GameWorld world,
-        List<CreatureRunState> states)
+        List<CreatureRunState> states,
+        List<StillbornRecord> stillborns,
+        WorldEvolutionJournal evolutionJournal)
     {
         int deaths = 0;
         CreatureEnvironmentContext environment = worldPreset.ToEnvironmentContext();
@@ -339,8 +392,19 @@ public sealed class LabRunner
                 {
                     state.Dead = true;
                     deaths++;
+                    evolutionJournal.Record(new NaturalSelectionEvent(
+                        Tick: tick + 1,
+                        NaturalSelectionEventKind.Death,
+                        state.Creature.Genome.Moniker,
+                        Detail: "dead locus set"));
                 }
             }
+
+            evolutionJournal.RecordSurvivalFrame(new SurvivalMetricFrame(
+                Tick: tick + 1,
+                LivingPopulation: states.Count(state => !state.Dead),
+                DeadCount: deaths,
+                StillbornCount: stillborns.Count));
         }
 
         return deaths;
