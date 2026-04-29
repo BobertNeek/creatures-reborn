@@ -50,13 +50,21 @@ public sealed record LabRunConfig(
     byte DadChanceOfMutation = 4,
     byte DadDegreeOfMutation = 4);
 
+public enum LineageBirthOutcome
+{
+    Living = 0,
+    Stillborn = 1,
+    Quarantined = 2
+}
+
 public sealed record LineageRecord(
     string Moniker,
     string? MotherMoniker,
     string? FatherMoniker,
     int BirthTick,
     int Generation,
-    string GenomeMoniker);
+    string GenomeMoniker,
+    LineageBirthOutcome Outcome = LineageBirthOutcome.Living);
 
 public sealed record LabChemicalValue(
     int ChemicalId,
@@ -114,6 +122,7 @@ public sealed record LabRunMetrics(
     int Births,
     int Deaths,
     IReadOnlyList<LineageRecord> Lineage,
+    IReadOnlyList<StillbornRecord> Stillborns,
     IReadOnlyList<LabCreatureMetrics> Creatures,
     IReadOnlyList<CrossoverReport> CrossoverReports,
     IReadOnlyList<MutationReport> MutationReports);
@@ -149,6 +158,7 @@ public sealed class LabRunner
         var world = new GameWorld();
         var states = new List<CreatureRunState>();
         var lineage = new List<LineageRecord>();
+        var stillborns = new List<StillbornRecord>();
         var crossoverReports = new List<CrossoverReport>();
         var mutationReports = new List<MutationReport>();
 
@@ -156,7 +166,7 @@ public sealed class LabRunner
         int initialPopulation = states.Count;
         int births = 0;
 
-        if (config.BreedFirstPairOnStart && TryBreedFirstPair(config, states, lineage, crossoverReports, mutationReports))
+        if (config.BreedFirstPairOnStart && TryBreedFirstPair(config, states, lineage, stillborns, crossoverReports, mutationReports))
             births++;
 
         int deaths = Tick(config, worldPreset, world, states);
@@ -172,6 +182,7 @@ public sealed class LabRunner
             Births: births,
             Deaths: deaths,
             Lineage: lineage,
+            Stillborns: stillborns,
             Creatures: creatureMetrics,
             CrossoverReports: crossoverReports,
             MutationReports: mutationReports);
@@ -214,6 +225,7 @@ public sealed class LabRunner
         LabRunConfig config,
         List<CreatureRunState> states,
         List<LineageRecord> lineage,
+        List<StillbornRecord> stillborns,
         List<CrossoverReport> crossoverReports,
         List<MutationReport> mutationReports)
     {
@@ -241,17 +253,53 @@ public sealed class LabRunner
         crossoverReports.Add(CrossoverReport.Create(childMoniker, mother.Genome, father.Genome, childGenome));
         mutationReports.Add(MutationReport.FromParentAndChild(mother.Genome, childGenome));
 
-        CreatureSim child = CreatureSim.CreateFromGenome(childGenome, new Rng(config.Seed + 10_001));
-        states.Add(new CreatureRunState(child));
-        lineage.Add(new LineageRecord(
-            childMoniker,
-            mother.Genome.Moniker,
-            father.Genome.Moniker,
-            BirthTick: 0,
-            Generation: 1,
-            GenomeMoniker: child.Genome.Moniker));
+        byte[] childGenomeBytes = childGenome.AsSpan().ToArray();
+        HatchResult hatch = CreatureHatchService.AttemptHatch(
+            new EggGenomePayload(
+                childGenomeBytes,
+                childGenome.Sex,
+                childGenome.Variant,
+                childMoniker),
+            new HatchAttemptContext(
+                childMoniker,
+                mother.Genome.Moniker,
+                father.Genome.Moniker,
+                BirthTick: 0,
+                Generation: 1),
+            new Rng(config.Seed + 10_001));
 
-        return true;
+        if (hatch.Creature != null)
+        {
+            CreatureSim child = hatch.Creature;
+            states.Add(new CreatureRunState(child));
+            lineage.Add(new LineageRecord(
+                childMoniker,
+                mother.Genome.Moniker,
+                father.Genome.Moniker,
+                BirthTick: 0,
+                Generation: 1,
+                GenomeMoniker: child.Genome.Moniker,
+                Outcome: LineageBirthOutcome.Living));
+            return true;
+        }
+
+        if (hatch.Stillborn != null)
+        {
+            stillborns.Add(hatch.Stillborn);
+            lineage.Add(new LineageRecord(
+                childMoniker,
+                mother.Genome.Moniker,
+                father.Genome.Moniker,
+                BirthTick: 0,
+                Generation: 1,
+                GenomeMoniker: childMoniker,
+                Outcome: hatch.Outcome == HatchOutcome.Quarantined
+                    ? LineageBirthOutcome.Quarantined
+                    : LineageBirthOutcome.Stillborn));
+            return true;
+        }
+
+        return false;
     }
 
     private static int Tick(

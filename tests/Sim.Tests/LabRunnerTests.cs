@@ -77,6 +77,8 @@ public class LabRunnerTests
         Assert.Equal("lab-child-0001", child.Moniker);
         Assert.Equal("lab-mum", child.MotherMoniker);
         Assert.Equal("lab-dad", child.FatherMoniker);
+        Assert.Equal(LineageBirthOutcome.Living, child.Outcome);
+        Assert.Empty(metrics.Stillborns);
         Assert.Single(metrics.CrossoverReports);
         Assert.Single(metrics.MutationReports);
     }

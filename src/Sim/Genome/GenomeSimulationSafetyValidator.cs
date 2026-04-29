@@ -37,8 +37,8 @@ public sealed record MinimumBrainInterfaceSpec(
     int MaximumLobeNeurons = 4096)
 {
     public static MinimumBrainInterfaceSpec Default { get; } = new(
-        RequiredLobes: ["driv", "decn", "verb", "noun", "attn"],
-        RequiredRoutes: [("driv", "decn")]);
+        RequiredLobes: ["driv", "decn"],
+        RequiredRoutes: []);
 }
 
 public sealed record MinimumBiologyInterfaceSpec(
@@ -105,12 +105,25 @@ public static class GenomeSimulationSafetyValidator
             }
         }
 
-        IReadOnlyList<GeneRecord> expressed = new GenomeExpressionPlan(records)
-            .GenesEligibleAt(options.Age, options.Sex, options.Variant);
+        IReadOnlyList<GeneRecord> expressed = records
+            .Where(record => IsCompatibleWithCreature(record, options.Sex, options.Variant))
+            .ToArray();
 
         ValidateBrain(expressed, options.BrainSpec, issues);
         ValidateBiology(expressed, options.BiologySpec, issues);
         return new GenomeSimulationSafetyReport(issues);
+    }
+
+    private static bool IsCompatibleWithCreature(GeneRecord record, int sex, int variant)
+    {
+        GeneHeader header = record.Header;
+        if (header.IsSilent)
+            return false;
+        if (header.MaleLinked && sex != GeneConstants.MALE)
+            return false;
+        if (header.FemaleLinked && sex != GeneConstants.FEMALE)
+            return false;
+        return header.Variant == 0 || header.Variant == variant;
     }
 
     private static void ValidateBrain(
@@ -169,6 +182,23 @@ public static class GenomeSimulationSafetyValidator
                     GenomeSimulationSafetySeverity.HardInvalid,
                     GenomeSimulationSafetyCode.ZeroSizedRequiredLobe,
                     $"Required engine brain lobe '{requiredLobe}' has {neurons} neurons, beyond the bounded runtime limit.",
+                    record.Identity));
+            }
+        }
+
+        foreach ((string token, GeneRecord record) in lobes)
+        {
+            if (spec.RequiredLobes.Contains(token, StringComparer.OrdinalIgnoreCase))
+                continue;
+
+            LobeShape shape = DecodeLobe(record);
+            int neurons = shape.Width * shape.Height;
+            if (neurons > 0 && neurons < spec.MinimumHealthyLobeNeurons)
+            {
+                issues.Add(new(
+                    GenomeSimulationSafetySeverity.WeakButLiving,
+                    GenomeSimulationSafetyCode.WeakBrainInterface,
+                    $"Optional brain lobe '{token}' has only {neurons} neuron(s).",
                     record.Identity));
             }
         }
