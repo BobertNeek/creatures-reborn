@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using CreaturesReborn.Sim.Biochemistry;
 using CreaturesReborn.Sim.Brain;
@@ -271,17 +272,29 @@ public sealed class Creature
 
     public CreatureAgeStage AgeStage => CreatureAge.StageFromAge(Genome.Age);
 
-    public GeneExpressionTrace ApplyGeneExpressionStage(byte newAge)
+    public AgeTransitionResult ApplyGeneExpressionStage(byte newAge, BiochemistryTrace? trace = null)
     {
         byte previousAge = Genome.Age;
+        return ApplyAgeTransition(previousAge, newAge, trace);
+    }
+
+    private AgeTransitionResult ApplyAgeTransition(byte previousAge, byte newAge, BiochemistryTrace? trace)
+    {
         Genome.Age = newAge;
         var expressionPlan = new GenomeExpressionPlan(GeneDecoder.Decode(Genome));
-        return new GeneExpressionTrace(
+        IReadOnlyList<GeneRecord> expressedGenes = expressionPlan.GenesEligibleAt(newAge, Genome.Sex, Genome.Variant);
+        var expressionTrace = new GeneExpressionTrace(
             previousAge,
             newAge,
-            expressionPlan.GenesEligibleAt(newAge, Genome.Sex, Genome.Variant)
+            expressedGenes
                 .Select(record => record.Identity)
                 .ToArray());
+        IReadOnlyList<GeneExpressionDelta> deltas = GeneExpressionRuntime.Apply(
+            expressedGenes,
+            Biochemistry,
+            trace);
+
+        return new AgeTransitionResult(previousAge, newAge, expressionTrace, deltas);
     }
 
     public void AdvanceAge(int tickCount)
@@ -291,8 +304,9 @@ public sealed class Creature
         _ageTickAccumulator += tickCount;
         while (_ageTickAccumulator >= TicksPerAgeStep && Genome.Age < byte.MaxValue)
         {
+            byte previousAge = Genome.Age;
             _ageTickAccumulator -= TicksPerAgeStep;
-            Genome.Age++;
+            ApplyAgeTransition(previousAge, (byte)(previousAge + 1), null);
         }
 
         if (Genome.Age == byte.MaxValue)

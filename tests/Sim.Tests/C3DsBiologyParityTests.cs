@@ -45,6 +45,75 @@ public sealed class C3DsBiologyParityTests
         Assert.NotNull(GeneSchemaCatalog.Get(GenePayloadKind.BrainLobe));
     }
 
+    [Fact]
+    public void AgeTransition_AppliesLateSwitchingInjectGene()
+    {
+        G genome = GenomeFromRaw(
+            Lobe("driv", 4),
+            Lobe("decn", 4),
+            Tract("driv", "decn"),
+            Organ(),
+            GeneWithSwitch(
+                (int)GeneType.BIOCHEMISTRYGENE,
+                (int)BiochemSubtype.G_INJECT,
+                id: 51,
+                switchOnAge: 2,
+                payload: [(byte)ChemID.Reward, 200]));
+        var creature = Creature.Creature.CreateFromGenome(genome, new Rng(12), new CreatureImportOptions(
+            Sex: GeneConstants.MALE,
+            Age: 0,
+            Variant: 0,
+            Moniker: "late-inject",
+            BiochemistryMode: BiochemistryCompatibilityMode.C3DS));
+        var trace = new BiochemistryTrace();
+
+        Assert.Equal(0.0f, creature.GetChemical(ChemID.Reward));
+
+        AgeTransitionResult result = creature.ApplyGeneExpressionStage(2, trace);
+
+        Assert.Equal(2, creature.Genome.Age);
+        Assert.Equal(200 / 255f, creature.GetChemical(ChemID.Reward), precision: 6);
+        Assert.Contains(result.Trace.ExpressedGenes, gene => gene.Id == 51);
+        Assert.Contains(result.Deltas, delta =>
+            delta.PayloadKind == GenePayloadKind.BiochemistryInject &&
+            delta.ChemicalId == ChemID.Reward &&
+            delta.Action == "set-initial-concentration");
+        Assert.Contains(trace.Deltas, delta =>
+            delta.ChemicalId == ChemID.Reward &&
+            delta.Source == ChemicalDeltaSource.CreatureInjection);
+    }
+
+    [Fact]
+    public void AdvanceAge_AppliesLateSwitchingHalfLifeGene()
+    {
+        byte[] halfLives = new byte[BiochemConst.NUMCHEM];
+        halfLives[ChemID.Reward] = 255;
+        G genome = GenomeFromRaw(
+            Lobe("driv", 4),
+            Lobe("decn", 4),
+            Tract("driv", "decn"),
+            Organ(),
+            GeneWithSwitch(
+                (int)GeneType.BIOCHEMISTRYGENE,
+                (int)BiochemSubtype.G_HALFLIFE,
+                id: 52,
+                switchOnAge: 2,
+                payload: halfLives));
+        var creature = Creature.Creature.CreateFromGenome(genome, new Rng(13), new CreatureImportOptions(
+            Sex: GeneConstants.MALE,
+            Age: 0,
+            Variant: 0,
+            Moniker: "late-half-life",
+            BiochemistryMode: BiochemistryCompatibilityMode.C3DS));
+
+        Assert.Equal(0.0f, creature.Biochemistry.GetHalfLifeView(ChemID.Reward).DecayRate);
+
+        creature.AdvanceAge(Creature.Creature.TicksPerAgeStep * 2);
+
+        Assert.Equal(2, creature.Genome.Age);
+        Assert.True(creature.Biochemistry.GetHalfLifeView(ChemID.Reward).DecayRate > 0.0f);
+    }
+
     internal static byte[] RawGenome(params byte[][] genes)
     {
         var bytes = new List<byte>();
@@ -62,6 +131,9 @@ public sealed class C3DsBiologyParityTests
     }
 
     internal static byte[] Gene(int type, int subtype, int id, byte flags = (byte)MutFlags.MUT, params byte[] payload)
+        => GeneWithSwitch(type, subtype, id, switchOnAge: 0, flags, payload);
+
+    internal static byte[] GeneWithSwitch(int type, int subtype, int id, byte switchOnAge, byte flags = (byte)MutFlags.MUT, params byte[] payload)
     {
         var bytes = new List<byte>
         {
@@ -70,7 +142,7 @@ public sealed class C3DsBiologyParityTests
             (byte)subtype,
             (byte)id,
             0,
-            0,
+            switchOnAge,
             flags,
             42,
             0
@@ -125,4 +197,3 @@ public sealed class C3DsBiologyParityTests
             payload[offset + i] = i < token.Length ? (byte)token[i] : (byte)' ';
     }
 }
-

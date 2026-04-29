@@ -191,6 +191,13 @@ public sealed class Biochemistry
     public ChemicalHalfLifeView GetHalfLifeView(int chem)
         => new(chem, ChemicalCatalog.Get(chem), _decayRates[chem]);
 
+    public void ApplyHalfLifeGene(ReadOnlySpan<byte> halfLifeBytes)
+    {
+        int count = Math.Min(BiochemConst.NUMCHEM, halfLifeBytes.Length);
+        for (int c = 0; c < count; c++)
+            SetDecayRateFromHalfLifeValue(c, halfLifeBytes[c] / 255f);
+    }
+
     public BiochemistryTrace BeginTrace()
     {
         _activeTrace = new BiochemistryTrace();
@@ -462,18 +469,7 @@ public sealed class Biochemistry
                    BiochemSubtypeInfo.NUMBIOCHEMSUBTYPES))
         {
             for (int c = 0; c < BiochemConst.NUMCHEM; c++)
-            {
-                float inputFloat = genome.GetFloat() * 32.0f;
-                if (inputFloat == 0.0f)
-                {
-                    _decayRates[c] = 0.0f;
-                }
-                else
-                {
-                    float halfLifeInTicks = MathF.Pow(2.2f, inputFloat);
-                    _decayRates[c] = MathF.Pow(0.5f, 1.0f / halfLifeInTicks);
-                }
-            }
+                SetDecayRateFromHalfLifeValue(c, genome.GetFloat());
         }
 
         // ---- 3. Inject genes (initial chemical concentrations) ----
@@ -547,6 +543,20 @@ public sealed class Biochemistry
             throw new InvalidOperationException("Create Biochemistry with the requested compatibility mode before loading a genome.");
 
         ReadFromGenome(genome);
+    }
+
+    private void SetDecayRateFromHalfLifeValue(int chem, float halfLifeValue)
+    {
+        float inputFloat = halfLifeValue * 32.0f;
+        if (inputFloat == 0.0f)
+        {
+            _decayRates[chem] = 0.0f;
+        }
+        else
+        {
+            float halfLifeInTicks = MathF.Pow(2.2f, inputFloat);
+            _decayRates[chem] = MathF.Pow(0.5f, 1.0f / halfLifeInTicks);
+        }
     }
 
     // -------------------------------------------------------------------------
