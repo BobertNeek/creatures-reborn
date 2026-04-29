@@ -82,6 +82,20 @@ public class CreatureTraceTests
         Assert.NotNull(trace.Learning);
     }
 
+    [Fact]
+    public void TickWithChemicalReinforcementTrace_ProjectsBiochemistryDeltas()
+    {
+        var creature = LoadStarter(seed: 101);
+        creature.SetChemical(ChemID.HungerForCarb, 0.8f);
+        creature.SetChemical(ChemID.Glycogen, 1.0f);
+
+        CreatureTickTrace trace = creature.Tick(new CreatureTraceOptions(IncludeChemicalReinforcementTrace: true));
+
+        Assert.NotNull(trace.Biochemistry);
+        Assert.NotNull(trace.ChemicalReinforcement);
+        Assert.Contains(trace.ChemicalReinforcement!.Signals, signal => signal.Domain == ChemicalReinforcementDomain.Hunger);
+    }
+
     private static C LoadStarter(int seed)
         => C.LoadFromFile(Path.GetFullPath(StarterGenomePath), new Rng(seed));
 }

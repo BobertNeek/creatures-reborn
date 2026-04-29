@@ -164,13 +164,22 @@ public sealed class Creature
         FeedDriveInputs();
         collector?.Record(CreatureTickStage.Drives, "Copied creature drive loci into brain drive inputs.");
 
-        BiochemistryTrace? biochemistryTrace = collector?.Options.IncludeBiochemistryTrace == true
+        bool collectBiochemistryTrace = collector?.Options.IncludeBiochemistryTrace == true
+            || collector?.Options.IncludeChemicalReinforcementTrace == true;
+        BiochemistryTrace? biochemistryTrace = collectBiochemistryTrace
             ? new BiochemistryTrace()
             : null;
         Biochemistry.Update(biochemistryTrace);
         if (collector != null)
         {
             collector.Trace.Biochemistry = biochemistryTrace;
+            if (collector.Options.IncludeChemicalReinforcementTrace && biochemistryTrace != null)
+            {
+                collector.Trace.ChemicalReinforcement = ChemicalReinforcementBus.Evaluate(
+                    biochemistryTrace,
+                    ChemicalReinforcementProfile.Default);
+            }
+
             collector.Record(CreatureTickStage.Biochemistry, "Updated neuroemitters, organs, and chemical half-lives.");
         }
 
