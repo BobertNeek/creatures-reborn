@@ -63,6 +63,20 @@ public sealed class EcologyRunnerTests
         Assert.Equal(result.Generations.Sum(g => g.EvolutionJournal.SurvivalFrames.Count), result.Journal.SurvivalFrames.Count);
     }
 
+    [Fact]
+    public void EcologyRunner_CarriesLivingOffspringGenomeBytesIntoNextGeneration()
+    {
+        EcologyRunConfig config = CreateConfig(seed: 603, generations: 2, ticks: 1);
+
+        EcologyRunResult result = new EcologyRunner().Run(config);
+
+        Assert.Equal(2, result.Generations.Count);
+        Assert.Equal(3, result.Generations[0].FinalPopulation);
+        Assert.Equal(3, result.Generations[1].InitialPopulation);
+        Assert.Contains(result.Generations[1].Lineage, lineage => lineage.Moniker == "lab-child-0001" && lineage.Generation == 0);
+        Assert.Contains(result.Generations[1].PopulationGenomes, genome => genome.Moniker == "lab-child-0001" && genome.GenomeBytes.Length > 0);
+    }
+
     private static EcologyRunConfig CreateConfig(int seed, int generations, int ticks)
         => new(
             Seed: seed,

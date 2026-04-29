@@ -152,6 +152,125 @@ public sealed class Organ
         _damageDueToZeroEnergy = (_initialLifeForce * damageDueToZeroEnergy) / 255.0f;
     }
 
+    public void InitFromPayload(ReadOnlySpan<byte> payload)
+    {
+        if (payload.Length < 5)
+            return;
+
+        Init(
+            payload[0] / 255f,
+            payload[1] / 255f,
+            payload[2] / 255f,
+            payload[3] / 255f,
+            payload[4] / 255f);
+    }
+
+    public bool ApplyReceptorGene(ReadOnlySpan<byte> payload, int currentReactionNo = -1)
+    {
+        if (payload.Length < 8 || _numReceptors >= BiochemConst.MAXRECEPTORS)
+            return false;
+
+        var r = new Receptor();
+        r.IDOrgan = payload[0] % OrganID.NUM_RECEPTOR_ORGANS;
+        r.IDTissue = payload[1];
+        if (r.IDOrgan == OrganID.ORGAN_REACTION)
+            r.IDTissue = currentReactionNo;
+
+        r.IDLocus = payload[2];
+        r.Chem = payload[3] % BiochemConst.NUMCHEM;
+        r.Threshold = payload[4] / 255f;
+        r.Nominal = payload[5] / 255f;
+        r.Gain = payload[6] / 255f;
+        r.Effect = payload[7];
+
+        int groupIndex = 0;
+        for (; groupIndex < _numReceptorGroups; groupIndex++)
+        {
+            Receptor first = _receptorGroups[groupIndex][0];
+            if (first.IDOrgan == r.IDOrgan &&
+                first.IDTissue == r.IDTissue &&
+                first.IDLocus == r.IDLocus)
+                break;
+        }
+
+        if (groupIndex == _numReceptorGroups)
+        {
+            if (_numReceptorGroups >= BiochemConst.MAXRECEPTORGROUPS)
+                return false;
+
+            _receptorGroups.Add(new List<Receptor>());
+            _numReceptorGroups++;
+        }
+
+        _numReceptors++;
+        _receptorGroups[groupIndex].Add(r);
+        BindToLoci();
+        InitEnergyCost();
+        return true;
+    }
+
+    public bool ApplyReactionGene(ReadOnlySpan<byte> payload)
+    {
+        if (payload.Length < 9 || _numReactions >= BiochemConst.MAXREACTIONS - 1)
+            return false;
+
+        Reaction reaction = _reactions[_numReactions++];
+        reaction.propR1 = Math.Clamp((int)payload[0], 1, BiochemConst.MAXREACTANTS);
+        reaction.R1 = payload[1];
+        reaction.propR2 = Math.Clamp((int)payload[2], 1, BiochemConst.MAXREACTANTS);
+        reaction.R2 = payload[3];
+        reaction.propP1 = Math.Clamp((int)payload[4], 1, BiochemConst.MAXREACTANTS);
+        reaction.P1 = payload[5];
+        reaction.propP2 = Math.Clamp((int)payload[6], 1, BiochemConst.MAXREACTANTS);
+        reaction.P2 = payload[7];
+        reaction.Rate.Value = 1.0f - payload[8] / 255f;
+
+        BindToLoci();
+        InitEnergyCost();
+        return true;
+    }
+
+    public bool ApplyEmitterGene(ReadOnlySpan<byte> payload)
+    {
+        if (payload.Length < 8 || _numEmitters >= BiochemConst.MAXEMITTERS)
+            return false;
+
+        int organ = payload[0] % OrganID.NUM_EMITTER_ORGANS;
+        int tissue = payload[1];
+        int locus = payload[2];
+        int chem = payload[3] % BiochemConst.NUMCHEM;
+
+        Emitter? emitter = null;
+        for (int i = 0; i < _numEmitters; i++)
+        {
+            if (_emitters[i].IDOrgan == organ &&
+                _emitters[i].IDTissue == tissue &&
+                _emitters[i].IDLocus == locus &&
+                _emitters[i].Chem == chem)
+            {
+                emitter = _emitters[i];
+                break;
+            }
+        }
+
+        if (emitter == null)
+        {
+            emitter = _emitters[_numEmitters++];
+            emitter.IDOrgan = organ;
+            emitter.IDTissue = tissue;
+            emitter.IDLocus = locus;
+            emitter.Chem = chem;
+        }
+
+        emitter.Threshold = payload[4] / 255f;
+        emitter.bioTickRate = 1.0f / Math.Clamp((int)payload[5], 1, 255);
+        emitter.Gain = payload[6] / 255f;
+        emitter.Effect = payload[7];
+        BindToLoci();
+        InitEnergyCost();
+        return true;
+    }
+
     // -------------------------------------------------------------------------
     // InitFromGenome — reads receptor/reaction/emitter genes for this organ.
     // Mirrors c2e Organ::InitFromGenome (Organ.cpp:~200).
@@ -394,6 +513,9 @@ public sealed class Organ
 
     private void InitEnergyCost()
     {
+        if (_owner != null)
+            _owner.ATPRequirement = MathF.Max(0.0f, _owner.ATPRequirement - _energyCost * LocClockRate.Value);
+
         _energyCost = BaseADPCost + (_numReceptors + _numEmitters + _numReactions) / 2550.0f;
         if (_owner != null)
             _owner.ATPRequirement += _energyCost * LocClockRate.Value;

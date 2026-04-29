@@ -127,6 +127,9 @@ public sealed class SavedEggState
     public string GenomePath { get; set; } = "";
     public byte[] GenomeBytes { get; set; } = Array.Empty<byte>();
     public int Sex { get; set; }
+    public int Variant { get; set; }
+    public bool IsStillborn { get; set; }
+    public string StillbornReport { get; set; } = "";
     public float Age { get; set; }
     public float HatchTime { get; set; }
     public float X { get; set; }

@@ -32,6 +32,7 @@ public partial class CreatureNode : Node3D
     // State
     // -------------------------------------------------------------------------
     private C? _creature;
+    private C? _pendingHatchedCreature;
     private float _tickAccumulator;
     private const float TickInterval = 1.0f / 20.0f;   // 20 Hz
 
@@ -66,6 +67,16 @@ public partial class CreatureNode : Node3D
             _verticalVelocity = 0;
     }
 
+    public void InitializeFromHatch(C creature, string genomePath, int sex, byte age, int variant, string moniker)
+    {
+        _pendingHatchedCreature = creature;
+        GenomePath = genomePath;
+        Sex = sex;
+        Age = age;
+        Variant = variant;
+        Moniker = moniker;
+    }
+
     // -------------------------------------------------------------------------
     // Godot lifecycle
     // -------------------------------------------------------------------------
@@ -74,6 +85,11 @@ public partial class CreatureNode : Node3D
         if (_pendingSavedState != null)
         {
             RestoreFromSavedState(_pendingSavedState);
+        }
+        else if (_pendingHatchedCreature != null)
+        {
+            _creature = _pendingHatchedCreature;
+            _pendingHatchedCreature = null;
         }
         else
         {
@@ -483,7 +499,8 @@ public partial class CreatureNode : Node3D
         var egg = new Agents.EggNode
         {
             GenomePath = tmpPath,
-            Sex = GD.Randf() < 0.5f ? GeneConstants.MALE : GeneConstants.FEMALE,
+            Sex = childGenome.Sex,
+            Variant = childGenome.Variant,
             HatchTime  = 12.0f,
             Position   = (Position + fatherNode.Position) * 0.5f,
         };

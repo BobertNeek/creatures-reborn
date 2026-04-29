@@ -3,7 +3,9 @@ using Godot;
 using CreaturesReborn.Sim.Agent;
 using CreaturesReborn.Sim.Creature;
 using CreaturesReborn.Sim.Genome;
+using CreaturesReborn.Sim.Lab;
 using CreaturesReborn.Sim.Save;
+using CreaturesReborn.Sim.Util;
 
 namespace CreaturesReborn.Godot.Agents;
 
@@ -27,12 +29,15 @@ public partial class EggNode : Node3D
     [Export] public float  HatchTime  = 12.0f;                          // seconds before hatch
     [Export] public string GenomePath = "";                             // path on disk; blank → starter
     [Export] public int    Sex        = GeneConstants.MALE;              // expressed sex for hatched creature
+    [Export] public int    Variant    = 0;                               // expressed variant for hatched creature
     [Export] public string EggSpritePath = "res://art/agents/egg.png";  // override sprite
     [Export] public float  SpriteSize = 0.55f;                          // world-units tall
 
     public AgentArchetype AgentArchetype => AgentCatalog.Egg;
     public AgentClassifier Classifier => AgentArchetype.Classifier;
     public int ObjectCategory => AgentArchetype.ObjectCategory;
+    public bool IsStillborn { get; private set; }
+    public string StillbornReport { get; private set; } = "";
 
     private float _age;
     private bool  _hatched;
@@ -44,6 +49,8 @@ public partial class EggNode : Node3D
     public override void _Ready()
     {
         BuildVisual();
+        if (IsStillborn)
+            ApplyStillbornVisual();
     }
 
     public override void _Process(double delta)
@@ -79,19 +86,50 @@ public partial class EggNode : Node3D
 
     private void Hatch()
     {
+        if (_hatched)
+            return;
+
+        string resolvedGenomePath = ResolveGenomePath();
+        byte[] genomeBytes;
+        try
+        {
+            genomeBytes = System.IO.File.ReadAllBytes(resolvedGenomePath);
+        }
+        catch (Exception ex)
+        {
+            GD.PrintErr($"[Egg] Hatch refused - genome could not be read: {resolvedGenomePath}. {ex.Message}");
+            MarkStillborn($"Stillborn: unreadable genome\n{ex.Message}");
+            return;
+        }
+
+        string childMoniker = System.IO.Path.GetFileNameWithoutExtension(resolvedGenomePath);
+        HatchResult result = CreatureHatchService.AttemptHatch(
+            new EggGenomePayload(genomeBytes, Sex, Variant, childMoniker),
+            new HatchAttemptContext(childMoniker, MotherMoniker: null, FatherMoniker: null, BirthTick: 0, Generation: 0),
+            new StatefulRng((int)GD.Randi()));
+
+        if (result.Stillborn != null)
+        {
+            MarkStillborn(SimulationReportFormatters.FormatStillbornReport(result.Stillborn));
+            return;
+        }
+
+        if (result.Creature == null)
+        {
+            MarkStillborn(SimulationReportFormatters.FormatSafetyReport(result.SafetyReport));
+            return;
+        }
+
         _hatched = true;
         var nornScene = GD.Load<PackedScene>("res://scenes/Norn.tscn");
         if (nornScene != null && GetParent() != null)
         {
             var norn = (CreatureNode)nornScene.Instantiate();
-            if (!string.IsNullOrEmpty(GenomePath))
-                norn.GenomePath = GenomePath;
-            norn.Sex = Sex;
-            norn.Age = 0;
+            norn.InitializeFromHatch(result.Creature, resolvedGenomePath, Sex, age: 0, Variant, childMoniker);
             // Spawn at egg position, slight nudge so it doesn't intersect siblings
             norn.Position = Position + new Vector3(0.3f, 0, 0);
             GetParent()!.AddChild(norn);
-            GD.Print($"[Egg] Hatched! Genome={GenomePath}");
+            GD.Print($"[Egg] Hatched! Genome={resolvedGenomePath}");
         }
         QueueFree();
     }
@@ -108,6 +146,9 @@ public partial class EggNode : Node3D
             GenomePath = GenomePath,
             GenomeBytes = genomeBytes,
             Sex = Sex,
+            Variant = Variant,
+            IsStillborn = IsStillborn,
+            StillbornReport = StillbornReport,
             Age = _age,
             HatchTime = HatchTime,
             X = Position.X,
@@ -129,6 +170,10 @@ public partial class EggNode : Node3D
         }
 
         Sex = state.Sex;
+        Variant = state.Variant;
+        IsStillborn = state.IsStillborn;
+        StillbornReport = state.StillbornReport;
+        _hatched = IsStillborn;
         _age = state.Age;
         HatchTime = state.HatchTime;
         Position = new Vector3(state.X, state.Y, state.Z);
@@ -156,6 +201,41 @@ public partial class EggNode : Node3D
             Position    = new Vector3(0, SpriteSize * 0.5f, 0),
         };
         AddChild(_glow);
+    }
+
+    private string ResolveGenomePath()
+    {
+        string path = string.IsNullOrWhiteSpace(GenomePath)
+            ? "res://data/genomes/starter.gen"
+            : GenomePath;
+        return path.StartsWith("res://", StringComparison.OrdinalIgnoreCase)
+            || path.StartsWith("user://", StringComparison.OrdinalIgnoreCase)
+            ? ProjectSettings.GlobalizePath(path)
+            : path;
+    }
+
+    private void MarkStillborn(string report)
+    {
+        IsStillborn = true;
+        StillbornReport = report;
+        _hatched = true;
+        ApplyStillbornVisual();
+        GD.PrintErr($"[Egg] Stillborn hatch outcome.\n{StillbornReport}");
+    }
+
+    private void ApplyStillbornVisual()
+    {
+        if (_sprite != null)
+        {
+            _sprite.Modulate = new Color(0.35f, 0.32f, 0.30f);
+            _sprite.Rotation = Vector3.Zero;
+        }
+
+        if (_glow != null)
+        {
+            _glow.LightColor = new Color(0.55f, 0.12f, 0.08f);
+            _glow.LightEnergy = 0.08f;
+        }
     }
 
     /// <summary>

@@ -83,8 +83,16 @@ public sealed class EcologyRunner
             generationResults.Add(metrics);
             MergeJournal(journal, metrics.EvolutionJournal, generation);
 
-            currentPopulation = currentPopulation
-                .Take(Math.Min(policy.PopulationCap, Math.Max(0, metrics.FinalPopulation)))
+            currentPopulation = metrics.PopulationGenomes
+                .Where(genome => !genome.Dead)
+                .Take(policy.PopulationCap)
+                .Select(genome => new LabCreatureSeed(
+                    GenomePath: "",
+                    Moniker: genome.Moniker,
+                    Sex: genome.Sex,
+                    Age: genome.Age,
+                    Variant: genome.Variant,
+                    GenomeBytes: genome.GenomeBytes))
                 .ToArray();
         }
 

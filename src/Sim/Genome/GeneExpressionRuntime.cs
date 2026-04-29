@@ -36,6 +36,13 @@ public static class GeneExpressionRuntime
                 case GenePayloadKind.BiochemistryHalfLife:
                     ApplyHalfLife(record, biochemistry, deltas);
                     break;
+                case GenePayloadKind.BiochemistryReaction:
+                case GenePayloadKind.BiochemistryReceptor:
+                case GenePayloadKind.BiochemistryEmitter:
+                case GenePayloadKind.BiochemistryNeuroEmitter:
+                case GenePayloadKind.Organ:
+                case GenePayloadKind.BrainOrgan:
+                    break;
             }
         }
 

@@ -301,8 +301,11 @@ public sealed class Creature
             expressedGenes,
             Biochemistry,
             trace);
+        var allDeltas = new List<GeneExpressionDelta>(deltas);
+        allDeltas.AddRange(Biochemistry.ApplyGeneExpressionRecords(expressedGenes));
+        allDeltas.AddRange(Brain.ApplyGeneExpressionRecords(expressedGenes, _rng));
 
-        return new AgeTransitionResult(previousAge, newAge, expressionTrace, deltas);
+        return new AgeTransitionResult(previousAge, newAge, expressionTrace, allDeltas);
     }
 
     public void AdvanceAge(int tickCount)

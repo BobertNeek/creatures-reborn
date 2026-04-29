@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using CreaturesReborn.Sim.Biochemistry;
 using CreaturesReborn.Sim.Genome;
@@ -112,6 +113,89 @@ public sealed class Brain : IBrainLocusProvider
             try { _instincts.Add(new Instinct(genome, this)); }
             catch (Exception) { }
         }
+    }
+
+    public IReadOnlyList<GeneExpressionDelta> ApplyGeneExpressionRecords(
+        IReadOnlyList<GeneRecord> expressedGenes,
+        IRng rng)
+    {
+        var deltas = new List<GeneExpressionDelta>();
+        foreach (GeneRecord record in expressedGenes)
+        {
+            switch (record.Payload.Kind)
+            {
+                case GenePayloadKind.BrainLobe:
+                    if (ApplyLobeGene(record, rng))
+                        deltas.Add(new GeneExpressionDelta(record.Identity, record.Payload.Kind, "add-brain-lobe"));
+                    break;
+                case GenePayloadKind.BrainTract:
+                    if (ApplyTractGene(record, rng))
+                        deltas.Add(new GeneExpressionDelta(record.Identity, record.Payload.Kind, "add-brain-tract"));
+                    break;
+            }
+        }
+
+        if (deltas.Count > 0)
+            _components.Sort(BrainComponent.CompareByUpdateTime);
+
+        return deltas;
+    }
+
+    private bool ApplyLobeGene(GeneRecord record, IRng rng)
+    {
+        if (_lobes.Count >= BrainConst.MaxLobes)
+            return false;
+
+        G geneGenome = GenomeFromRecord(record);
+        if (!geneGenome.GetGeneType((int)GeneType.BRAINGENE, (int)BrainSubtype.G_LOBE, BrainSubtypeInfo.NUMBRAINSUBTYPES))
+            return false;
+
+        var lobe = new Lobe(geneGenome);
+        if (_lobes.Any(existing => existing.Token == lobe.Token))
+            return false;
+
+        lobe.IdInList = _lobes.Count > 0 ? _lobes[^1].IdInList + 1 : 0;
+        lobe.RegisterRng(rng);
+        if (_chemicals != null)
+            lobe.RegisterBiochemistry(_chemicals);
+        lobe.Initialise();
+        _lobes.Add(lobe);
+        _components.Add(lobe);
+        _brainLoci.Clear();
+        return true;
+    }
+
+    private bool ApplyTractGene(GeneRecord record, IRng rng)
+    {
+        if (_tracts.Count >= BrainConst.MaxTracts)
+            return false;
+
+        G geneGenome = GenomeFromRecord(record);
+        if (!geneGenome.GetGeneType((int)GeneType.BRAINGENE, (int)BrainSubtype.G_TRACT, BrainSubtypeInfo.NUMBRAINSUBTYPES))
+            return false;
+
+        var tract = new Tract(geneGenome, _lobes, rng);
+        tract.IdInList = _tracts.Count > 0 ? _tracts[^1].IdInList + 1 : 0;
+        tract.RegisterRng(rng);
+        if (_chemicals != null)
+            tract.RegisterBiochemistry(_chemicals);
+        tract.Initialise();
+        _tracts.Add(tract);
+        _components.Add(tract);
+        return true;
+    }
+
+    private static G GenomeFromRecord(GeneRecord record)
+    {
+        byte[] bytes = new byte[record.RawBytes.Length + 4];
+        Array.Copy(record.RawBytes, bytes, record.RawBytes.Length);
+        bytes[^4] = (byte)'g';
+        bytes[^3] = (byte)'e';
+        bytes[^2] = (byte)'n';
+        bytes[^1] = (byte)'d';
+        var genome = new G(new Rng(0));
+        genome.AttachBytes(bytes, GeneConstants.MALE, age: (byte)record.SwitchOnAge, variant: record.Variant, moniker: "late-gene");
+        return genome;
     }
 
     // -------------------------------------------------------------------------

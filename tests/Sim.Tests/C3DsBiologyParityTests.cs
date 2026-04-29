@@ -114,6 +114,102 @@ public sealed class C3DsBiologyParityTests
         Assert.True(creature.Biochemistry.GetHalfLifeView(ChemID.Reward).DecayRate > 0.0f);
     }
 
+    [Fact]
+    public void AgeTransition_AppliesLateBiochemistryStructureGenes()
+    {
+        G genome = GenomeFromRaw(
+            Lobe("driv", 4),
+            Lobe("decn", 4),
+            Tract("driv", "decn"),
+            Organ(),
+            Reaction(ChemID.ATP, ChemID.ADP),
+            Receptor(ChemID.Injury, 3, 0),
+            GeneWithSwitch(
+                (int)GeneType.BIOCHEMISTRYGENE,
+                (int)BiochemSubtype.G_REACTION,
+                id: 61,
+                switchOnAge: 2,
+                payload: [1, (byte)ChemID.Glucose, 1, 0, 1, (byte)ChemID.Glycogen, 1, 0, 128]),
+            GeneWithSwitch(
+                (int)GeneType.BIOCHEMISTRYGENE,
+                (int)BiochemSubtype.G_RECEPTOR,
+                id: 62,
+                switchOnAge: 2,
+                payload: [1, (byte)CreatureTissue.Immune, ImmuneLocus.Die, (byte)ChemID.Pain, 1, 0, 255, 0]),
+            GeneWithSwitch(
+                (int)GeneType.BIOCHEMISTRYGENE,
+                (int)BiochemSubtype.G_EMITTER,
+                id: 63,
+                switchOnAge: 2,
+                payload: [1, (byte)CreatureTissue.Sensorimotor, SensorimotorEmitterLocus.Const, (byte)ChemID.Reward, 0, 1, 128, 0]),
+            GeneWithSwitch(
+                (int)GeneType.BIOCHEMISTRYGENE,
+                (int)BiochemSubtype.G_NEUROEMITTER,
+                id: 64,
+                switchOnAge: 2,
+                payload: [0, 0, 0, 0, 0, 0, 255, (byte)ChemID.Punishment, 64, 0, 0, 0, 0, 0, 0]),
+            GeneWithSwitch(
+                (int)GeneType.ORGANGENE,
+                (int)OrganSubtype.G_ORGAN,
+                id: 65,
+                switchOnAge: 2,
+                payload: [128, 16, 255, 0, 16]));
+        var creature = Creature.Creature.CreateFromGenome(genome, new Rng(14), new CreatureImportOptions(
+            Sex: GeneConstants.MALE,
+            Age: 0,
+            Variant: 0,
+            Moniker: "late-biochem",
+            BiochemistryMode: BiochemistryCompatibilityMode.C3DS));
+        int organsBefore = creature.Biochemistry.OrganCount;
+        int reactionsBefore = creature.Biochemistry.GetOrgan(0).ReactionCount;
+        int receptorsBefore = creature.Biochemistry.GetOrgan(0).ReceptorCount;
+        int emittersBefore = creature.Biochemistry.GetOrgan(0).EmitterCount;
+        int neuroEmittersBefore = creature.Biochemistry.NeuroEmitterCount;
+
+        AgeTransitionResult result = creature.ApplyGeneExpressionStage(2);
+
+        Assert.True(creature.Biochemistry.OrganCount > organsBefore);
+        Assert.True(creature.Biochemistry.GetOrgan(0).ReactionCount > reactionsBefore);
+        Assert.True(creature.Biochemistry.GetOrgan(0).ReceptorCount > receptorsBefore);
+        Assert.True(creature.Biochemistry.GetOrgan(0).EmitterCount > emittersBefore);
+        Assert.True(creature.Biochemistry.NeuroEmitterCount > neuroEmittersBefore);
+        Assert.Contains(result.Deltas, delta => delta.PayloadKind == GenePayloadKind.BiochemistryReaction);
+        Assert.Contains(result.Deltas, delta => delta.PayloadKind == GenePayloadKind.BiochemistryReceptor);
+        Assert.Contains(result.Deltas, delta => delta.PayloadKind == GenePayloadKind.BiochemistryEmitter);
+        Assert.Contains(result.Deltas, delta => delta.PayloadKind == GenePayloadKind.BiochemistryNeuroEmitter);
+        Assert.Contains(result.Deltas, delta => delta.PayloadKind == GenePayloadKind.Organ);
+    }
+
+    [Fact]
+    public void AgeTransition_AppliesLateBrainLobeAndTractGenes()
+    {
+        G genome = GenomeFromRaw(
+            Lobe("driv", 4),
+            Lobe("decn", 4),
+            Tract("driv", "decn"),
+            Organ(),
+            Reaction(ChemID.ATP, ChemID.ADP),
+            Receptor(ChemID.Injury, 3, 0),
+            LateLobe("memo", 3, switchOnAge: 2),
+            LateTract("driv", "memo", switchOnAge: 2));
+        var creature = Creature.Creature.CreateFromGenome(genome, new Rng(15), new CreatureImportOptions(
+            Sex: GeneConstants.MALE,
+            Age: 0,
+            Variant: 0,
+            Moniker: "late-brain",
+            BiochemistryMode: BiochemistryCompatibilityMode.C3DS));
+        int lobesBefore = creature.Brain.LobeCount;
+        int tractsBefore = creature.Brain.TractCount;
+
+        AgeTransitionResult result = creature.ApplyGeneExpressionStage(2);
+
+        Assert.True(creature.Brain.LobeCount > lobesBefore);
+        Assert.True(creature.Brain.TractCount > tractsBefore);
+        Assert.Contains(creature.Brain.CreateSnapshot().Lobes, lobe => lobe.TokenText == "memo");
+        Assert.Contains(result.Deltas, delta => delta.PayloadKind == GenePayloadKind.BrainLobe);
+        Assert.Contains(result.Deltas, delta => delta.PayloadKind == GenePayloadKind.BrainTract);
+    }
+
     internal static byte[] RawGenome(params byte[][] genes)
     {
         var bytes = new List<byte>();
@@ -160,6 +256,15 @@ public sealed class C3DsBiologyParityTests
         return Gene((int)GeneType.BRAINGENE, (int)BrainSubtype.G_LOBE, token.GetHashCode() & 0xFF, payload: payload);
     }
 
+    internal static byte[] LateLobe(string token, byte size, byte switchOnAge)
+    {
+        byte[] payload = new byte[121];
+        WriteToken(payload, 0, token);
+        payload[10] = size;
+        payload[11] = size;
+        return GeneWithSwitch((int)GeneType.BRAINGENE, (int)BrainSubtype.G_LOBE, token.GetHashCode() & 0xFF, switchOnAge, payload: payload);
+    }
+
     internal static byte[] Tract(string source, string destination)
     {
         byte[] payload = new byte[128];
@@ -172,6 +277,20 @@ public sealed class C3DsBiologyParityTests
         payload[19] = 3;
         payload[21] = 1;
         return Gene((int)GeneType.BRAINGENE, (int)BrainSubtype.G_TRACT, source[0] ^ destination[0], payload: payload);
+    }
+
+    internal static byte[] LateTract(string source, string destination, byte switchOnAge)
+    {
+        byte[] payload = new byte[128];
+        WriteToken(payload, 2, source);
+        payload[7] = 0;
+        payload[9] = 3;
+        payload[11] = 1;
+        WriteToken(payload, 12, destination);
+        payload[17] = 0;
+        payload[19] = 3;
+        payload[21] = 1;
+        return GeneWithSwitch((int)GeneType.BRAINGENE, (int)BrainSubtype.G_TRACT, source[0] ^ destination[0], switchOnAge, payload: payload);
     }
 
     internal static byte[] Organ()

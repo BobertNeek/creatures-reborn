@@ -7,6 +7,7 @@ using CreaturesReborn.Sim.Brain;
 using CreaturesReborn.Sim.Creature;
 using CreaturesReborn.Sim.Formats;
 using CreaturesReborn.Sim.Genome;
+using CreaturesReborn.Sim.Save;
 using CreaturesReborn.Sim.Util;
 using CreaturesReborn.Sim.World;
 using CreatureSim = CreaturesReborn.Sim.Creature.Creature;
@@ -19,7 +20,8 @@ public sealed record LabCreatureSeed(
     string Moniker,
     int Sex = GeneConstants.MALE,
     byte Age = 0,
-    int Variant = 0);
+    int Variant = 0,
+    byte[]? GenomeBytes = null);
 
 public sealed record LabWorldPreset(
     string Name,
@@ -112,6 +114,14 @@ public sealed record LabCreatureMetrics(
     LabBehaviorMetrics Behavior,
     LabEnvironmentMetrics Environment);
 
+public sealed record LabCreatureGenomeRecord(
+    string Moniker,
+    int Sex,
+    byte Age,
+    int Variant,
+    bool Dead,
+    byte[] GenomeBytes);
+
 public sealed record LabRunMetrics(
     int Seed,
     int TicksRequested,
@@ -126,7 +136,8 @@ public sealed record LabRunMetrics(
     IReadOnlyList<LabCreatureMetrics> Creatures,
     IReadOnlyList<CrossoverReport> CrossoverReports,
     IReadOnlyList<MutationReport> MutationReports,
-    WorldEvolutionJournal EvolutionJournal);
+    WorldEvolutionJournal EvolutionJournal,
+    IReadOnlyList<LabCreatureGenomeRecord> PopulationGenomes);
 
 public sealed class LabRunner
 {
@@ -173,6 +184,7 @@ public sealed class LabRunner
 
         int deaths = Tick(config, worldPreset, world, states, stillborns, evolutionJournal);
         IReadOnlyList<LabCreatureMetrics> creatureMetrics = states.Select(CreateMetrics).ToArray();
+        IReadOnlyList<LabCreatureGenomeRecord> populationGenomes = states.Select(CreateGenomeRecord).ToArray();
 
         return new LabRunMetrics(
             Seed: config.Seed,
@@ -188,7 +200,8 @@ public sealed class LabRunner
             Creatures: creatureMetrics,
             CrossoverReports: crossoverReports,
             MutationReports: mutationReports,
-            EvolutionJournal: evolutionJournal);
+            EvolutionJournal: evolutionJournal,
+            PopulationGenomes: populationGenomes);
     }
 
     private static void LoadFounders(
@@ -200,19 +213,31 @@ public sealed class LabRunner
         for (int i = 0; i < config.Population.Count; i++)
         {
             LabCreatureSeed seed = config.Population[i];
-            if (!File.Exists(seed.GenomePath))
-                throw new FileNotFoundException($"Lab genome path does not exist: {seed.GenomePath}", seed.GenomePath);
-
             string moniker = string.IsNullOrWhiteSpace(seed.Moniker)
                 ? $"founder-{i + 1:D4}"
                 : seed.Moniker;
-            var creature = CreatureSim.LoadFromFile(
-                seed.GenomePath,
-                new Rng(config.Seed + i + 1),
-                seed.Sex,
-                seed.Age,
-                seed.Variant,
-                moniker);
+            IRng rng = new Rng(config.Seed + i + 1);
+            CreatureSim creature;
+            if (seed.GenomeBytes is { Length: > 0 } genomeBytes)
+            {
+                var genome = new G(rng);
+                GenomeReader.Load(genome, genomeBytes, seed.Sex, age: 0, seed.Variant, moniker);
+                creature = CreatureSim.CreateFromGenome(genome, rng);
+                creature.Genome.Age = seed.Age;
+            }
+            else
+            {
+                if (!File.Exists(seed.GenomePath))
+                    throw new FileNotFoundException($"Lab genome path does not exist: {seed.GenomePath}", seed.GenomePath);
+
+                creature = CreatureSim.LoadFromFile(
+                    seed.GenomePath,
+                    rng,
+                    seed.Sex,
+                    seed.Age,
+                    seed.Variant,
+                    moniker);
+            }
 
             states.Add(new CreatureRunState(creature));
             lineage.Add(new LineageRecord(
@@ -434,6 +459,18 @@ public sealed class LabRunner
                 state.UniqueVerbs.Count,
                 state.UniqueNouns.Count),
             state.Environment);
+    }
+
+    private static LabCreatureGenomeRecord CreateGenomeRecord(CreatureRunState state)
+    {
+        SavedCreatureState snapshot = state.Creature.CreateSnapshot();
+        return new LabCreatureGenomeRecord(
+            state.Creature.Genome.Moniker,
+            state.Creature.Genome.Sex,
+            state.Creature.Genome.Age,
+            state.Creature.Genome.Variant,
+            state.Dead,
+            snapshot.GenomeBytes);
     }
 
     private static LabChemicalSummary CreateChemicalSummary(CreatureSim creature)

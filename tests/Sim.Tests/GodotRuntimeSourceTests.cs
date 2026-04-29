@@ -80,6 +80,20 @@ public class GodotRuntimeSourceTests
     }
 
     [Fact]
+    public void EggNode_UsesHatchServiceAndKeepsStillbornRecordsInspectable()
+    {
+        string eggSource = File.ReadAllText(RepoPath("src", "Godot", "Agents", "EggNode.cs"));
+
+        Assert.Contains("CreatureHatchService.AttemptHatch", eggSource);
+        Assert.Contains("EggGenomePayload", eggSource);
+        Assert.Contains("HatchAttemptContext", eggSource);
+        Assert.Contains("SimulationReportFormatters.FormatStillbornReport", eggSource);
+        Assert.Contains("MarkStillborn", eggSource);
+        Assert.Contains("IsStillborn", eggSource);
+        Assert.DoesNotContain("C.LoadFromFile", eggSource);
+    }
+
+    [Fact]
     public void StairsNode_OnlyCapturesCreaturesNearRampSurface()
     {
         string stairsSource = File.ReadAllText(RepoPath("src", "Godot", "StairsNode.cs"));

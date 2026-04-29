@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using CreaturesReborn.Sim.Save;
 using CreaturesReborn.Sim.Genome;
 
@@ -543,6 +544,115 @@ public sealed class Biochemistry
             throw new InvalidOperationException("Create Biochemistry with the requested compatibility mode before loading a genome.");
 
         ReadFromGenome(genome);
+    }
+
+    public IReadOnlyList<GeneExpressionDelta> ApplyGeneExpressionRecords(IReadOnlyList<GeneRecord> expressedGenes)
+    {
+        var deltas = new System.Collections.Generic.List<GeneExpressionDelta>();
+        Organ? targetOrgan = _numOrgans > 0 ? _organs[0] : null;
+
+        foreach (GeneRecord record in expressedGenes)
+        {
+            switch (record.Payload.Kind)
+            {
+                case GenePayloadKind.Organ:
+                case GenePayloadKind.BrainOrgan:
+                    if (ApplyOrganGene(record.Payload.Bytes, out Organ? organ))
+                    {
+                        targetOrgan = organ;
+                        deltas.Add(new GeneExpressionDelta(record.Identity, record.Payload.Kind, "add-organ"));
+                    }
+                    break;
+
+                case GenePayloadKind.BiochemistryReaction:
+                    if (targetOrgan != null && targetOrgan.ApplyReactionGene(record.Payload.Bytes))
+                        deltas.Add(new GeneExpressionDelta(record.Identity, record.Payload.Kind, "add-reaction"));
+                    break;
+
+                case GenePayloadKind.BiochemistryReceptor:
+                    if (targetOrgan != null && targetOrgan.ApplyReceptorGene(record.Payload.Bytes))
+                        deltas.Add(new GeneExpressionDelta(record.Identity, record.Payload.Kind, "add-receptor"));
+                    break;
+
+                case GenePayloadKind.BiochemistryEmitter:
+                    if (targetOrgan != null && targetOrgan.ApplyEmitterGene(record.Payload.Bytes))
+                        deltas.Add(new GeneExpressionDelta(record.Identity, record.Payload.Kind, "add-emitter"));
+                    break;
+
+                case GenePayloadKind.BiochemistryNeuroEmitter:
+                    if (ApplyNeuroEmitterGene(record.Payload.Bytes))
+                        deltas.Add(new GeneExpressionDelta(record.Identity, record.Payload.Kind, "add-neuroemitter"));
+                    break;
+            }
+        }
+
+        return deltas;
+    }
+
+    private bool ApplyOrganGene(ReadOnlySpan<byte> payload, out Organ? organ)
+    {
+        organ = null;
+        if (_numOrgans >= BiochemConst.MAXORGANS)
+            return false;
+
+        organ = new Organ();
+        organ.SetOwner(this);
+        organ.InitFromPayload(payload);
+        _organs[_numOrgans++] = organ;
+        organ.BindToLoci();
+        return true;
+    }
+
+    private bool ApplyNeuroEmitterGene(ReadOnlySpan<byte> payload)
+    {
+        if (payload.Length < 15 || _numNeuroEmitters == BiochemConst.MAX_NEUROEMITTERS)
+            return false;
+
+        FloatLocus[] neuronInputs = new FloatLocus[NeuroEmitter.NumNeuronalInputs];
+        int offset = 0;
+        for (int i = 0; i < NeuroEmitter.NumNeuronalInputs; i++)
+        {
+            int lobeId = payload[offset++];
+            int neuronId = payload[offset++];
+            neuronInputs[i] = GetCreatureLocusAddress(
+                (int)LocusType.Emitter,
+                OrganID.ORGAN_BRAIN,
+                lobeId,
+                neuronId * BiochemConst.NoOfNeuronVariablesAsLoci);
+        }
+
+        NeuroEmitter? neuroEmitter = null;
+        for (int i = 0; i < _numNeuroEmitters; i++)
+        {
+            int matches = 0;
+            for (int input = 0; input < NeuroEmitter.NumNeuronalInputs; input++)
+            {
+                if (_neuroEmitters[i].NeuronalInputs[input] == neuronInputs[input])
+                    matches++;
+            }
+
+            if (matches == NeuroEmitter.NumNeuronalInputs)
+            {
+                neuroEmitter = _neuroEmitters[i];
+                break;
+            }
+        }
+
+        if (neuroEmitter == null)
+        {
+            neuroEmitter = _neuroEmitters[_numNeuroEmitters++];
+            for (int input = 0; input < NeuroEmitter.NumNeuronalInputs; input++)
+                neuroEmitter.NeuronalInputs[input] = neuronInputs[input];
+        }
+
+        neuroEmitter.bioTickRate = payload[offset++] / 255f;
+        for (int emission = 0; emission < NeuroEmitter.NumChemEmissions; emission++)
+        {
+            neuroEmitter.ChemEmissions[emission].ChemId = payload[offset++];
+            neuroEmitter.ChemEmissions[emission].Amount = payload[offset++] / 255f;
+        }
+
+        return true;
     }
 
     private void SetDecayRateFromHalfLifeValue(int chem, float halfLifeValue)
