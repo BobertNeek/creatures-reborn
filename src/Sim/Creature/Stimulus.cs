@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using CreaturesReborn.Sim.Biochemistry;
 
 namespace CreaturesReborn.Sim.Creature;
@@ -246,25 +247,78 @@ public static class StimulusTable
     /// <summary>
     /// Apply a stimulus to a creature: inject the defined chemicals.
     /// </summary>
-    public static void Apply(Creature creature, int stimId)
+    public static StimulusApplicationTrace Apply(Creature creature, int stimId)
         => Apply(creature, stimId, trace: null);
 
-    public static void Apply(Creature creature, int stimId, BiochemistryTrace? trace)
+    public static StimulusApplicationTrace Apply(Creature creature, int stimId, BiochemistryTrace? trace)
     {
+        if (creature.Biochemistry.CompatibilityMode == BiochemistryCompatibilityMode.C3DS &&
+            creature.Stimuli.TryGet(stimId, out StimulusGeneDefinition? genomeDefinition))
+            return ApplyGenomeDefinition(creature, genomeDefinition, trace);
+
         if (TryApplyNutritionStimulus(creature, stimId, trace))
-            return;
+        {
+            return new StimulusApplicationTrace(
+                stimId,
+                UsedGenomeAuthoredDefinition: false,
+                SourceGene: null,
+                Significance: Get(stimId).Significance,
+                ChemicalDeltas: FallbackDeltas(Get(stimId)));
+        }
 
         var def = Get(stimId);
         ApplyChemical(creature, stimId, def.Chem1, def.Amt1, trace);
         ApplyChemical(creature, stimId, def.Chem2, def.Amt2, trace);
         ApplyChemical(creature, stimId, def.Chem3, def.Amt3, trace);
         ApplyChemical(creature, stimId, def.Chem4, def.Amt4, trace);
+        return new StimulusApplicationTrace(
+            stimId,
+            UsedGenomeAuthoredDefinition: false,
+            SourceGene: null,
+            Significance: def.Significance,
+            ChemicalDeltas: FallbackDeltas(def));
     }
 
     private static void ApplyChemical(Creature creature, int stimId, int chem, float amount, BiochemistryTrace? trace)
     {
         if (chem == 0) return;
         creature.Biochemistry.AddChemical(chem, amount, ChemicalDeltaSource.Stimulus, $"stimulus:{stimId}", trace);
+    }
+
+    private static StimulusApplicationTrace ApplyGenomeDefinition(
+        Creature creature,
+        StimulusGeneDefinition definition,
+        BiochemistryTrace? trace)
+    {
+        foreach (StimulusChemicalDelta delta in definition.ChemicalDeltas)
+        {
+            if (delta.ChemicalId == ChemID.None || delta.Amount == 0.0f)
+                continue;
+            creature.Biochemistry.AddChemical(
+                delta.ChemicalId,
+                delta.Amount,
+                ChemicalDeltaSource.Stimulus,
+                $"stimulus-gene:{definition.Gene.Id}:stimulus:{definition.StimulusId}",
+                trace);
+        }
+
+        return new StimulusApplicationTrace(
+            definition.StimulusId,
+            UsedGenomeAuthoredDefinition: true,
+            SourceGene: definition.Gene,
+            Significance: definition.Significance,
+            ChemicalDeltas: definition.ChemicalDeltas);
+    }
+
+    private static IReadOnlyList<StimulusChemicalDelta> FallbackDeltas(StimulusDef definition)
+    {
+        return
+        [
+            new(definition.Chem1, definition.Amt1),
+            new(definition.Chem2, definition.Amt2),
+            new(definition.Chem3, definition.Amt3),
+            new(definition.Chem4, definition.Amt4)
+        ];
     }
 
     private static bool TryApplyNutritionStimulus(Creature creature, int stimId, BiochemistryTrace? trace)

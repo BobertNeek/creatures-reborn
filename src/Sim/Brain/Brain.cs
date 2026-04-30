@@ -451,6 +451,23 @@ public sealed class Brain : IBrainLocusProvider
     public BrainSnapshot CreateSnapshot()
         => CreateSnapshot(new BrainSnapshotOptions());
 
+    public BrainParityTrace CreateParityTrace()
+    {
+        BrainSnapshot snapshot = CreateSnapshot(new BrainSnapshotOptions(
+            MaxNeuronsPerLobe: 0,
+            MaxDendritesPerTract: 0));
+        return new BrainParityTrace(
+            new BrainBootParitySnapshot(
+                snapshot.Lobes.Count,
+                snapshot.Tracts.Count,
+                snapshot.Lobes,
+                snapshot.Tracts),
+            new InstinctProcessingTrace(
+                snapshot.InstinctsRemaining,
+                snapshot.IsProcessingInstincts),
+            snapshot.Modules.Select(module => module.Name).ToArray());
+    }
+
     public BrainSnapshot CreateSnapshot(BrainSnapshotOptions options)
     {
         var lobes = new List<LobeSnapshot>(_lobes.Count);
