@@ -30,6 +30,7 @@ public sealed class Creature
     public  BC           Biochemistry { get; }
     public  BrainCls     Brain        { get; }
     public  MotorFaculty Motor        { get; }
+    public  GenomeStimulusTable Stimuli { get; private set; }
 
     private readonly IRng _rng;
     private int _ageTickAccumulator;
@@ -50,6 +51,7 @@ public sealed class Creature
     {
         Genome = genome;
         _rng   = rng;
+        Stimuli = GenomeStimulusTable.FromGenome(genome);
 
         // Biochemistry (owns the chemical array)
         Biochemistry = new BC(biochemistryMode);
@@ -304,6 +306,8 @@ public sealed class Creature
         var allDeltas = new List<GeneExpressionDelta>(deltas);
         allDeltas.AddRange(Biochemistry.ApplyGeneExpressionRecords(expressedGenes));
         allDeltas.AddRange(Brain.ApplyGeneExpressionRecords(expressedGenes, _rng));
+        if (expressedGenes.Any(record => record.Payload.Kind == GenePayloadKind.CreatureStimulus))
+            Stimuli = GenomeStimulusTable.FromGenome(Genome);
 
         return new AgeTransitionResult(previousAge, newAge, expressionTrace, allDeltas);
     }

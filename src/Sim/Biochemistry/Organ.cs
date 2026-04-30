@@ -104,6 +104,74 @@ public sealed class Organ
         return reactions;
     }
 
+    public IReadOnlyList<ReactionParitySnapshot> CreateReactionParitySnapshots()
+    {
+        var reactions = new List<ReactionParitySnapshot>(_numReactions);
+        for (int i = 0; i < _numReactions; i++)
+        {
+            Reaction reaction = _reactions[i];
+            reactions.Add(new(
+                i,
+                reaction.R1,
+                reaction.propR1,
+                reaction.R2,
+                reaction.propR2,
+                reaction.P1,
+                reaction.propP1,
+                reaction.P2,
+                reaction.propP2,
+                reaction.Rate.Value));
+        }
+
+        return reactions;
+    }
+
+    public IReadOnlyList<ReceptorParitySnapshot> CreateReceptorParitySnapshots()
+    {
+        var receptors = new List<ReceptorParitySnapshot>(_numReceptors);
+        int index = 0;
+        foreach (List<Receptor> group in _receptorGroups)
+        {
+            foreach (Receptor receptor in group)
+            {
+                receptors.Add(new(
+                    index++,
+                    receptor.IDOrgan,
+                    receptor.IDTissue,
+                    receptor.IDLocus,
+                    receptor.Chem,
+                    receptor.Threshold,
+                    receptor.Nominal,
+                    receptor.Gain,
+                    receptor.Effect,
+                    receptor.isClockRateReceptor));
+            }
+        }
+
+        return receptors;
+    }
+
+    public IReadOnlyList<EmitterParitySnapshot> CreateEmitterParitySnapshots()
+    {
+        var emitters = new List<EmitterParitySnapshot>(_numEmitters);
+        for (int i = 0; i < _numEmitters; i++)
+        {
+            Emitter emitter = _emitters[i];
+            emitters.Add(new(
+                i,
+                emitter.IDOrgan,
+                emitter.IDTissue,
+                emitter.IDLocus,
+                emitter.Chem,
+                emitter.Threshold,
+                emitter.bioTickRate,
+                emitter.Gain,
+                emitter.Effect));
+        }
+
+        return emitters;
+    }
+
     public OrganDefinitionView CreateDefinitionView(int index)
         => new(index, CreateSnapshot(index), GetReactionDefinitionViews());
 

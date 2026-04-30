@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CreaturesReborn.Sim.Save;
 using CreaturesReborn.Sim.Genome;
 
@@ -370,6 +371,56 @@ public sealed class Biochemistry
 
     public OrganDefinitionView GetOrganDefinitionView(int i)
         => _organs[i].CreateDefinitionView(i);
+
+    public BiochemistryParityTrace CreateParityTrace()
+    {
+        var halfLives = new List<HalfLifeParitySnapshot>(BiochemConst.NUMCHEM);
+        for (int chem = 0; chem < BiochemConst.NUMCHEM; chem++)
+        {
+            ChemicalDefinition definition = ChemicalCatalog.Get(chem);
+            halfLives.Add(new HalfLifeParitySnapshot(
+                chem,
+                definition.DisplayName,
+                _decayRates[chem]));
+        }
+
+        var organs = new List<OrganParitySnapshot>(_numOrgans);
+        for (int i = 0; i < _numOrgans; i++)
+        {
+            Organ organ = _organs[i];
+            organs.Add(new OrganParitySnapshot(
+                organ.CreateSnapshot(i),
+                organ.CreateReactionParitySnapshots(),
+                organ.CreateReceptorParitySnapshots(),
+                organ.CreateEmitterParitySnapshots()));
+        }
+
+        var neuroEmitters = new List<NeuroEmitterParitySnapshot>(_numNeuroEmitters);
+        for (int i = 0; i < _numNeuroEmitters; i++)
+        {
+            NeuroEmitter neuroEmitter = _neuroEmitters[i];
+            var emissions = new List<ChemicalEmissionParitySnapshot>(NeuroEmitter.NumChemEmissions);
+            for (int emission = 0; emission < NeuroEmitter.NumChemEmissions; emission++)
+            {
+                emissions.Add(new ChemicalEmissionParitySnapshot(
+                    neuroEmitter.ChemEmissions[emission].ChemId,
+                    neuroEmitter.ChemEmissions[emission].Amount));
+            }
+
+            neuroEmitters.Add(new NeuroEmitterParitySnapshot(
+                i,
+                neuroEmitter.bioTickRate,
+                emissions));
+        }
+
+        return new BiochemistryParityTrace(
+            CompatibilityMode,
+            BiochemConst.NUMCHEM,
+            _chemConcs.Count(value => value != 0.0f),
+            halfLives,
+            organs,
+            neuroEmitters);
+    }
 
     // -------------------------------------------------------------------------
     // Locus table
