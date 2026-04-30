@@ -151,6 +151,11 @@ public class GodotRuntimeSourceTests
         Assert.Contains("BuildBrainModeHeader", overlay);
         Assert.Contains("SetBrainMapMode", overlay);
         Assert.Contains("SetShowTracts", overlay);
+        Assert.Contains("BuildGeneModeHeader", overlay);
+        Assert.Contains("SetGeneEditorMode", overlay);
+        Assert.Contains("Button(\"Typed Editor\", () => SetGeneEditorMode(1)", overlay);
+        Assert.Contains("Button(\"Raw Payload\", () => SetGeneEditorMode(2)", overlay);
+        Assert.DoesNotContain("genePane.AddChild(SegmentedHeader(\"Genes\", \"Typed Editor\", \"Raw Payload\"))", overlay);
         Assert.Contains("PauseMonitor", overlay);
         Assert.Contains("ResumeMonitor", overlay);
         Assert.Contains("▁▂▃▄▅▆▇█", overlay);
@@ -185,6 +190,8 @@ public class GodotRuntimeSourceTests
         Assert.Contains("FormatValidationSummary", overlay);
         Assert.Contains("FormatValidationFooter", overlay);
         Assert.Contains("_footerValidationLabel", overlay);
+        Assert.Contains("LobeSlots[index % LobeSlots.Length]", overlay);
+        Assert.DoesNotContain("FallbackSlot(index - LobeSlots.Length", overlay);
         Assert.DoesNotContain("? \"[color=green]No validation issues.[/color]\"", overlay);
         Assert.DoesNotContain("VALIDATION   42 OK    2 WARN    1 ERR", overlay);
         Assert.DoesNotContain("id={gene.Id} gen={gene.Generation} bytes={gene.Length}", overlay);

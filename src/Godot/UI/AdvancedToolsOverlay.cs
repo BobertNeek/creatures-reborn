@@ -40,6 +40,9 @@ public partial class AdvancedToolsOverlay : Control
     private Button _resumeButton = null!;
     private Button _lobesButton = null!;
     private Button _tractsButton = null!;
+    private Button _genesButton = null!;
+    private Button _typedTabButton = null!;
+    private Button _rawTabButton = null!;
     private BrainMapView _brainMap = null!;
     private RichTextLabel _brainTables = null!;
     private RichTextLabel _brainCharts = null!;
@@ -310,7 +313,7 @@ public partial class AdvancedToolsOverlay : Control
         };
         genePane.SizeFlagsHorizontal = SizeFlags.Fill;
         genePane.AddThemeConstantOverride("separation", 6);
-        genePane.AddChild(SegmentedHeader("Genes", "Typed Editor", "Raw Payload"));
+        genePane.AddChild(BuildGeneModeHeader());
         genePane.AddChild(BuildGeneFilters());
         _geneList = new ItemList
         {
@@ -328,6 +331,24 @@ public partial class AdvancedToolsOverlay : Control
         editorPane.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         box.AddChild(editorPane);
         return box;
+    }
+
+    private Control BuildGeneModeHeader()
+    {
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", 3);
+
+        _genesButton = Button("Genes", () => SetGeneEditorMode(0), new Vector2(62, 24));
+        _typedTabButton = Button("Typed Editor", () => SetGeneEditorMode(1), new Vector2(62, 24));
+        _rawTabButton = Button("Raw Payload", () => SetGeneEditorMode(2), new Vector2(62, 24));
+        _genesButton.AddThemeFontSizeOverride("font_size", 9);
+        _typedTabButton.AddThemeFontSizeOverride("font_size", 9);
+        _rawTabButton.AddThemeFontSizeOverride("font_size", 9);
+        row.AddChild(_genesButton);
+        row.AddChild(_typedTabButton);
+        row.AddChild(_rawTabButton);
+        UpdateGeneModeButtons(0);
+        return row;
     }
 
     private Control BuildRightRail()
@@ -946,6 +967,26 @@ public partial class AdvancedToolsOverlay : Control
         SetStatus(showTracts ? "Brain map showing tracts." : "Brain map showing lobes.");
     }
 
+    private void SetGeneEditorMode(int mode)
+    {
+        UpdateGeneModeButtons(mode);
+        switch (mode)
+        {
+            case 1:
+                _typedFieldName?.GrabFocus();
+                SetStatus("Genetics Kit focused typed editor.");
+                break;
+            case 2:
+                _rawEditor?.GrabFocus();
+                SetStatus("Genetics Kit focused raw payload editor.");
+                break;
+            default:
+                _geneList?.GrabFocus();
+                SetStatus("Genetics Kit focused gene list.");
+                break;
+        }
+    }
+
     private void UpdatePauseButtons()
     {
         if (_pauseButton == null || _resumeButton == null)
@@ -962,6 +1003,16 @@ public partial class AdvancedToolsOverlay : Control
 
         StyleButton(_lobesButton, active: !_showTractMode);
         StyleButton(_tractsButton, active: _showTractMode);
+    }
+
+    private void UpdateGeneModeButtons(int mode)
+    {
+        if (_genesButton == null || _typedTabButton == null || _rawTabButton == null)
+            return;
+
+        StyleButton(_genesButton, active: mode == 0);
+        StyleButton(_typedTabButton, active: mode == 1);
+        StyleButton(_rawTabButton, active: mode == 2);
     }
 
     private void AdjustSampleInterval(float delta)
@@ -1332,7 +1383,7 @@ public partial class AdvancedToolsOverlay : Control
 
         private static Rect2 ResolveLobeRect(BrainLobeMonitorRow lobe, int index, int total, Vector2 available)
         {
-            Rect2 design = index < LobeSlots.Length ? LobeSlots[index] : FallbackSlot(index - LobeSlots.Length, total);
+            Rect2 design = LobeSlots[index % LobeSlots.Length];
             float xScale = Math.Max(0.1f, (available.X - 18.0f) / 520.0f);
             float yScale = Math.Max(0.1f, (available.Y - 18.0f) / 330.0f);
             var offset = new Vector2(9, 9);
@@ -1341,16 +1392,6 @@ public partial class AdvancedToolsOverlay : Control
             return new Rect2(
                 offset + new Vector2(design.Position.X * xScale, design.Position.Y * yScale),
                 new Vector2(width, height));
-        }
-
-        private static Rect2 FallbackSlot(int index, int total)
-        {
-            int col = index % 5;
-            int row = index / 5;
-            float y = 238 + row * 44;
-            if (y > 286)
-                y = 286 - (total % 3) * 3;
-            return new Rect2(18 + col * 96, y, 78, 40);
         }
 
         private static float ResolveCellHeat(BrainLobeMonitorRow lobe, IReadOnlyList<BrainNeuronMonitorRow> sampled, int cellIndex, int cellCount)
@@ -1376,21 +1417,30 @@ public partial class AdvancedToolsOverlay : Control
 
         private static readonly Rect2[] LobeSlots =
         [
-            new(new Vector2(16, 34), new Vector2(68, 52)),
-            new(new Vector2(98, 28), new Vector2(108, 76)),
-            new(new Vector2(224, 28), new Vector2(108, 76)),
-            new(new Vector2(350, 28), new Vector2(72, 58)),
-            new(new Vector2(420, 92), new Vector2(78, 70)),
-            new(new Vector2(24, 116), new Vector2(76, 58)),
-            new(new Vector2(110, 126), new Vector2(76, 70)),
-            new(new Vector2(194, 126), new Vector2(76, 70)),
-            new(new Vector2(284, 126), new Vector2(108, 70)),
-            new(new Vector2(38, 218), new Vector2(72, 56)),
-            new(new Vector2(72, 286), new Vector2(76, 48)),
-            new(new Vector2(154, 270), new Vector2(88, 62)),
-            new(new Vector2(274, 270), new Vector2(116, 62)),
-            new(new Vector2(404, 270), new Vector2(92, 62)),
-            new(new Vector2(430, 198), new Vector2(72, 56)),
+            new(new Vector2(16, 28), new Vector2(58, 52)),
+            new(new Vector2(92, 24), new Vector2(84, 62)),
+            new(new Vector2(188, 24), new Vector2(84, 62)),
+            new(new Vector2(284, 24), new Vector2(58, 52)),
+            new(new Vector2(360, 78), new Vector2(72, 56)),
+            new(new Vector2(24, 106), new Vector2(62, 54)),
+            new(new Vector2(100, 106), new Vector2(72, 58)),
+            new(new Vector2(186, 106), new Vector2(62, 54)),
+            new(new Vector2(260, 106), new Vector2(88, 58)),
+            new(new Vector2(390, 172), new Vector2(58, 48)),
+            new(new Vector2(28, 194), new Vector2(64, 48)),
+            new(new Vector2(106, 194), new Vector2(72, 48)),
+            new(new Vector2(192, 194), new Vector2(72, 48)),
+            new(new Vector2(278, 194), new Vector2(88, 48)),
+            new(new Vector2(20, 256), new Vector2(62, 46)),
+            new(new Vector2(96, 256), new Vector2(72, 46)),
+            new(new Vector2(182, 256), new Vector2(78, 46)),
+            new(new Vector2(274, 256), new Vector2(74, 46)),
+            new(new Vector2(360, 256), new Vector2(70, 46)),
+            new(new Vector2(446, 28), new Vector2(58, 52)),
+            new(new Vector2(452, 104), new Vector2(58, 52)),
+            new(new Vector2(452, 180), new Vector2(58, 52)),
+            new(new Vector2(446, 256), new Vector2(58, 46)),
+            new(new Vector2(214, 256), new Vector2(50, 46)),
         ];
     }
 }
