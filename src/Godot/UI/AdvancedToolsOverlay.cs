@@ -34,6 +34,7 @@ public partial class AdvancedToolsOverlay : Control
 
     private Label _targetLabel = null!;
     private Label _statusLabel = null!;
+    private Label _footerValidationLabel = null!;
     private TabContainer _tabs = null!;
     private Button _pauseButton = null!;
     private Button _resumeButton = null!;
@@ -116,8 +117,7 @@ public partial class AdvancedToolsOverlay : Control
         root.AddChild(BuildToolbar());
         root.AddChild(BuildTabs());
         SelectStartupTab();
-        _statusLabel = Label("Ready.", 10);
-        root.AddChild(_statusLabel);
+        root.AddChild(BuildCommandFooter());
     }
 
     public override void _ExitTree()
@@ -202,9 +202,9 @@ public partial class AdvancedToolsOverlay : Control
             SizeFlagsVertical = SizeFlags.ExpandFill,
         };
         workbench.AddThemeConstantOverride("separation", 8);
-        workbench.AddChild(Section("Brain Monitor", BuildBrainWorkbench(), new Vector2(410, 560)));
-        workbench.AddChild(Section("Genetics Kit", BuildGeneticsWorkbench(), new Vector2(590, 560)));
-        workbench.AddChild(Section("Validation", BuildRightRail(), new Vector2(190, 560)));
+        workbench.AddChild(Section("Brain Monitor", BuildBrainWorkbench(), new Vector2(540, 560)));
+        workbench.AddChild(Section("Genetics Kit", BuildGeneticsWorkbench(), new Vector2(475, 560)));
+        workbench.AddChild(Section("Validation", BuildRightRail(), new Vector2(185, 560)));
         shell.AddChild(workbench);
         return shell;
     }
@@ -223,7 +223,7 @@ public partial class AdvancedToolsOverlay : Control
         mapRow.AddThemeConstantOverride("separation", 6);
         _brainMap = new BrainMapView
         {
-            CustomMinimumSize = new Vector2(292, 300),
+            CustomMinimumSize = new Vector2(418, 300),
             SizeFlagsHorizontal = SizeFlags.ExpandFill,
             SizeFlagsVertical = SizeFlags.ExpandFill,
         };
@@ -236,12 +236,49 @@ public partial class AdvancedToolsOverlay : Control
 
         var lower = new HBoxContainer();
         lower.AddThemeConstantOverride("separation", 6);
-        _brainCharts = RichText(new Vector2(210, 190));
-        _brainTables = RichText(new Vector2(160, 190));
+        _brainCharts = RichText(new Vector2(300, 190));
+        _brainTables = RichText(new Vector2(205, 190));
         lower.AddChild(_brainCharts);
         lower.AddChild(_brainTables);
         box.AddChild(lower);
         return box;
+    }
+
+    private Control BuildCommandFooter()
+    {
+        var panel = new Panel
+        {
+            CustomMinimumSize = new Vector2(0, 44),
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+        };
+        panel.AddThemeStyleboxOverride("panel", PanelStyle(new Color(0.018f, 0.036f, 0.040f, 0.98f), border: true));
+
+        var row = new HBoxContainer();
+        row.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        row.OffsetLeft = 10;
+        row.OffsetTop = 6;
+        row.OffsetRight = -10;
+        row.OffsetBottom = -6;
+        row.AddThemeConstantOverride("separation", 8);
+        panel.AddChild(row);
+
+        var tools = new VBoxContainer { CustomMinimumSize = new Vector2(290, 0) };
+        tools.AddThemeConstantOverride("separation", 1);
+        tools.AddChild(Label("Tools", 10));
+        _statusLabel = Label("Ready.", 9);
+        tools.AddChild(_statusLabel);
+        row.AddChild(tools);
+
+        row.AddChild(Button("UNDO", Undo, new Vector2(92, 28)));
+        row.AddChild(Button("REDO", Redo, new Vector2(92, 28)));
+        row.AddChild(Button("REVERT ALL", RevertAll, new Vector2(120, 28)));
+
+        var spacer = new Control { SizeFlagsHorizontal = SizeFlags.ExpandFill };
+        row.AddChild(spacer);
+        _footerValidationLabel = Label("VALIDATION   -- OK    -- WARN    -- ERR", 10);
+        row.AddChild(_footerValidationLabel);
+        row.AddChild(Label("Build: 0.9.0-dev   |   Session: 01:23:45", 9));
+        return panel;
     }
 
     private Control BuildBrainModeHeader()
@@ -268,15 +305,16 @@ public partial class AdvancedToolsOverlay : Control
 
         var genePane = new VBoxContainer
         {
-            CustomMinimumSize = new Vector2(218, 0),
+            CustomMinimumSize = new Vector2(198, 0),
             SizeFlagsVertical = SizeFlags.ExpandFill,
         };
+        genePane.SizeFlagsHorizontal = SizeFlags.Fill;
         genePane.AddThemeConstantOverride("separation", 6);
         genePane.AddChild(SegmentedHeader("Genes", "Typed Editor", "Raw Payload"));
         genePane.AddChild(BuildGeneFilters());
         _geneList = new ItemList
         {
-            CustomMinimumSize = new Vector2(218, 330),
+            CustomMinimumSize = new Vector2(198, 330),
             SizeFlagsVertical = SizeFlags.ExpandFill,
         };
         _geneList.ItemSelected += OnGeneSelected;
@@ -286,7 +324,7 @@ public partial class AdvancedToolsOverlay : Control
         box.AddChild(genePane);
 
         var editorPane = BuildGeneEditor();
-        editorPane.CustomMinimumSize = new Vector2(210, 0);
+        editorPane.CustomMinimumSize = new Vector2(222, 0);
         editorPane.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         box.AddChild(editorPane);
         return box;
@@ -377,18 +415,18 @@ public partial class AdvancedToolsOverlay : Control
         _familyFilter = new OptionButton();
         foreach (string label in new[] { "All", "Brain", "Biochemistry", "Creature", "Organ" })
             _familyFilter.AddItem(label);
-        _familyFilter.CustomMinimumSize = new Vector2(84, 0);
+        _familyFilter.CustomMinimumSize = new Vector2(76, 0);
         _familyFilter.ItemSelected += _ => RefreshGeneList();
         row.AddChild(_familyFilter);
-        _geneSearch = new LineEdit { PlaceholderText = "search", CustomMinimumSize = new Vector2(118, 0) };
+        _geneSearch = new LineEdit { PlaceholderText = "search", CustomMinimumSize = new Vector2(102, 0) };
         _geneSearch.TextChanged += _ => RefreshGeneList();
         row.AddChild(_geneSearch);
         box.AddChild(row);
 
         var flags = new HBoxContainer();
-        _mutableOnly = Check("Mutable", RefreshGeneList);
-        _sexLinkedOnly = Check("Sex linked", RefreshGeneList);
-        _invalidOnly = Check("Invalid", RefreshGeneList);
+        _mutableOnly = Check("Mut", RefreshGeneList);
+        _sexLinkedOnly = Check("Sex", RefreshGeneList);
+        _invalidOnly = Check("Bad", RefreshGeneList);
         flags.AddChild(_mutableOnly);
         flags.AddChild(_sexLinkedOnly);
         flags.AddChild(_invalidOnly);
@@ -449,8 +487,8 @@ public partial class AdvancedToolsOverlay : Control
         var sexRow = new HBoxContainer();
         sexRow.AddChild(_flagMale);
         sexRow.AddChild(_flagFemale);
-        sexRow.AddChild(Button("Apply", ApplyHeaderEdit, new Vector2(64, 28)));
         box.AddChild(sexRow);
+        box.AddChild(Button("Apply Header", ApplyHeaderEdit, new Vector2(180, 28)));
 
         _typedEditor = TextEditor(new Vector2(210, 105), readOnly: true);
         box.AddChild(Label("Typed Editor", 10, bold: true));
@@ -576,9 +614,20 @@ public partial class AdvancedToolsOverlay : Control
             if (_invalidOnly.ButtonPressed && !invalidOffsets.Contains(gene.Offset))
                 continue;
 
-            _geneList.AddItem($"{i:D3} {gene.DisplayName} id={gene.Id} gen={gene.Generation} bytes={gene.Length}");
+            _geneList.AddItem(FormatGeneListItem(i, gene));
             _geneList.SetItemMetadata(_geneList.ItemCount - 1, i);
         }
+    }
+
+    private static string FormatGeneListItem(int index, GeneRecord gene)
+    {
+        string displayName = gene.DisplayName
+            .Replace("Biochemistry/", "Bio/", StringComparison.Ordinal)
+            .Replace("Creature/", "Creature/", StringComparison.Ordinal)
+            .Replace("Organ/", "Org/", StringComparison.Ordinal);
+        if (displayName.Length > 22)
+            displayName = displayName[..19] + "...";
+        return $"{index:D3} {displayName} {gene.Length}b";
     }
 
     private void OnGeneSelected(long itemIndex)
@@ -694,6 +743,12 @@ public partial class AdvancedToolsOverlay : Control
         AfterEdit("Redo.");
     }
 
+    private void RevertAll()
+    {
+        LoadGenomeSession(_selectedCreatureResolver?.Invoke());
+        SetStatus("Reverted staged genetics edits.");
+    }
+
     private void AfterEdit(string message)
     {
         RefreshGeneList();
@@ -708,9 +763,9 @@ public partial class AdvancedToolsOverlay : Control
             return;
 
         IReadOnlyList<GeneValidationIssue> validation = _genomeSession.Validate();
-        _validationSummary.Text = validation.Count == 0
-            ? "[color=green]No validation issues.[/color]"
-            : string.Join('\n', validation.Take(12).Select(issue => $"[color={(issue.Severity == GeneValidationSeverity.Error ? "red" : "yellow")}]{issue.Code}[/color] @{issue.Offset}: {issue.Message}"));
+        _validationSummary.Text = FormatValidationSummary(validation, _genomeSession.Document.WorkingRecords.Count);
+        if (_footerValidationLabel != null)
+            _footerValidationLabel.Text = FormatValidationFooter(validation, _genomeSession.Document.WorkingRecords.Count);
 
         GenomeDiff diff = _genomeSession.CreateDiff();
         _diffSummary.Text = diff.Records.Count == 0
@@ -727,6 +782,39 @@ public partial class AdvancedToolsOverlay : Control
         foreach (PhenotypeSection section in phenotype.Sections.Values)
             sb.AppendLine($"{section.Name}: {string.Join("; ", section.Lines.Skip(1).Take(4))}");
         _genomeSummary.Text = sb.ToString();
+    }
+
+    private static string FormatValidationSummary(IReadOnlyList<GeneValidationIssue> validation, int geneCount)
+    {
+        int errors = validation.Count(issue => issue.Severity == GeneValidationSeverity.Error);
+        int warnings = validation.Count - errors;
+        int valid = Math.Max(0, geneCount - validation.Count);
+        var sb = new StringBuilder();
+        sb.AppendLine($"[b]VALID[/b] [color=#5fe270]{valid}[/color]    [b]WARN[/b] [color=#ffd33d]{warnings}[/color]    [b]ERR[/b] [color=#ff5252]{errors}[/color]");
+        sb.AppendLine("[b]Details[/b]");
+        if (validation.Count == 0)
+        {
+            sb.AppendLine("[color=#5fe270]ok[/color] All gene sizes valid");
+            sb.AppendLine("[color=#5fe270]ok[/color] No duplicate gene IDs");
+            sb.AppendLine("[color=#5fe270]ok[/color] Payloads decoded or raw-safe");
+            return sb.ToString();
+        }
+
+        foreach (GeneValidationIssue issue in validation.Take(7))
+        {
+            string color = issue.Severity == GeneValidationSeverity.Error ? "#ff5252" : "#ffd33d";
+            sb.AppendLine($"[color={color}]{issue.Code}[/color] @{issue.Offset}: {issue.Message}");
+        }
+
+        return sb.ToString();
+    }
+
+    private static string FormatValidationFooter(IReadOnlyList<GeneValidationIssue> validation, int geneCount)
+    {
+        int errors = validation.Count(issue => issue.Severity == GeneValidationSeverity.Error);
+        int warnings = validation.Count - errors;
+        int valid = Math.Max(0, geneCount - validation.Count);
+        return $"VALIDATION   {valid} OK    {warnings} WARN    {errors} ERR";
     }
 
     private void ImportGenome()
@@ -1008,7 +1096,7 @@ public partial class AdvancedToolsOverlay : Control
         {
             var label = Label(labels[i], 10);
             label.HorizontalAlignment = HorizontalAlignment.Center;
-            label.CustomMinimumSize = new Vector2(labels.Length > 2 ? 76 : 112, 24);
+            label.CustomMinimumSize = new Vector2(labels.Length > 2 ? 62 : 112, 24);
             label.AddThemeStyleboxOverride("normal", PanelStyle(
                 i == 0 ? new Color(0.035f, 0.20f, 0.24f, 0.95f) : new Color(0.035f, 0.050f, 0.056f, 0.95f),
                 border: true));
@@ -1182,8 +1270,8 @@ public partial class AdvancedToolsOverlay : Control
                 DrawString(ThemeDB.FallbackFont, rect.Position + new Vector2(5, 25), $"{lobe.Width}x{lobe.Height}", HorizontalAlignment.Left, -1, 8, new Color(0.60f, 0.72f, 0.74f));
                 centers[lobe.Token] = rect.GetCenter();
 
-                int cols = Math.Clamp(lobe.Width, 4, 8);
-                int rows = Math.Clamp(lobe.Height, 3, 6);
+                int cols = Math.Clamp(lobe.Width, 4, 7);
+                int rows = Math.Clamp(lobe.Height, 3, 5);
                 Vector2 cell = new(Math.Max(3, (rect.Size.X - 12) / cols), Math.Max(3, (rect.Size.Y - 34) / rows));
                 BrainNeuronMonitorRow[] sampled = neuronsByLobe.TryGetValue(lobe.Index, out BrainNeuronMonitorRow[]? rowsForLobe)
                     ? rowsForLobe

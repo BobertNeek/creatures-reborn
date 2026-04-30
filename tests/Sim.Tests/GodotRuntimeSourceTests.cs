@@ -161,6 +161,36 @@ public class GodotRuntimeSourceTests
     }
 
     [Fact]
+    public void AdvancedToolsOverlay_PreservesPolishedBlueprintProportions()
+    {
+        string overlay = File.ReadAllText(RepoPath("src", "Godot", "UI", "AdvancedToolsOverlay.cs"));
+
+        Assert.Contains("BuildCommandFooter", overlay);
+        Assert.Contains("new Vector2(540, 560)", overlay);
+        Assert.Contains("new Vector2(475, 560)", overlay);
+        Assert.Contains("new Vector2(185, 560)", overlay);
+        Assert.Contains("CustomMinimumSize = new Vector2(418, 300)", overlay);
+        Assert.Contains("RichText(new Vector2(300, 190))", overlay);
+        Assert.Contains("RichText(new Vector2(205, 190))", overlay);
+        Assert.Contains("CustomMinimumSize = new Vector2(198, 0)", overlay);
+        Assert.Contains("genePane.SizeFlagsHorizontal = SizeFlags.Fill", overlay);
+        Assert.Contains("editorPane.CustomMinimumSize = new Vector2(222, 0)", overlay);
+        Assert.Contains("FormatGeneListItem", overlay);
+        Assert.Contains("Check(\"Mut\"", overlay);
+        Assert.Contains("labels.Length > 2 ? 62 : 112", overlay);
+        Assert.Contains("Button(\"Apply Header\", ApplyHeaderEdit", overlay);
+        Assert.DoesNotContain("sexRow.AddChild(Button(\"Apply\"", overlay);
+        Assert.Contains("Math.Clamp(lobe.Width, 4, 7)", overlay);
+        Assert.Contains("Math.Clamp(lobe.Height, 3, 5)", overlay);
+        Assert.Contains("FormatValidationSummary", overlay);
+        Assert.Contains("FormatValidationFooter", overlay);
+        Assert.Contains("_footerValidationLabel", overlay);
+        Assert.DoesNotContain("? \"[color=green]No validation issues.[/color]\"", overlay);
+        Assert.DoesNotContain("VALIDATION   42 OK    2 WARN    1 ERR", overlay);
+        Assert.DoesNotContain("id={gene.Id} gen={gene.Generation} bytes={gene.Length}", overlay);
+    }
+
+    [Fact]
     public void DebugScreenshot_UsesFallbackBeforeReadingViewportTextureInHeadlessMode()
     {
         string screenshotSource = File.ReadAllText(RepoPath("src", "Godot", "DebugScreenshot.cs"));
