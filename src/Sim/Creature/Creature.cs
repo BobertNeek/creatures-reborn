@@ -31,9 +31,13 @@ public sealed class Creature
     public  BrainCls     Brain        { get; }
     public  MotorFaculty Motor        { get; }
     public  GenomeStimulusTable Stimuli { get; private set; }
+    public  CreatureVocabulary Vocabulary { get; } = new();
+    public  CreatureSpatialMemory SpatialMemory { get; } = new();
 
     private readonly IRng _rng;
     private int _ageTickAccumulator;
+    private CreatureSpeechSuggestion? _pendingSpeechSuggestion;
+    private int _pendingSpeechTicks;
 
     // Additional drive inputs contributed by the Godot layer (wall aversion, home smell,
     // social proximity, etc.).  Mixed into FeedDriveInputs each tick then reset to zero.
@@ -69,6 +73,7 @@ public sealed class Creature
 
         // Motor sits on top of the brain
         Motor = new MotorFaculty(Brain);
+        Vocabulary.SeedDefaultVocab();
 
         // Process all instinct genes (c2e REM-sleep birth phase).
         // Instincts do initial reinforcement of the driv→decn tract weights so the
@@ -237,6 +242,34 @@ public sealed class Creature
     public void InjectChemical(int idx, float amount)
         => Biochemistry.AddChemical(idx, amount);
 
+    public CreatureSpeechSuggestion HearSpeech(string text, float strength = 0.75f, int durationTicks = 40)
+    {
+        CreatureSpeechSuggestion suggestion = CreatureSpeechParser.Parse(text, Vocabulary);
+        if (suggestion.IsRecognized)
+        {
+            _pendingSpeechSuggestion = suggestion with
+            {
+                Confidence = Math.Clamp(Math.Max(suggestion.Confidence, strength), 0.0f, 1.0f),
+            };
+            _pendingSpeechTicks = Math.Max(1, durationTicks);
+        }
+
+        return suggestion;
+    }
+
+    public void ObserveObjectClass(
+        int objectCategory,
+        string noun,
+        float x,
+        float y,
+        int roomId,
+        int tick,
+        float reinforcement = 0.35f)
+    {
+        Vocabulary.LearnNounAlias(noun, objectCategory, reinforcement * 0.5f);
+        SpatialMemory.Observe(objectCategory, noun, x, y, roomId, tick, reinforcement);
+    }
+
     public CreatureEnvironmentResponse ApplyEnvironment(Room room, BiochemistryTrace? trace = null)
         => ApplyEnvironment(CreatureEnvironmentContext.FromRoom(room), trace);
 
@@ -386,6 +419,19 @@ public sealed class Creature
             float combined = Math.Clamp(biochem + _additionalDriveInputs[d], 0.0f, 1.0f);
             Brain.SetInput(drivToken, d, combined);
             _additionalDriveInputs[d] = 0.0f;
+        }
+
+        if (_pendingSpeechSuggestion is { } suggestion)
+        {
+            float strength = suggestion.Confidence;
+            if (suggestion.VerbId is int verbId)
+                Motor.SuggestVerb(verbId, strength);
+            if (suggestion.ObjectCategory is int nounId)
+                Motor.SuggestNoun(nounId, strength);
+
+            _pendingSpeechTicks--;
+            if (_pendingSpeechTicks <= 0)
+                _pendingSpeechSuggestion = null;
         }
     }
 

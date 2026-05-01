@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using Godot;
+using CreaturesReborn.Sim.Agent;
 using CreaturesReborn.Sim.Creature;
 using CreaturesReborn.Sim.Util;
 
@@ -22,6 +23,10 @@ public partial class IncubatorNode : Node3D
 {
     [Export] public float WarmUpTime = 8.0f;   // seconds to warm the egg
     [Export] public string DefaultGenomePath = "res://data/genomes/starter.gen";
+
+    public AgentArchetype AgentArchetype => AgentCatalog.Incubator;
+    public AgentClassifier Classifier => AgentArchetype.Classifier;
+    public int ObjectCategory => AgentArchetype.ObjectCategory;
 
     // ── State ───────────────────────────────────────────────────────────────
     private bool  _hasEgg;
@@ -190,5 +195,9 @@ public partial class IncubatorNode : Node3D
         };
         _heatGlow.Position = new Vector3(0, 0.15f, 0);
         AddChild(_heatGlow);
+
+        Sprite3D? sprite = AgentSpriteFactory.Create(AgentArchetype, 0.95f);
+        if (sprite != null)
+            AddChild(sprite);
     }
 }

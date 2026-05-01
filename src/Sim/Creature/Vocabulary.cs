@@ -83,12 +83,12 @@ public sealed class CreatureVocabulary
     /// <summary>Teach the creature a word (or reinforce existing knowledge).</summary>
     public void Learn(string word, bool isVerb, int id, float reinforcement = 0.2f)
     {
-        word = word.ToLowerInvariant();
+        word = Normalize(word);
         if (_words.TryGetValue(word, out var existing))
         {
             // Reinforce existing knowledge
             float newConf = System.Math.Min(existing.Confidence + reinforcement, 1.0f);
-            _words[word] = new VocabEntry(isVerb, id, newConf);
+            _words[word] = new VocabEntry(existing.IsVerb, existing.Id, newConf);
         }
         else
         {
@@ -96,10 +96,16 @@ public sealed class CreatureVocabulary
         }
     }
 
+    public void LearnNounAlias(string word, int objectCategory, float reinforcement = 0.2f)
+        => Learn(word, false, objectCategory, reinforcement);
+
+    public void LearnVerbAlias(string word, int verbId, float reinforcement = 0.2f)
+        => Learn(word, true, verbId, reinforcement);
+
     /// <summary>Look up a word. Returns null if unknown.</summary>
     public VocabEntry? Lookup(string word)
     {
-        word = word.ToLowerInvariant();
+        word = Normalize(word);
         return _words.TryGetValue(word, out var entry) ? entry : null;
     }
 
@@ -140,4 +146,7 @@ public sealed class CreatureVocabulary
         Learn("left",      true, VerbId.TravelWest,  0.3f);
         Learn("right",     true, VerbId.TravelEast,  0.3f);
     }
+
+    private static string Normalize(string word)
+        => word.Trim().ToLowerInvariant();
 }

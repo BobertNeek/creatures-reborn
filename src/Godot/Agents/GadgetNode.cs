@@ -34,8 +34,10 @@ public partial class GadgetNode : Node3D
     public AgentArchetype AgentArchetype => Type switch
     {
         GadgetType.EmpathicVendor => AgentCatalog.EmpathicVendor,
-        GadgetType.TrainingDummy => AgentCatalog.Toy,
-        GadgetType.RobotToy => AgentCatalog.Toy,
+        GadgetType.LearningMachine => AgentCatalog.LearningMachine,
+        GadgetType.TrainingDummy => AgentCatalog.TrainingDummy,
+        GadgetType.RobotToy => AgentCatalog.RobotToy,
+        GadgetType.Musicola => AgentCatalog.Musicola,
         _ => AgentCatalog.Machine,
     };
 
@@ -210,6 +212,10 @@ public partial class GadgetNode : Node3D
                 BuildMachineVisual(new Color(0.8f, 0.5f, 0.3f));
                 break;
         }
+
+        Sprite3D? sprite = AgentSpriteFactory.Create(AgentArchetype, 1.15f);
+        if (sprite != null)
+            _bodyNode.AddChild(sprite);
 
         AddChild(_bodyNode);
     }

@@ -34,6 +34,9 @@ public partial class FoodNode : Node3D
     public override void _Ready()
     {
         _visual = BuildVisual(FoodKind);
+        Sprite3D? sprite = AgentSpriteFactory.Create(AgentArchetype, 0.75f);
+        if (sprite != null)
+            _visual.AddChild(sprite);
         AddChild(_visual);
     }
 

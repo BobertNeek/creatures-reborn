@@ -33,4 +33,24 @@ public class AgentCatalogTests
         Assert.Equal(AgentFamily.Creature, AgentCatalog.Norn.Classifier.Family);
         Assert.Equal(AgentFamily.Pointer, AgentCatalog.Hand.Classifier.Family);
     }
+
+    [Fact]
+    public void C3DsInspiredAgents_HaveVocabularyNounsAndSpriteTokens()
+    {
+        AgentArchetype[] archetypes =
+        {
+            AgentCatalog.EmpathicVendor,
+            AgentCatalog.LearningMachine,
+            AgentCatalog.Musicola,
+            AgentCatalog.TrainingDummy,
+            AgentCatalog.RobotToy,
+            AgentCatalog.Incubator,
+        };
+
+        foreach (AgentArchetype archetype in archetypes)
+        {
+            Assert.False(string.IsNullOrWhiteSpace(archetype.Noun));
+            Assert.False(string.IsNullOrWhiteSpace(archetype.SpriteToken));
+        }
+    }
 }

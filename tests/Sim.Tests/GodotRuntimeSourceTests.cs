@@ -49,6 +49,29 @@ public class GodotRuntimeSourceTests
     }
 
     [Fact]
+    public void PointerAgent_RightClickTapTicklesAndHoldLeadsCreatures()
+    {
+        string pointerSource = File.ReadAllText(RepoPath("src", "Godot", "PointerAgent.cs"));
+        string creatureSource = File.ReadAllText(RepoPath("src", "Godot", "CreatureNode.cs"));
+
+        Assert.Contains("LeadHoldThreshold", pointerSource);
+        Assert.Contains("BeginLeadingCreature", pointerSource);
+        Assert.Contains("EndLeadingCreature", pointerSource);
+        Assert.Contains("SetForcedWalkTarget", creatureSource);
+        Assert.Contains("ObserveNearbyAgents", creatureSource);
+    }
+
+    [Fact]
+    public void GameGui_ProvidesSpeechSuggestionInputForSelectedCreature()
+    {
+        string gameGui = File.ReadAllText(RepoPath("src", "Godot", "UI", "GameGui.cs"));
+
+        Assert.Contains("_speechInput", gameGui);
+        Assert.Contains("SubmitSpeechSuggestion", gameGui);
+        Assert.Contains("ApplySpeechSuggestion", gameGui);
+    }
+
+    [Fact]
     public void NornRuntime_ProjectsWalkStepsOntoWalkableTreehouseSurfaces()
     {
         string spriteSource = File.ReadAllText(RepoPath("src", "Godot", "NornBillboardSprite.cs"));

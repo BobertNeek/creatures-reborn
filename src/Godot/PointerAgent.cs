@@ -26,10 +26,15 @@ public partial class PointerAgent : Node3D
     private CreatureNode? _selectedCreature;
     private CreatureNode? _carriedCreature;
     private FoodNode?     _carriedFood;
+    private CreatureNode? _leadCandidate;
+    private CreatureNode? _ledCreature;
     private Vector3       _carriedCreatureOffset;
     private Vector3       _carriedFoodOffset;
     private Node3D?       _handVisual;
     private float         _worldFloorY;
+    private bool          _rightButtonDown;
+    private double        _rightButtonPressedAt;
+    private const double  LeadHoldThreshold = 0.28;
 
     // ── Visual feedback ─────────────────────────────────────────────────────
     private MeshInstance3D? _cursor;
@@ -89,6 +94,16 @@ public partial class PointerAgent : Node3D
         {
             _carriedFood.Position = Position + _carriedFoodOffset;
         }
+
+        if (_rightButtonDown && _ledCreature == null)
+        {
+            double now = Time.GetTicksMsec() / 1000.0;
+            if (now - _rightButtonPressedAt >= LeadHoldThreshold)
+                BeginLeadingCreature();
+        }
+
+        if (_ledCreature != null)
+            _ledCreature.SetForcedWalkTarget(Position);
     }
 
     public override void _UnhandledInput(InputEvent @event)
@@ -101,13 +116,16 @@ public partial class PointerAgent : Node3D
                     HandleLeftClick();
                     break;
                 case MouseButton.Right:
-                    HandleRightClick();   // tickle
+                    BeginRightClickGesture();
                     break;
                 case MouseButton.Middle:
                     HandleMiddleClick();  // slap
                     break;
             }
         }
+
+        if (@event is InputEventMouseButton rb && !rb.Pressed && rb.ButtonIndex == MouseButton.Right)
+            EndRightClickGesture();
 
         // Shift+Left = slap
         if (@event is InputEventMouseButton mb2 && mb2.Pressed
@@ -192,6 +210,55 @@ public partial class PointerAgent : Node3D
             // Visual feedback — brief green flash
             FlashCursor(new Color(0.3f, 1.0f, 0.3f));
         }
+    }
+
+    private void BeginRightClickGesture()
+    {
+        _rightButtonDown = true;
+        _rightButtonPressedAt = Time.GetTicksMsec() / 1000.0;
+        _leadCandidate = FindNearestCreature(1.2f) ?? _selectedCreature;
+    }
+
+    private void EndRightClickGesture()
+    {
+        if (!_rightButtonDown)
+            return;
+
+        bool wasLeading = _ledCreature != null;
+        EndLeadingCreature();
+        _rightButtonDown = false;
+
+        if (!wasLeading)
+            HandleRightClick();
+
+        _leadCandidate = null;
+    }
+
+    private void BeginLeadingCreature()
+    {
+        CreatureNode? creature = _leadCandidate;
+        if (creature == null || creature.Creature == null)
+            return;
+
+        _selectedCreature = creature;
+        _ledCreature = creature;
+        _ledCreature.SetForcedWalkTarget(Position);
+        if (creature.Creature != null)
+            StimulusTable.Apply(creature.Creature, StimulusId.HandHeldCreature);
+        FlashCursor(new Color(0.65f, 0.85f, 1.0f));
+        GD.Print("[Hand] Leading creature by hand.");
+    }
+
+    private void EndLeadingCreature()
+    {
+        if (_ledCreature == null)
+            return;
+
+        _ledCreature.SetForcedWalkTarget(null);
+        if (_ledCreature.Creature != null)
+            StimulusTable.Apply(_ledCreature.Creature, StimulusId.HandDroppedCreature);
+        GD.Print("[Hand] Released creature lead.");
+        _ledCreature = null;
     }
 
     // ── Middle click / Shift+click: slap ────────────────────────────────────

@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using CreaturesReborn.Sim.Agent;
 using CreaturesReborn.Sim.Biochemistry;
 using CreaturesReborn.Sim.Formats;
 using CreaturesReborn.Sim.Creature;
@@ -49,6 +50,10 @@ public partial class CreatureNode : Node3D
     private float _prevX     = float.NaN;
     private float _stuckTime = 0.0f;
     private const float StuckThreshold = 1.5f;   // seconds before forced bounce
+    private Vector3? _forcedWalkTarget;
+    private CreatureSpeechSuggestion? _activeSpeechSuggestion;
+    private Vector3? _activeSpeechTarget;
+    private int _speechSuggestionTicks;
 
     // -------------------------------------------------------------------------
     // Public accessors
@@ -65,6 +70,13 @@ public partial class CreatureNode : Node3D
         _heldByHand = held;
         if (held)
             _verticalVelocity = 0;
+    }
+
+    public void SetForcedWalkTarget(Vector3? target)
+    {
+        _forcedWalkTarget = target;
+        if (target.HasValue)
+            ObserveNearbyAgents(radius: 3.0f, reinforcement: 0.45f);
     }
 
     public void InitializeFromHatch(C creature, string genomePath, int sex, byte age, int variant, string moniker)
@@ -204,6 +216,7 @@ public partial class CreatureNode : Node3D
         {
             _tickAccumulator -= TickInterval;
             FeedContextualDrives();   // must come BEFORE Tick() so drives arrive in same batch
+            ApplyActiveSpeechSuggestion();
             _creature.Tick();
             ExecuteDecision();
         }
@@ -283,6 +296,23 @@ public partial class CreatureNode : Node3D
                 break;
         }
 
+        if (_forcedWalkTarget is Vector3 leadTarget)
+        {
+            int leadDir = CreaturePerception.DirectionToward(GetParent(), Position, leadTarget);
+            if (MathF.Abs(leadTarget.X - Position.X) > 0.18f)
+            {
+                walkDir = leadDir;
+                pose = NornActionPose.Walk;
+            }
+        }
+        else if (_activeSpeechTarget is Vector3 speechTarget
+                 && _activeSpeechSuggestion is { ObjectCategory: not null })
+        {
+            int suggestionDir = CreaturePerception.DirectionToward(GetParent(), Position, speechTarget);
+            if (MathF.Abs(speechTarget.X - Position.X) > 0.35f)
+                walkDir = suggestionDir;
+        }
+
         // Delegate walking to sprite (step-driven animation)
         _sprite?.SetWalkDirection(walkDir);
         _sprite?.SetActionPose(walkDir != 0 ? NornActionPose.Walk : pose);
@@ -319,6 +349,63 @@ public partial class CreatureNode : Node3D
         // Biochem-driven egg laying: triggered by Progesterone, not a decision lobe verb
         if (_layEggCooldown <= 0 && _creature.GetChemical(ChemID.Progesterone) > 0.7f)
             TryLayEgg();
+
+        ObserveNearbyAgents(radius: 2.2f, reinforcement: _forcedWalkTarget.HasValue ? 0.32f : 0.08f);
+    }
+
+    public CreatureSpeechSuggestion ApplySpeechSuggestion(string text, Vector3 handPosition)
+    {
+        if (_creature == null)
+            return default;
+
+        CreatureSpeechSuggestion suggestion = _creature.HearSpeech(text);
+        _activeSpeechSuggestion = suggestion.IsRecognized ? suggestion : null;
+        _activeSpeechTarget = ResolveSpeechTarget(suggestion, handPosition);
+        _speechSuggestionTicks = suggestion.IsRecognized ? 80 : 0;
+
+        if (suggestion.ObjectCategory is int objectCategory
+            && !string.IsNullOrWhiteSpace(suggestion.NounWord))
+        {
+            _creature.Vocabulary.LearnNounAlias(suggestion.NounWord, objectCategory, 0.25f);
+        }
+
+        GD.Print($"[Speech] {Name} heard \"{text}\" -> verb={suggestion.VerbId?.ToString() ?? "?"} noun={suggestion.ObjectCategory?.ToString() ?? "?"}.");
+        return suggestion;
+    }
+
+    private void ApplyActiveSpeechSuggestion()
+    {
+        if (_creature == null || _activeSpeechSuggestion == null)
+            return;
+
+        if (_activeSpeechSuggestion.Value.VerbId is int verbId)
+            _creature.Motor.SuggestVerb(verbId, _activeSpeechSuggestion.Value.Confidence);
+        if (_activeSpeechSuggestion.Value.ObjectCategory is int nounId)
+            _creature.Motor.SuggestNoun(nounId, _activeSpeechSuggestion.Value.Confidence);
+
+        _speechSuggestionTicks--;
+        if (_speechSuggestionTicks <= 0)
+        {
+            _activeSpeechSuggestion = null;
+            _activeSpeechTarget = null;
+        }
+    }
+
+    private Vector3? ResolveSpeechTarget(CreatureSpeechSuggestion suggestion, Vector3 handPosition)
+    {
+        if (_creature == null)
+            return null;
+
+        if (suggestion.ObjectCategory == ObjectCategory.Hand)
+            return handPosition;
+
+        if (suggestion.ObjectCategory is int objectCategory
+            && _creature.SpatialMemory.FindByCategory(objectCategory) is CreatureObjectMemory memory)
+        {
+            return new Vector3(memory.X, memory.Y, Position.Z);
+        }
+
+        return null;
     }
 
     // -------------------------------------------------------------------------
@@ -533,5 +620,31 @@ public partial class CreatureNode : Node3D
     private FoodNode? FindNearestFood(float maxDist)
     {
         return CreaturePerception.FindNearestReachableFood(GetParent(), Position, maxDist);
+    }
+
+    public void ObserveNearbyAgents(float radius = 2.5f, float reinforcement = 0.2f)
+    {
+        if (_creature == null || GetParent() is not WorldNode world)
+            return;
+
+        int roomId = world.Navigation?.ResolveRoom(Position.X, Position.Y)?.Id ?? -1;
+        foreach (Node node in world.GetChildren())
+        {
+            if (ReferenceEquals(node, this) || node is not Node3D node3D)
+                continue;
+            if (Position.DistanceTo(node3D.Position) > radius)
+                continue;
+            if (!AgentObservation.TryGetArchetype(node, out AgentArchetype archetype))
+                continue;
+
+            _creature.ObserveObjectClass(
+                archetype.ObjectCategory,
+                archetype.Noun,
+                node3D.Position.X,
+                node3D.Position.Y,
+                roomId,
+                world.TotalTicks,
+                reinforcement);
+        }
     }
 }

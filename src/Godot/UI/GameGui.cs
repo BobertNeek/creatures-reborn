@@ -35,6 +35,7 @@ public partial class GameGui : Control
     private ProgressBar? _happyBar;
     private Label?       _verbLabel;
     private Label?       _populationLabel;
+    private LineEdit?    _speechInput;
     private Control?     _pauseOverlay;
     private VBoxContainer? _pauseContent;
     private SettingsOverlay? _settingsOverlay;
@@ -238,6 +239,8 @@ public partial class GameGui : Control
         hbox.AddChild(MakeButton("Tools", ShowAdvancedToolsOverlay));
         hbox.AddChild(MakeButton("Save", ShowSaveOverlay));
         hbox.AddChild(MakeButton("[Tab] Next", () => CycleCreature()));
+        _speechInput = MakeSpeechInput();
+        hbox.AddChild(_speechInput);
     }
 
     // ── Actions ─────────────────────────────────────────────────────────────
@@ -343,6 +346,26 @@ public partial class GameGui : Control
         // Directly invoke the egg-laying pipeline — skips Progesterone/proximity gates
         a.LayEggWith(b);
         GD.Print($"[GUI] Forced breed: {a.Name} x {b.Name} ({nearest:F1}m apart).");
+    }
+
+    private void SubmitSpeechSuggestion(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return;
+
+        CreatureNode? creature = GetSelectedCreatureNode();
+        if (creature?.Creature == null)
+            return;
+
+        _pointer ??= FindPointerAgent();
+        Vector3 handPosition = _pointer?.Position ?? creature.Position;
+        creature.ApplySpeechSuggestion(text, handPosition);
+
+        if (_speechInput != null)
+        {
+            _speechInput.Text = string.Empty;
+            _speechInput.ReleaseFocus();
+        }
     }
 
     private void CycleCreature()
@@ -733,6 +756,18 @@ public partial class GameGui : Control
         };
         btn.AddThemeStyleboxOverride("hover", hoverStyle);
         return btn;
+    }
+
+    private LineEdit MakeSpeechInput()
+    {
+        var input = new LineEdit
+        {
+            PlaceholderText = "say: push food",
+            CustomMinimumSize = new Vector2(190, 32),
+            TooltipText = "Type suggestions such as 'come', 'push toy', or 'eat food'.",
+        };
+        input.TextSubmitted += SubmitSpeechSuggestion;
+        return input;
     }
 
     private static StyleBoxFlat PausePanelStyle()
