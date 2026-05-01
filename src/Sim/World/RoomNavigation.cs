@@ -51,7 +51,7 @@ public sealed class RoomNavigation
 {
     private readonly GameMap _map;
     private const float SurfaceTouchTolerance = 0.65f;
-    private const float SurfaceGapTolerance = 0.08f;
+    private const float SurfaceGapTolerance = 0.55f;
 
     public RoomNavigation(GameMap map)
     {
@@ -114,7 +114,7 @@ public sealed class RoomNavigation
 
     public WalkableSurface? ProjectHorizontalStep(float fromX, float fromY, float requestedX)
     {
-        WalkableSurface? current = SnapToNearestSurface(fromX, fromY);
+        WalkableSurface? current = ResolveCurrentWalkSurface(fromX, fromY);
         if (current == null) return null;
 
         float direction = MathF.Sign(requestedX - fromX);
@@ -146,7 +146,7 @@ public sealed class RoomNavigation
             float distance = dx * dx + verticalDelta * verticalDelta;
             float score = dx * dx * 4f + verticalDelta * verticalDelta;
             if (!ReferenceEquals(room, currentRoom))
-                score -= 0.01f;
+                score -= 0.25f;
 
             if (score < bestScore)
             {
@@ -164,6 +164,21 @@ public sealed class RoomNavigation
             clampedX,
             currentRoom.FloorYAtX(clampedX),
             0);
+    }
+
+    private WalkableSurface? ResolveCurrentWalkSurface(float x, float y)
+    {
+        Room? room = _map.RoomAt(x, y);
+        if (room != null)
+        {
+            float sx = Math.Clamp(x, room.XLeft, room.XRight);
+            float sy = room.FloorYAtX(sx);
+            float dx = sx - x;
+            float dy = sy - y;
+            return new WalkableSurface(room, sx, sy, dx * dx + dy * dy);
+        }
+
+        return FindSurfaceBelow(x, y) ?? SnapToNearestSurface(x, y);
     }
 
     public Room? ResolveRoom(float x, float y)

@@ -121,10 +121,12 @@ public class MetaroomEditorSceneTests
         MetaroomDefinition definition = MetaroomDefinitionJson.Load(path);
 
         Assert.Equal("treehouse", definition.Id);
-        Assert.Equal("res://art/metaroom/metaroom-right-connector-v2.png", definition.BackgroundPath);
-        Assert.True(definition.Paths.Count >= 8);
-        Assert.Contains(definition.Objects, obj => obj.Kind == MetaroomObjectKind.Door);
-        Assert.Contains(definition.Objects, obj => obj.Kind == MetaroomObjectKind.FoodSpawn);
+        Assert.Equal("Treehouse", definition.Name);
+        Assert.Equal("res://art/metaroom/imported/ig_08c5f1f9f59ddea70169ed69df04348199aeebee1a267cc1df.png", definition.BackgroundPath);
+        Assert.True(definition.Paths.Count >= 20);
+        Assert.Contains(definition.Objects, obj => obj.Kind == MetaroomObjectKind.Incubator);
+        Assert.Contains(definition.Objects, obj => obj.Kind == MetaroomObjectKind.FoodDispenser);
+        Assert.Contains(definition.Objects, obj => obj.Kind == MetaroomObjectKind.Toy);
         Assert.Contains(definition.Objects, obj => obj.Kind == MetaroomObjectKind.NornSpawn);
     }
 

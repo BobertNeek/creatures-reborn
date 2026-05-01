@@ -162,4 +162,38 @@ public class WorldNavigationTests
         Assert.Equal(14.2f, upperStep.Value.X, precision: 3);
         Assert.Equal(5.0f, upperStep.Value.Y, precision: 3);
     }
+
+    [Fact]
+    public void ProjectHorizontalStep_UsesContainingRoomBeforeNearestSurface()
+    {
+        var map = new GameMap();
+        var metaRoom = map.AddMetaRoom(0, 0, 40, 20, "test");
+        var lower = map.AddRoom(metaRoom.Id, 0, 10, 4, 4, 1, 1);
+        map.AddRoom(metaRoom.Id, 0, 10, 4.55f, 4.55f, 1.55f, 1.55f);
+
+        var nav = new RoomNavigation(map);
+        var step = nav.ProjectHorizontalStep(5.0f, 1.35f, 5.5f);
+
+        Assert.NotNull(step);
+        Assert.Same(lower, step.Value.Room);
+        Assert.Equal(5.5f, step.Value.X, precision: 3);
+        Assert.Equal(1.0f, step.Value.Y, precision: 3);
+    }
+
+    [Fact]
+    public void ProjectHorizontalStep_BridgesSmallAuthoredEndpointGaps()
+    {
+        var map = new GameMap();
+        var metaRoom = map.AddMetaRoom(0, 0, 40, 20, "test");
+        var lower = map.AddRoom(metaRoom.Id, 0, 10, 4, 4, 1, 1);
+        var ramp = map.AddRoom(metaRoom.Id, 10.45f, 14, 4.1f, 6, 1.1f, 3);
+
+        var nav = new RoomNavigation(map);
+        var step = nav.ProjectHorizontalStep(9.95f, 1.0f, 10.2f);
+
+        Assert.NotNull(step);
+        Assert.Same(ramp, step.Value.Room);
+        Assert.Equal(10.45f, step.Value.X, precision: 3);
+        Assert.Equal(1.1f, step.Value.Y, precision: 3);
+    }
 }
