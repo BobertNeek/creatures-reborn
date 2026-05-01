@@ -39,6 +39,28 @@ public class GodotRuntimeSourceTests
     }
 
     [Fact]
+    public void CreatureNode_ConfiguresRenderingDeviceBrainBackendThroughShadowValidation()
+    {
+        string creatureSource = File.ReadAllText(RepoPath("src", "Godot", "CreatureNode.cs"));
+        string backendPath = RepoPath("src", "Godot", "BrainGpu", "GodotRenderingDeviceBrainBackend.cs");
+        string controllerPath = RepoPath("src", "Godot", "BrainGpu", "BrainGpuAccelerationController.cs");
+
+        Assert.True(File.Exists(backendPath), "Godot brain GPU backend should stay outside CreatureNode.");
+        Assert.True(File.Exists(controllerPath), "Promotion logic should be a small controller, not embedded in CreatureNode.");
+        string backendSource = File.ReadAllText(backendPath);
+        string controllerSource = File.ReadAllText(controllerPath);
+
+        Assert.Contains("RenderingDevice", backendSource);
+        Assert.Contains("ComputeListDispatch", backendSource);
+        Assert.Contains("GpuShadowValidate", controllerSource);
+        Assert.Contains("GpuPreferred", controllerSource);
+        Assert.Contains("BrainGpuAccelerationController.TryCreate", creatureSource);
+        Assert.Contains("ObserveTick", creatureSource);
+        Assert.True(File.Exists(RepoPath("src", "Godot", "BrainGpu", "BrainGpuSmokeTest.cs")));
+        Assert.Contains("--brain-gpu-smoke", File.ReadAllText(RepoPath("src", "Godot", "BrainGpu", "BrainGpuSmokeTest.cs")));
+    }
+
+    [Fact]
     public void PointerAgent_PreservesGrabOffsetWhileCarryingCreatures()
     {
         string pointerSource = File.ReadAllText(RepoPath("src", "Godot", "PointerAgent.cs"));

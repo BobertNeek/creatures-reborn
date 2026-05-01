@@ -52,6 +52,12 @@ public interface IBrainExecutionBackend
     void Update(BrainExecutionContext context);
 }
 
+public interface ICpuAuthoritativeShadowBrainBackend : IBrainExecutionBackend
+{
+    string? LastShadowValidationFailure { get; }
+    void UpdateCpuAuthoritativeShadow(BrainExecutionContext context);
+}
+
 public sealed class CpuBrainExecutionBackend : IBrainExecutionBackend
 {
     public static CpuBrainExecutionBackend Instance { get; } = new();

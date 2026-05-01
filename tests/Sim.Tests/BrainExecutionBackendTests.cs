@@ -100,6 +100,28 @@ public sealed class BrainExecutionBackendTests
         AssertBrainSampleEqual(baseline, shadowed);
     }
 
+    [Fact]
+    public void Brain_GpuShadowValidate_RestoresSvRuleScratchBeforeCpuValidation()
+    {
+        B baseline = LoadBrain(seed: 205);
+        B shadowed = LoadBrain(seed: 205);
+        var backend = new ScratchMutatingGpuBackend();
+
+        Array.Clear(SVRule.InvalidVariables);
+        SVRule.InvalidVariables[3] = 0.12f;
+        baseline.UpdateComponents();
+        float expectedScratch = SVRule.InvalidVariables[3];
+
+        Array.Clear(SVRule.InvalidVariables);
+        SVRule.InvalidVariables[3] = 0.12f;
+        shadowed.ConfigureExecutionBackend(backend, BrainExecutionMode.GpuShadowValidate);
+        shadowed.UpdateComponents();
+
+        Assert.Equal(1, backend.UpdateCalls);
+        Assert.Equal(expectedScratch, SVRule.InvalidVariables[3], precision: 6);
+        AssertBrainSampleEqual(baseline, shadowed);
+    }
+
     private static B LoadBrain(int seed)
     {
         var genome = GenomeReader.LoadNew(new Rng(seed), Path.GetFullPath(StarterGenomePath));
@@ -184,6 +206,26 @@ public sealed class BrainExecutionBackendTests
             Lobe? lobe = context.Brain.GetLobe(0);
             if (lobe != null)
                 lobe.GetNeuron(0).States[NeuronVar.State] = 0.99f;
+        }
+    }
+
+    private sealed class ScratchMutatingGpuBackend : IBrainExecutionBackend
+    {
+        public string Name => "scratch gpu";
+        public BrainExecutionBackendKind Kind => BrainExecutionBackendKind.Gpu;
+        public bool IsAvailable => true;
+        public int UpdateCalls { get; private set; }
+
+        public bool Supports(BrainExecutionContext context, out string? reason)
+        {
+            reason = null;
+            return true;
+        }
+
+        public void Update(BrainExecutionContext context)
+        {
+            UpdateCalls++;
+            SVRule.InvalidVariables[3] = 0.99f;
         }
     }
 }

@@ -271,12 +271,22 @@ public sealed class Brain : IBrainLocusProvider
             }
             else if (ExecutionMode == BrainExecutionMode.GpuShadowValidate)
             {
-                RunGpuShadowValidation(backend, context);
+                if (backend is ICpuAuthoritativeShadowBrainBackend cpuAuthoritative)
+                {
+                    cpuAuthoritative.UpdateCpuAuthoritativeShadow(context);
+                    LastExecutionStatus = BrainExecutionStatus.CpuAfterGpuShadow(cpuAuthoritative.LastShadowValidationFailure);
+                }
+                else
+                {
+                    RunGpuShadowValidation(backend, context);
+                }
                 return;
             }
             else
             {
                 SavedBrainState checkpoint = CreateSaveState();
+                List<float[]> inputCheckpoint = CreateLobeInputSnapshot();
+                float[] scratchCheckpoint = (float[])SVRule.InvalidVariables.Clone();
                 try
                 {
                     backend.Update(context);
@@ -286,6 +296,8 @@ public sealed class Brain : IBrainLocusProvider
                 catch (Exception ex)
                 {
                     RestoreSaveState(checkpoint);
+                    RestoreLobeInputSnapshot(inputCheckpoint);
+                    RestoreSvRuleScratch(scratchCheckpoint);
                     fallbackReason = $"{backend.Name} failed before commit: {ex.Message}";
                 }
             }
@@ -302,13 +314,17 @@ public sealed class Brain : IBrainLocusProvider
     private void RunGpuShadowValidation(IBrainExecutionBackend backend, BrainExecutionContext context)
     {
         SavedBrainState checkpoint = CreateSaveState();
+        List<float[]> inputCheckpoint = CreateLobeInputSnapshot();
+        float[] scratchCheckpoint = (float[])SVRule.InvalidVariables.Clone();
         SavedBrainState? gpuState = null;
+        float[]? gpuScratch = null;
         string? shadowFailure = null;
 
         try
         {
             backend.Update(context);
             gpuState = CreateSaveState();
+            gpuScratch = (float[])SVRule.InvalidVariables.Clone();
         }
         catch (Exception ex)
         {
@@ -316,6 +332,8 @@ public sealed class Brain : IBrainLocusProvider
         }
 
         RestoreSaveState(checkpoint);
+        RestoreLobeInputSnapshot(inputCheckpoint);
+        RestoreSvRuleScratch(scratchCheckpoint);
         CpuBrainExecutionBackend.Instance.Update(context);
 
         if (shadowFailure != null)
@@ -325,7 +343,11 @@ public sealed class Brain : IBrainLocusProvider
         }
 
         SavedBrainState cpuState = CreateSaveState();
-        if (gpuState != null && SavedBrainStateComparer.Equivalent(cpuState, gpuState))
+        float[] cpuScratch = (float[])SVRule.InvalidVariables.Clone();
+        if (gpuState != null
+            && gpuScratch != null
+            && SavedBrainStateComparer.Equivalent(cpuState, gpuState)
+            && SavedBrainStateComparer.FloatArraysEquivalent(cpuScratch, gpuScratch))
         {
             LastExecutionStatus = BrainExecutionStatus.CpuAfterGpuShadow(null);
             return;
@@ -333,6 +355,24 @@ public sealed class Brain : IBrainLocusProvider
 
         LastExecutionStatus = BrainExecutionStatus.CpuAfterGpuShadow(
             $"{backend.Name} shadow output differed from CPU; kept CPU state.");
+    }
+
+    private static void RestoreSvRuleScratch(float[] scratch)
+        => Array.Copy(scratch, SVRule.InvalidVariables, Math.Min(scratch.Length, SVRule.InvalidVariables.Length));
+
+    private List<float[]> CreateLobeInputSnapshot()
+    {
+        var inputs = new List<float[]>(_lobes.Count);
+        foreach (Lobe lobe in _lobes)
+            inputs.Add(lobe.CreateInputSnapshot());
+        return inputs;
+    }
+
+    private void RestoreLobeInputSnapshot(IReadOnlyList<float[]> inputs)
+    {
+        int count = Math.Min(_lobes.Count, inputs.Count);
+        for (int i = 0; i < count; i++)
+            _lobes[i].RestoreInputSnapshot(inputs[i]);
     }
 
     private BrainExecutionContext CreateExecutionContext(LearningTrace? trace)
@@ -479,6 +519,9 @@ public sealed class Brain : IBrainLocusProvider
             return 0.0f;
         return _chemicals[chemicalId];
     }
+
+    public float[] CreateChemicalSnapshot()
+        => _chemicals == null ? Array.Empty<float>() : (float[])_chemicals.Clone();
 
     public float ReadPort(BrainPort port)
     {

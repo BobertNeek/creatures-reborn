@@ -51,7 +51,7 @@ internal static class SavedBrainStateComparer
         return true;
     }
 
-    private static bool FloatArraysEquivalent(float[] expected, float[] actual)
+    public static bool FloatArraysEquivalent(float[] expected, float[] actual)
     {
         if (expected.Length != actual.Length)
             return false;

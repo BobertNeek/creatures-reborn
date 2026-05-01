@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using CreaturesReborn.Sim.Save;
 using G = CreaturesReborn.Sim.Genome.Genome;
 
@@ -196,6 +197,55 @@ public sealed class Lobe : BrainComponent
     public int    GetTissueId()             => _tissueId;
     public int    GetWhichNeuronWon()       => _winningNeuronId;
     public float[] GetSpareNeuronVariables() => _spareNeuronVars;
+
+    public LobeAcceleratorState CreateAcceleratorState()
+    {
+        var states = new float[_neurons.Count * BrainConst.NumSVRuleVariables];
+        for (int i = 0; i < _neurons.Count; i++)
+            Array.Copy(_neurons[i].States, 0, states, i * BrainConst.NumSVRuleVariables, BrainConst.NumSVRuleVariables);
+
+        return new LobeAcceleratorState(
+            Token,
+            Width,
+            Height,
+            _runInitRuleAlways,
+            _winningNeuronId,
+            states,
+            (float[])_neuronInputs.Clone(),
+            InitRule.DescribeEntries().ToArray(),
+            UpdateRule.DescribeEntries().ToArray());
+    }
+
+    public bool CanRunOnAccelerator(out string? reason)
+    {
+        LobeAcceleratorState state = CreateAcceleratorState();
+        return state.CanRunDeterministically(out reason);
+    }
+
+    public void ApplyAcceleratorResult(float[] neuronStates, int winningNeuronId)
+    {
+        int expected = _neurons.Count * BrainConst.NumSVRuleVariables;
+        if (neuronStates.Length != expected)
+            throw new ArgumentException($"Expected {expected} neuron state values, got {neuronStates.Length}.", nameof(neuronStates));
+
+        for (int i = 0; i < _neurons.Count; i++)
+            Array.Copy(neuronStates, i * BrainConst.NumSVRuleVariables, _neurons[i].States, 0, BrainConst.NumSVRuleVariables);
+
+        _winningNeuronId = Math.Clamp(winningNeuronId, 0, Math.Max(0, _neurons.Count - 1));
+        _spareNeuronVars = _neurons.Count > 0
+            ? _neurons[_winningNeuronId].States
+            : SVRule.InvalidVariables;
+        Array.Clear(_neuronInputs);
+    }
+
+    public float[] CreateInputSnapshot()
+        => (float[])_neuronInputs.Clone();
+
+    public void RestoreInputSnapshot(float[] inputs)
+    {
+        Array.Clear(_neuronInputs);
+        Array.Copy(inputs, _neuronInputs, Math.Min(inputs.Length, _neuronInputs.Length));
+    }
 
     public float GetNeuronState(int neuron, int stateVar)
     {

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Godot;
+using CreaturesReborn.Godot.BrainGpu;
 using CreaturesReborn.Sim.Save;
 using CreaturesReborn.Sim.Settings;
 
@@ -17,6 +18,7 @@ public partial class MainMenu : Control
     public override void _Ready()
     {
         AddChild(new DebugScreenshot { Name = "DebugScreenshot" });
+        AddChild(new BrainGpuSmokeTest { Name = "BrainGpuSmokeTest" });
         _settings = GameSettingsStore.Load();
         GameSettingsApplier.Apply(_settings);
         BuildMenu();

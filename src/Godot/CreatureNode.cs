@@ -1,5 +1,6 @@
 using System;
 using Godot;
+using CreaturesReborn.Godot.BrainGpu;
 using CreaturesReborn.Sim.Agent;
 using CreaturesReborn.Sim.Biochemistry;
 using CreaturesReborn.Sim.Formats;
@@ -54,6 +55,7 @@ public partial class CreatureNode : Node3D
     private CreatureSpeechSuggestion? _activeSpeechSuggestion;
     private Vector3? _activeSpeechTarget;
     private int _speechSuggestionTicks;
+    private BrainGpuAccelerationController? _brainGpuAcceleration;
     private string _lastSpeechResponse = "";
 
     // -------------------------------------------------------------------------
@@ -128,6 +130,7 @@ public partial class CreatureNode : Node3D
 
         _sprite = GetNodeOrNull<NornBillboardSprite>("Sprite");
         _sprite?.UpdateVisuals(_creature);
+        ConfigureBrainGpuAcceleration();
 
         // Give the sprite a room-bounds clamper so it respects walls
         // Supports old MetaroomNode, ColonyMetaroomNode, and TreehouseMetaroomNode
@@ -188,6 +191,7 @@ public partial class CreatureNode : Node3D
             Variant = resolvedVariant;
             Moniker = resolvedMoniker;
             _sprite?.UpdateVisuals(_creature);
+            ConfigureBrainGpuAcceleration();
             GD.Print($"[CreatureNode] Live-applied genome to {Name}.");
         }
         catch (Exception ex)
@@ -209,6 +213,12 @@ public partial class CreatureNode : Node3D
         Position = new Vector3(state.X, state.Y, state.Z);
     }
 
+    public override void _ExitTree()
+    {
+        _brainGpuAcceleration?.Dispose();
+        _brainGpuAcceleration = null;
+    }
+
     public override void _Process(double delta)
     {
         if (_creature == null) return;
@@ -220,6 +230,7 @@ public partial class CreatureNode : Node3D
             FeedContextualDrives();   // must come BEFORE Tick() so drives arrive in same batch
             ApplyActiveSpeechSuggestion();
             _creature.Tick();
+            _brainGpuAcceleration?.ObserveTick(_creature.Brain);
             ExecuteDecision();
         }
 
@@ -243,6 +254,16 @@ public partial class CreatureNode : Node3D
     {
         if (_creature == null) return;
         CreatureContextDrives.Apply(this, _creature);
+    }
+
+    private void ConfigureBrainGpuAcceleration()
+    {
+        if (_creature == null)
+            return;
+
+        _brainGpuAcceleration?.Dispose();
+        _brainGpuAcceleration = BrainGpuAccelerationController.TryCreate();
+        _brainGpuAcceleration?.Attach(_creature.Brain);
     }
 
     // -------------------------------------------------------------------------
