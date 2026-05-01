@@ -46,6 +46,10 @@ public sealed class Brain : IBrainLocusProvider
     // -------------------------------------------------------------------------
     private bool _processingInstincts;
     private int _updateTick;
+    private IBrainExecutionBackend? _preferredExecutionBackend;
+
+    public BrainExecutionMode ExecutionMode { get; private set; } = BrainExecutionMode.CpuOnly;
+    public BrainExecutionStatus LastExecutionStatus { get; private set; } = BrainExecutionStatus.Cpu();
 
     // -------------------------------------------------------------------------
     // ReadFromGenome — mirroring Brain.cpp:77-158
@@ -251,13 +255,105 @@ public sealed class Brain : IBrainLocusProvider
 
     public void UpdateComponents(LearningTrace? trace)
     {
+        BrainExecutionContext context = CreateExecutionContext(trace);
+        string? fallbackReason = null;
+
+        if (ExecutionMode is BrainExecutionMode.GpuPreferred or BrainExecutionMode.GpuShadowValidate
+            && _preferredExecutionBackend is { } backend)
+        {
+            if (!backend.IsAvailable)
+            {
+                fallbackReason = $"{backend.Name} unavailable.";
+            }
+            else if (!backend.Supports(context, out string? reason))
+            {
+                fallbackReason = $"{backend.Name} unsupported: {reason ?? "not supported"}.";
+            }
+            else if (ExecutionMode == BrainExecutionMode.GpuShadowValidate)
+            {
+                RunGpuShadowValidation(backend, context);
+                return;
+            }
+            else
+            {
+                SavedBrainState checkpoint = CreateSaveState();
+                try
+                {
+                    backend.Update(context);
+                    LastExecutionStatus = BrainExecutionStatus.Used(backend);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    RestoreSaveState(checkpoint);
+                    fallbackReason = $"{backend.Name} failed before commit: {ex.Message}";
+                }
+            }
+        }
+        else if (ExecutionMode != BrainExecutionMode.CpuOnly)
+        {
+            fallbackReason = "No GPU brain backend configured.";
+        }
+
+        CpuBrainExecutionBackend.Instance.Update(context);
+        LastExecutionStatus = BrainExecutionStatus.Cpu(fallbackReason);
+    }
+
+    private void RunGpuShadowValidation(IBrainExecutionBackend backend, BrainExecutionContext context)
+    {
+        SavedBrainState checkpoint = CreateSaveState();
+        SavedBrainState? gpuState = null;
+        string? shadowFailure = null;
+
+        try
+        {
+            backend.Update(context);
+            gpuState = CreateSaveState();
+        }
+        catch (Exception ex)
+        {
+            shadowFailure = $"{backend.Name} shadow failed: {ex.Message}";
+        }
+
+        RestoreSaveState(checkpoint);
+        CpuBrainExecutionBackend.Instance.Update(context);
+
+        if (shadowFailure != null)
+        {
+            LastExecutionStatus = BrainExecutionStatus.CpuAfterGpuShadow(shadowFailure);
+            return;
+        }
+
+        SavedBrainState cpuState = CreateSaveState();
+        if (gpuState != null && SavedBrainStateComparer.Equivalent(cpuState, gpuState))
+        {
+            LastExecutionStatus = BrainExecutionStatus.CpuAfterGpuShadow(null);
+            return;
+        }
+
+        LastExecutionStatus = BrainExecutionStatus.CpuAfterGpuShadow(
+            $"{backend.Name} shadow output differed from CPU; kept CPU state.");
+    }
+
+    private BrainExecutionContext CreateExecutionContext(LearningTrace? trace)
+        => new(
+            this,
+            _components,
+            _modules,
+            trace,
+            _updateTick,
+            IsLobeTokenShadowed,
+            RunClassicCpuUpdate);
+
+    private void RunClassicCpuUpdate(LearningTrace? trace, int tick)
+    {
         foreach (var c in _components)
         {
             // If a registered module shadows this lobe, skip the SVRule update.
             if (c is Lobe lobe && IsLobeTokenShadowed(lobe.Token))
                 continue;
             if (c is Tract tract)
-                tract.DoUpdate(trace, _updateTick);
+                tract.DoUpdate(trace, tick);
             else
                 c.DoUpdate();
         }
@@ -265,6 +361,20 @@ public sealed class Brain : IBrainLocusProvider
         // Run plugged-in modules (after default lobe stack, or as shadow replacements).
         foreach (var m in _modules)
             m.Update(this);
+    }
+
+    public void ConfigureExecutionBackend(IBrainExecutionBackend? backend, BrainExecutionMode mode)
+    {
+        if (mode == BrainExecutionMode.CpuOnly)
+        {
+            _preferredExecutionBackend = null;
+            ExecutionMode = BrainExecutionMode.CpuOnly;
+            LastExecutionStatus = BrainExecutionStatus.Cpu();
+            return;
+        }
+
+        _preferredExecutionBackend = backend;
+        ExecutionMode = mode;
     }
 
     // -------------------------------------------------------------------------
