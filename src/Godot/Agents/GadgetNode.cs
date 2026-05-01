@@ -16,7 +16,7 @@ namespace CreaturesReborn.Godot.Agents;
 /// Each gadget type has different behaviour on activation and timer.
 /// </summary>
 [GlobalClass]
-public partial class GadgetNode : Node3D
+public partial class GadgetNode : Node3D, IHandCarryable
 {
     public enum GadgetType
     {
@@ -43,6 +43,8 @@ public partial class GadgetNode : Node3D
 
     public AgentClassifier Classifier => AgentArchetype.Classifier;
     public int ObjectCategory => AgentArchetype.ObjectCategory;
+    public bool CanBeCarriedByHand { get; private set; } = true;
+    public Node3D CarryNode => this;
 
     private float _timer;
     private float _animPhase;
@@ -72,6 +74,17 @@ public partial class GadgetNode : Node3D
 
         // Animate indicator
         AnimateIndicator();
+    }
+
+    public void PickUp(Node3D holder)
+    {
+        CanBeCarriedByHand = false;
+    }
+
+    public void Drop(Vector3 worldPos)
+    {
+        Position = worldPos;
+        CanBeCarriedByHand = true;
     }
 
     /// <summary>Activated by click or creature push.</summary>
@@ -183,6 +196,7 @@ public partial class GadgetNode : Node3D
             if (dist > ScanRadius) continue;
 
             // Give a small reward for being near the learning machine
+            cn.Creature.Vocabulary.TeachHolisticVocabulary();
             StimulusTable.Apply(cn.Creature, StimulusId.Activate1Good);
             GD.Print("[LearningMachine] Teaching creature vocabulary.");
             break;

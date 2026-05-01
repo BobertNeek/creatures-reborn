@@ -36,6 +36,7 @@ public partial class GameGui : Control
     private Label?       _verbLabel;
     private Label?       _populationLabel;
     private LineEdit?    _speechInput;
+    private Label?       _speechLog;
     private Control?     _pauseOverlay;
     private VBoxContainer? _pauseContent;
     private SettingsOverlay? _settingsOverlay;
@@ -241,6 +242,9 @@ public partial class GameGui : Control
         hbox.AddChild(MakeButton("[Tab] Next", () => CycleCreature()));
         _speechInput = MakeSpeechInput();
         hbox.AddChild(_speechInput);
+        _speechLog = MakeLabel("", 10);
+        _speechLog.CustomMinimumSize = new Vector2(260, 32);
+        hbox.AddChild(_speechLog);
     }
 
     // ── Actions ─────────────────────────────────────────────────────────────
@@ -353,19 +357,47 @@ public partial class GameGui : Control
         if (string.IsNullOrWhiteSpace(text))
             return;
 
-        CreatureNode? creature = GetSelectedCreatureNode();
-        if (creature?.Creature == null)
-            return;
-
         _pointer ??= FindPointerAgent();
-        Vector3 handPosition = _pointer?.Position ?? creature.Position;
-        creature.ApplySpeechSuggestion(text, handPosition);
+        Vector3 handPosition = _pointer?.Position ?? GetSelectedCreatureNode()?.Position ?? Vector3.Zero;
+        BroadcastSpeechSuggestion(text, handPosition);
 
         if (_speechInput != null)
         {
             _speechInput.Text = string.Empty;
             _speechInput.ReleaseFocus();
         }
+    }
+
+    private void BroadcastSpeechSuggestion(string text, Vector3 handPosition)
+    {
+        WorldNode? world = _world ?? FindWorldNode();
+        if (world == null)
+            return;
+
+        const float Earshot = 8.0f;
+        var responses = new System.Collections.Generic.List<string>();
+        foreach (Node node in world.GetChildren())
+        {
+            if (node is not CreatureNode creature || creature.Creature == null)
+                continue;
+            if (creature.Position.DistanceTo(handPosition) > Earshot)
+                continue;
+
+            CreatureSpeechSuggestion parsed = CreatureSpeechParser.Parse(text, creature.Creature.Vocabulary);
+            if (!creature.MatchesSpeechSubject(parsed.SubjectWord))
+                continue;
+
+            CreatureSpeechSuggestion applied = creature.ApplySpeechSuggestion(text, handPosition);
+            if (!string.IsNullOrWhiteSpace(creature.LastSpeechResponse))
+                responses.Add(creature.LastSpeechResponse);
+            else if (applied.IsRecognized)
+                responses.Add($"{creature.Name}: heard {applied.Intent}");
+        }
+
+        if (_speechLog != null)
+            _speechLog.Text = responses.Count == 0
+                ? "No creature heard that."
+                : string.Join("  ", responses.Take(2));
     }
 
     private void CycleCreature()

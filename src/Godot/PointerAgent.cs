@@ -25,11 +25,11 @@ public partial class PointerAgent : Node3D
     private Camera3D?     _camera;
     private CreatureNode? _selectedCreature;
     private CreatureNode? _carriedCreature;
-    private FoodNode?     _carriedFood;
+    private IHandCarryable? _carriedObject;
     private CreatureNode? _leadCandidate;
     private CreatureNode? _ledCreature;
     private Vector3       _carriedCreatureOffset;
-    private Vector3       _carriedFoodOffset;
+    private Vector3       _carriedObjectOffset;
     private Node3D?       _handVisual;
     private float         _worldFloorY;
     private bool          _rightButtonDown;
@@ -44,7 +44,7 @@ public partial class PointerAgent : Node3D
     public CreatureNode? SelectedCreature => _selectedCreature;
 
     /// <summary>Is the hand currently carrying something?</summary>
-    public bool IsCarrying => _carriedCreature != null || _carriedFood != null;
+    public bool IsCarrying => _carriedCreature != null || _carriedObject != null;
     public AgentArchetype AgentArchetype => AgentCatalog.Hand;
     public AgentClassifier Classifier => AgentArchetype.Classifier;
     public int ObjectCategory => AgentArchetype.ObjectCategory;
@@ -90,9 +90,9 @@ public partial class PointerAgent : Node3D
         {
             _carriedCreature.Position = Position + _carriedCreatureOffset;
         }
-        if (_carriedFood != null)
+        if (_carriedObject != null)
         {
-            _carriedFood.Position = Position + _carriedFoodOffset;
+            _carriedObject.CarryNode.Position = Position + _carriedObjectOffset;
         }
 
         if (_rightButtonDown && _ledCreature == null)
@@ -144,9 +144,9 @@ public partial class PointerAgent : Node3D
             DropCreature();
             return;
         }
-        if (_carriedFood != null)
+        if (_carriedObject != null)
         {
-            DropFood();
+            DropObject();
             return;
         }
 
@@ -165,7 +165,7 @@ public partial class PointerAgent : Node3D
 
         // Try to find what we clicked on
         var creature = FindNearestCreature(1.5f);
-        var food     = FindNearestFood(1.0f);
+        var carryable = FindNearestCarryable(1.0f);
 
         if (creature != null)
         {
@@ -173,9 +173,9 @@ public partial class PointerAgent : Node3D
             float dist = Position.DistanceTo(creature.Position);
             if (dist < 0.8f) PickUpCreature(creature);
         }
-        else if (food != null && !food.IsConsumed)
+        else if (carryable != null)
         {
-            PickUpFood(food);
+            PickUpObject(carryable);
         }
     }
 
@@ -319,24 +319,24 @@ public partial class PointerAgent : Node3D
         return treehouse.GetNearestFloorY(x, y);
     }
 
-    // ── Pick up / drop food ─────────────────────────────────────────────────
-    private void PickUpFood(FoodNode food)
+    // ── Pick up / drop objects ──────────────────────────────────────────────
+    private void PickUpObject(IHandCarryable carryable)
     {
-        _carriedFood = food;
-        _carriedFoodOffset = food.Position - Position;
-        food.PickUp(this);
-        GD.Print("[Hand] Picked up food.");
+        _carriedObject = carryable;
+        _carriedObjectOffset = carryable.CarryNode.Position - Position;
+        carryable.PickUp(this);
+        GD.Print($"[Hand] Picked up {carryable.AgentArchetype.Noun}.");
     }
 
-    private void DropFood()
+    private void DropObject()
     {
-        if (_carriedFood == null) return;
+        if (_carriedObject == null) return;
         var world = GetParent() as WorldNode;
         float dropX = world?.ClampX(Position.X) ?? Position.X;
-        float dropY = SnapToNearestFloorY(dropX, Position.Y + _carriedFoodOffset.Y) + 0.18f;
-        _carriedFood.Drop(new Vector3(dropX, dropY, 0));
-        _carriedFood = null;
-        GD.Print($"[Hand] Dropped food at floor Y={dropY:F1}.");
+        float dropY = SnapToNearestFloorY(dropX, Position.Y + _carriedObjectOffset.Y) + 0.18f;
+        _carriedObject.Drop(new Vector3(dropX, dropY, 0));
+        GD.Print($"[Hand] Dropped {_carriedObject.AgentArchetype.Noun} at floor Y={dropY:F1}.");
+        _carriedObject = null;
     }
 
     // ── Queries ─────────────────────────────────────────────────────────────
@@ -358,19 +358,19 @@ public partial class PointerAgent : Node3D
         return nearest;
     }
 
-    private FoodNode? FindNearestFood(float range)
+    private IHandCarryable? FindNearestCarryable(float range)
     {
-        FoodNode? nearest = null;
+        IHandCarryable? nearest = null;
         float nearestDist = range;
         var parent = GetParent();
         if (parent == null) return null;
 
         foreach (Node n in parent.GetChildren())
         {
-            if (n is FoodNode food && !food.IsConsumed && !food.IsHeld)
+            if (n is IHandCarryable carryable && carryable.CanBeCarriedByHand)
             {
-                float d = Position.DistanceTo(food.Position);
-                if (d < nearestDist) { nearest = food; nearestDist = d; }
+                float d = Position.DistanceTo(carryable.CarryNode.Position);
+                if (d < nearestDist) { nearest = carryable; nearestDist = d; }
             }
         }
         return nearest;

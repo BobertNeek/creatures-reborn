@@ -67,8 +67,39 @@ public class GodotRuntimeSourceTests
         string gameGui = File.ReadAllText(RepoPath("src", "Godot", "UI", "GameGui.cs"));
 
         Assert.Contains("_speechInput", gameGui);
+        Assert.Contains("_speechLog", gameGui);
         Assert.Contains("SubmitSpeechSuggestion", gameGui);
         Assert.Contains("ApplySpeechSuggestion", gameGui);
+        Assert.Contains("BroadcastSpeechSuggestion", gameGui);
+        Assert.Contains("LastSpeechResponse", gameGui);
+    }
+
+    [Fact]
+    public void PointerAgent_CarriesGenericHandCarryableObjects()
+    {
+        string pointerSource = File.ReadAllText(RepoPath("src", "Godot", "PointerAgent.cs"));
+        string carryableSource = File.ReadAllText(RepoPath("src", "Godot", "IHandCarryable.cs"));
+        string gadgetSource = File.ReadAllText(RepoPath("src", "Godot", "Agents", "GadgetNode.cs"));
+        string eggSource = File.ReadAllText(RepoPath("src", "Godot", "Agents", "EggNode.cs"));
+
+        Assert.Contains("_carriedObject", pointerSource);
+        Assert.Contains("FindNearestCarryable", pointerSource);
+        Assert.Contains("IHandCarryable", carryableSource);
+        Assert.Contains("IHandCarryable", gadgetSource);
+        Assert.Contains("IHandCarryable", eggSource);
+        Assert.DoesNotContain("_carriedFood", pointerSource);
+    }
+
+    [Fact]
+    public void AgentSprites_UseGeneratedPngAssetsInsteadOfSvg()
+    {
+        string factory = File.ReadAllText(RepoPath("src", "Godot", "AgentSpriteFactory.cs"));
+        string generatedDir = RepoPath("art", "agents", "generated");
+
+        Assert.Contains(".png", factory);
+        Assert.DoesNotContain(".svg", factory);
+        Assert.Empty(Directory.GetFiles(generatedDir, "*.svg", SearchOption.AllDirectories));
+        Assert.NotEmpty(Directory.GetFiles(generatedDir, "*.png", SearchOption.TopDirectoryOnly));
     }
 
     [Fact]

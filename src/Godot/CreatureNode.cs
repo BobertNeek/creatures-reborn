@@ -54,11 +54,13 @@ public partial class CreatureNode : Node3D
     private CreatureSpeechSuggestion? _activeSpeechSuggestion;
     private Vector3? _activeSpeechTarget;
     private int _speechSuggestionTicks;
+    private string _lastSpeechResponse = "";
 
     // -------------------------------------------------------------------------
     // Public accessors
     // -------------------------------------------------------------------------
     public C? Creature => _creature;
+    public string LastSpeechResponse => _lastSpeechResponse;
     public SavedCreatureState? PendingSavedState
     {
         get => _pendingSavedState;
@@ -359,9 +361,15 @@ public partial class CreatureNode : Node3D
             return default;
 
         CreatureSpeechSuggestion suggestion = _creature.HearSpeech(text);
-        _activeSpeechSuggestion = suggestion.IsRecognized ? suggestion : null;
+        _lastSpeechResponse = BuildSpeechResponse(suggestion);
+        _activeSpeechSuggestion = suggestion.Intent is SpeechIntentKind.Command or SpeechIntentKind.Attention
+            && suggestion.IsRecognized
+            ? suggestion
+            : null;
         _activeSpeechTarget = ResolveSpeechTarget(suggestion, handPosition);
         _speechSuggestionTicks = suggestion.IsRecognized ? 80 : 0;
+
+        ApplySpeechTeachingStimulus(suggestion);
 
         if (suggestion.ObjectCategory is int objectCategory
             && !string.IsNullOrWhiteSpace(suggestion.NounWord))
@@ -369,8 +377,84 @@ public partial class CreatureNode : Node3D
             _creature.Vocabulary.LearnNounAlias(suggestion.NounWord, objectCategory, 0.25f);
         }
 
-        GD.Print($"[Speech] {Name} heard \"{text}\" -> verb={suggestion.VerbId?.ToString() ?? "?"} noun={suggestion.ObjectCategory?.ToString() ?? "?"}.");
+        GD.Print($"[Speech] {Name} heard \"{text}\" -> intent={suggestion.Intent} verb={suggestion.VerbId?.ToString() ?? "?"} noun={suggestion.ObjectCategory?.ToString() ?? "?"}.");
         return suggestion;
+    }
+
+    public bool MatchesSpeechSubject(string subjectWord)
+    {
+        if (string.IsNullOrWhiteSpace(subjectWord))
+            return true;
+
+        string subject = subjectWord.Trim().ToLowerInvariant();
+        if (Name.ToString().Trim().ToLowerInvariant() == subject)
+            return true;
+        if (!string.IsNullOrWhiteSpace(Moniker) && Moniker.Trim().ToLowerInvariant() == subject)
+            return true;
+        if (_creature != null && !string.IsNullOrWhiteSpace(_creature.Genome.Moniker)
+            && _creature.Genome.Moniker.Trim().ToLowerInvariant() == subject)
+            return true;
+
+        return false;
+    }
+
+    private void ApplySpeechTeachingStimulus(CreatureSpeechSuggestion suggestion)
+    {
+        if (_creature == null)
+            return;
+
+        switch (suggestion.Intent)
+        {
+            case SpeechIntentKind.Praise:
+                StimulusTable.Apply(_creature, StimulusId.PatOnBack);
+                break;
+            case SpeechIntentKind.Punish:
+                StimulusTable.Apply(_creature, StimulusId.Slap);
+                break;
+        }
+    }
+
+    private string BuildSpeechResponse(CreatureSpeechSuggestion suggestion)
+    {
+        if (_creature == null || !suggestion.IsRecognized)
+            return "";
+
+        string speaker = string.IsNullOrWhiteSpace(Moniker)
+            ? Name.ToString()
+            : Moniker;
+
+        return suggestion.Intent switch
+        {
+            SpeechIntentKind.What => CreatureSpeechResponse.FormatAction(
+                speaker,
+                _creature.Motor.CurrentVerb,
+                _creature.Motor.CurrentNoun,
+                _creature.Vocabulary),
+            SpeechIntentKind.Express => CreatureSpeechResponse.FormatNeed(speaker, StrongestDrive()),
+            SpeechIntentKind.Praise => $"{speaker} yes",
+            SpeechIntentKind.Punish => $"{speaker} no",
+            _ => "",
+        };
+    }
+
+    private int StrongestDrive()
+    {
+        if (_creature == null)
+            return DriveId.Boredom;
+
+        int strongest = 0;
+        float strongestValue = float.MinValue;
+        for (int drive = 0; drive < DriveId.NumDrives; drive++)
+        {
+            float value = _creature.GetDriveLevel(drive);
+            if (value > strongestValue)
+            {
+                strongest = drive;
+                strongestValue = value;
+            }
+        }
+
+        return strongest;
     }
 
     private void ApplyActiveSpeechSuggestion()

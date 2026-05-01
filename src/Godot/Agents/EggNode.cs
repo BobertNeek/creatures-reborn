@@ -24,7 +24,7 @@ namespace CreaturesReborn.Godot.Agents;
 /// identical fallback pattern to TreehouseMetaroomNode.BuildBackdrop.
 /// </summary>
 [GlobalClass]
-public partial class EggNode : Node3D
+public partial class EggNode : Node3D, IHandCarryable
 {
     [Export] public float  HatchTime  = 12.0f;                          // seconds before hatch
     [Export] public string GenomePath = "";                             // path on disk; blank → starter
@@ -36,6 +36,8 @@ public partial class EggNode : Node3D
     public AgentArchetype AgentArchetype => AgentCatalog.Egg;
     public AgentClassifier Classifier => AgentArchetype.Classifier;
     public int ObjectCategory => AgentArchetype.ObjectCategory;
+    public bool CanBeCarriedByHand => !_hatched && !IsStillborn;
+    public Node3D CarryNode => this;
     public bool IsStillborn { get; private set; }
     public string StillbornReport { get; private set; } = "";
 
@@ -82,6 +84,15 @@ public partial class EggNode : Node3D
             _glow.LightEnergy = 0.15f + t * 0.7f;
 
         if (_age >= HatchTime) Hatch();
+    }
+
+    public void PickUp(Node3D holder)
+    {
+    }
+
+    public void Drop(Vector3 worldPos)
+    {
+        Position = worldPos;
     }
 
     private void Hatch()

@@ -11,7 +11,7 @@ namespace CreaturesReborn.Godot;
 /// stimulus mapping are selected by <see cref="FoodKind"/>.
 /// </summary>
 [GlobalClass]
-public partial class FoodNode : Node3D
+public partial class FoodNode : Node3D, IHandCarryable
 {
     [Export] public FoodKind FoodKind = FoodKind.Fruit;
 
@@ -28,6 +28,8 @@ public partial class FoodNode : Node3D
     public AgentArchetype AgentArchetype => AgentCatalog.ForFood(FoodKind);
     public AgentClassifier Classifier => AgentArchetype.Classifier;
     public int ObjectCategory => AgentArchetype.ObjectCategory;
+    public bool CanBeCarriedByHand => !IsConsumed && !IsHeld;
+    public Node3D CarryNode => this;
 
     private Node3D? _visual;      // parent of fruit + leaf + glow light
 

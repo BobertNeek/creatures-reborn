@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace CreaturesReborn.Sim.Creature;
 
@@ -113,38 +114,80 @@ public sealed class CreatureVocabulary
     public IReadOnlyDictionary<string, VocabEntry> AllWords => _words;
 
     /// <summary>Seed with the DS default vocabulary.</summary>
-    public void SeedDefaultVocab()
+    public void SeedDefaultVocab(float initialConfidence = 0.3f)
     {
+        float noun = System.Math.Clamp(initialConfidence, 0.05f, 1.0f);
+        float weak = System.Math.Clamp(initialConfidence * 0.75f, 0.05f, 1.0f);
+        float known = System.Math.Clamp(initialConfidence + 0.1f, 0.05f, 1.0f);
+
         // Nouns
-        Learn("food",      false, ObjectCategory.Food,       0.4f);
-        Learn("fruit",     false, ObjectCategory.Fruit,      0.3f);
-        Learn("seed",      false, ObjectCategory.Seed,       0.3f);
-        Learn("norn",      false, ObjectCategory.Norn,       0.5f);
-        Learn("grendel",   false, ObjectCategory.Grendel,    0.3f);
-        Learn("ettin",     false, ObjectCategory.Ettin,      0.3f);
-        Learn("hand",      false, ObjectCategory.Hand,       0.5f);
-        Learn("toy",       false, ObjectCategory.Toy,        0.3f);
-        Learn("door",      false, ObjectCategory.Door,       0.3f);
-        Learn("egg",       false, ObjectCategory.Egg,        0.3f);
-        Learn("plant",     false, ObjectCategory.Plant,      0.3f);
-        Learn("machine",   false, ObjectCategory.Machine,    0.2f);
-        Learn("elevator",  false, ObjectCategory.Elevator,   0.2f);
-        Learn("bug",       false, ObjectCategory.Bug,        0.2f);
-        Learn("critter",   false, ObjectCategory.Critter,    0.2f);
-        Learn("dispenser", false, ObjectCategory.Dispenser,  0.2f);
+        Learn("food",      false, ObjectCategory.Food,       known);
+        Learn("fruit",     false, ObjectCategory.Fruit,      noun);
+        Learn("seed",      false, ObjectCategory.Seed,       noun);
+        Learn("norn",      false, ObjectCategory.Norn,       known);
+        Learn("grendel",   false, ObjectCategory.Grendel,    noun);
+        Learn("ettin",     false, ObjectCategory.Ettin,      noun);
+        Learn("hand",      false, ObjectCategory.Hand,       known);
+        Learn("toy",       false, ObjectCategory.Toy,        noun);
+        Learn("door",      false, ObjectCategory.Door,       noun);
+        Learn("egg",       false, ObjectCategory.Egg,        noun);
+        Learn("plant",     false, ObjectCategory.Plant,      noun);
+        Learn("machine",   false, ObjectCategory.Machine,    weak);
+        Learn("elevator",  false, ObjectCategory.Elevator,   weak);
+        Learn("bug",       false, ObjectCategory.Bug,        weak);
+        Learn("critter",   false, ObjectCategory.Critter,    weak);
+        Learn("dispenser", false, ObjectCategory.Dispenser,  weak);
+        Learn("button",    false, ObjectCategory.Button,     weak);
+        Learn("instrument", false, ObjectCategory.Instrument, weak);
+        Learn("tool",      false, ObjectCategory.Tool,       weak);
+        Learn("something", false, ObjectCategory.Count - 1,   weak);
 
         // Verbs
-        Learn("push",      true, VerbId.Activate1,   0.4f);
-        Learn("pull",      true, VerbId.Activate2,   0.3f);
-        Learn("eat",       true, VerbId.Eat,         0.5f);
-        Learn("get",       true, VerbId.Get,         0.4f);
-        Learn("drop",      true, VerbId.Drop,        0.3f);
-        Learn("come",      true, VerbId.Approach,    0.4f);
-        Learn("run",       true, VerbId.Retreat,     0.3f);
-        Learn("hit",       true, VerbId.Hit,         0.2f);
-        Learn("rest",      true, VerbId.Rest,        0.3f);
-        Learn("left",      true, VerbId.TravelWest,  0.3f);
-        Learn("right",     true, VerbId.TravelEast,  0.3f);
+        Learn("look",      true, VerbId.Default,     weak);
+        Learn("push",      true, VerbId.Activate1,   known);
+        Learn("pull",      true, VerbId.Activate2,   noun);
+        Learn("stop",      true, VerbId.Deactivate,  noun);
+        Learn("deactivate", true, VerbId.Deactivate, noun);
+        Learn("approach",  true, VerbId.Approach,    known);
+        Learn("come",      true, VerbId.Approach,    known);
+        Learn("retreat",   true, VerbId.Retreat,     noun);
+        Learn("run",       true, VerbId.Retreat,     noun);
+        Learn("hit",       true, VerbId.Hit,         weak);
+        Learn("get",       true, VerbId.Get,         known);
+        Learn("drop",      true, VerbId.Drop,        noun);
+        Learn("express",   true, VerbId.ExpressNeed, noun);
+        Learn("rest",      true, VerbId.Rest,        noun);
+        Learn("left",      true, VerbId.TravelWest,  noun);
+        Learn("right",     true, VerbId.TravelEast,  noun);
+        Learn("eat",       true, VerbId.Eat,         known);
+
+        // State/teaching words.
+        Learn("very",      false, ObjectCategory.Count - 1, weak);
+        Learn("hungry",    false, ObjectCategory.Count - 1, weak);
+        Learn("tired",     false, ObjectCategory.Count - 1, weak);
+        Learn("bored",     false, ObjectCategory.Count - 1, weak);
+        Learn("lonely",    false, ObjectCategory.Count - 1, weak);
+        Learn("scared",    false, ObjectCategory.Count - 1, weak);
+    }
+
+    public void TeachHolisticVocabulary()
+    {
+        string[] words = _words.Keys.ToArray();
+        foreach (string word in words)
+        {
+            VocabEntry entry = _words[word];
+            _words[word] = new VocabEntry(entry.IsVerb, entry.Id, 1.0f);
+        }
+    }
+
+    public string? FindKnownWord(bool isVerb, int id)
+    {
+        return _words
+            .Where(pair => pair.Value.IsVerb == isVerb && pair.Value.Id == id)
+            .OrderByDescending(pair => pair.Value.Confidence)
+            .ThenBy(pair => pair.Key.Length)
+            .Select(pair => pair.Key)
+            .FirstOrDefault();
     }
 
     private static string Normalize(string word)

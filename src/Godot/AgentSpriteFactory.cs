@@ -10,11 +10,21 @@ public static class AgentSpriteFactory
         if (string.IsNullOrWhiteSpace(archetype.SpriteToken))
             return null;
 
-        string path = $"res://art/agents/generated/{archetype.SpriteToken}.svg";
-        if (!ResourceLoader.Exists(path))
-            return null;
+        string path = $"res://art/agents/generated/{archetype.SpriteToken}.png";
+        Texture2D? texture = null;
+        if (ResourceLoader.Exists(path))
+            texture = ResourceLoader.Load<Texture2D>(path);
 
-        Texture2D? texture = ResourceLoader.Load<Texture2D>(path);
+        if (texture == null)
+        {
+            string absolutePath = ProjectSettings.GlobalizePath(path);
+            if (System.IO.File.Exists(absolutePath))
+            {
+                Image image = Image.LoadFromFile(absolutePath);
+                texture = ImageTexture.CreateFromImage(image);
+            }
+        }
+
         if (texture == null)
             return null;
 
