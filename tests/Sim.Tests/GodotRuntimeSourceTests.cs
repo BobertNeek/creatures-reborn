@@ -44,23 +44,44 @@ public class GodotRuntimeSourceTests
         string creatureSource = File.ReadAllText(RepoPath("src", "Godot", "CreatureNode.cs"));
         string backendPath = RepoPath("src", "Godot", "BrainGpu", "GodotRenderingDeviceBrainBackend.cs");
         string controllerPath = RepoPath("src", "Godot", "BrainGpu", "BrainGpuAccelerationController.cs");
+        string shaderLibraryPath = RepoPath("src", "Godot", "BrainGpu", "BrainGpuShaderLibrary.cs");
+        string bufferCachePath = RepoPath("src", "Godot", "BrainGpu", "BrainGpuStorageBufferCache.cs");
 
         Assert.True(File.Exists(backendPath), "Godot brain GPU backend should stay outside CreatureNode.");
         Assert.True(File.Exists(controllerPath), "Promotion logic should be a small controller, not embedded in CreatureNode.");
+        Assert.True(File.Exists(shaderLibraryPath), "Shader source should live outside the dispatch backend.");
+        Assert.True(File.Exists(bufferCachePath), "Persistent RenderingDevice buffers should live in a focused cache.");
         string backendSource = File.ReadAllText(backendPath);
         string controllerSource = File.ReadAllText(controllerPath);
+        string shaderLibrarySource = File.ReadAllText(shaderLibraryPath);
+        string bufferCacheSource = File.ReadAllText(bufferCachePath);
 
         Assert.Contains("RenderingDevice", backendSource);
         Assert.Contains("ComputeListDispatch", backendSource);
         Assert.Contains("AcceleratedTractsLastTick", backendSource);
+        Assert.Contains("LastCapabilityReport", backendSource);
+        Assert.Contains("BrainGpuCapabilityReport", backendSource);
+        Assert.Contains("LastDispatchMetrics", backendSource);
+        Assert.Contains("BrainGpuDispatchMetrics", backendSource);
+        Assert.Contains("BrainGpuStorageBufferCache", backendSource);
+        Assert.DoesNotContain("StorageBufferCreate", backendSource);
+        Assert.Contains("BufferUpdate", bufferCacheSource);
+        Assert.Contains("StorageBufferCreate", bufferCacheSource);
         Assert.Contains("RunTract", backendSource);
+        Assert.DoesNotContain("private const string LobeComputeShaderSource", backendSource);
+        Assert.Contains("LobeComputeShaderSource", shaderLibrarySource);
+        Assert.Contains("TractComputeShaderSource", shaderLibrarySource);
         Assert.Contains("GpuShadowValidate", controllerSource);
         Assert.Contains("GpuPreferred", controllerSource);
+        Assert.Contains("CoverageCompleteForPromotion", controllerSource);
+        Assert.DoesNotContain("AcceleratedLobesLastTick > 0", controllerSource);
         Assert.Contains("BrainGpuAccelerationController.TryCreate", creatureSource);
         Assert.Contains("ObserveTick", creatureSource);
         Assert.True(File.Exists(RepoPath("src", "Godot", "BrainGpu", "BrainGpuSmokeTest.cs")));
         string smokeSource = File.ReadAllText(RepoPath("src", "Godot", "BrainGpu", "BrainGpuSmokeTest.cs"));
         Assert.Contains("--brain-gpu-smoke", smokeSource);
+        Assert.Contains("--brain-gpu-soak", smokeSource);
+        Assert.Contains("LastDispatchMetrics", smokeSource);
         Assert.Contains("AcceleratedTractsLastTick", smokeSource);
     }
 

@@ -54,7 +54,9 @@ public sealed class BrainGpuAccelerationController : System.IDisposable
             if (brain.ExecutionMode != BrainExecutionMode.GpuShadowValidate)
                 return;
 
-            if (status.UsedGpu && status.FallbackReason == null && _backend.AcceleratedLobesLastTick > 0)
+            if (status.UsedGpu
+                && status.FallbackReason == null
+                && _backend.LastCapabilityReport.CoverageCompleteForPromotion)
             {
                 _shadowParityTicks++;
                 if (_shadowParityTicks >= ShadowParityTicksBeforePromotion)

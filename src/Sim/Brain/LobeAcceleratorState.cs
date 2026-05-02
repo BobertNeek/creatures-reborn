@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace CreaturesReborn.Sim.Brain;
 
@@ -21,25 +20,7 @@ public sealed record LobeAcceleratorState(
         IEnumerable<SVRuleEntrySnapshot> initRule,
         IEnumerable<SVRuleEntrySnapshot> updateRule,
         out string? reason)
-    {
-        foreach (SVRuleEntrySnapshot entry in initRule.Concat(updateRule))
-        {
-            if (entry.Operand == SVRule.Operand.Random)
-            {
-                reason = "SVRule reads the random operand.";
-                return false;
-            }
-
-            if (entry.Operation == SVRule.Op.DoSignalNoise)
-            {
-                reason = "SVRule uses signal-noise RNG.";
-                return false;
-            }
-        }
-
-        reason = null;
-        return true;
-    }
+        => BrainGpuSvRuleSupport.CanRunRules(initRule, updateRule, out reason);
 
     public bool CanRunDeterministically(out string? reason)
         => RulesCanRunDeterministically(InitRule, UpdateRule, out reason);
