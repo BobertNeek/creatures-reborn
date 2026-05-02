@@ -92,7 +92,7 @@ public partial class PointerAgent : Node3D
         }
         if (_carriedObject != null)
         {
-            _carriedObject.CarryNode.Position = Position + _carriedObjectOffset;
+            _carriedObject.CarryNode.GlobalPosition = GlobalPosition + _carriedObjectOffset;
         }
 
         if (_rightButtonDown && _ledCreature == null)
@@ -323,7 +323,7 @@ public partial class PointerAgent : Node3D
     private void PickUpObject(IHandCarryable carryable)
     {
         _carriedObject = carryable;
-        _carriedObjectOffset = carryable.CarryNode.Position - Position;
+        _carriedObjectOffset = carryable.CarryNode.GlobalPosition - GlobalPosition;
         carryable.PickUp(this);
         GD.Print($"[Hand] Picked up {carryable.AgentArchetype.Noun}.");
     }
@@ -365,15 +365,23 @@ public partial class PointerAgent : Node3D
         var parent = GetParent();
         if (parent == null) return null;
 
+        FindNearestCarryableIn(parent, ref nearest, ref nearestDist);
+        return nearest;
+    }
+
+    private void FindNearestCarryableIn(Node parent, ref IHandCarryable? nearest, ref float nearestDist)
+    {
         foreach (Node n in parent.GetChildren())
         {
             if (n is IHandCarryable carryable && carryable.CanBeCarriedByHand)
             {
-                float d = Position.DistanceTo(carryable.CarryNode.Position);
+                float d = GlobalPosition.DistanceTo(carryable.CarryNode.GlobalPosition);
                 if (d < nearestDist) { nearest = carryable; nearestDist = d; }
             }
+
+            if (n.GetChildCount() > 0)
+                FindNearestCarryableIn(n, ref nearest, ref nearestDist);
         }
-        return nearest;
     }
 
     // ── Visuals ─────────────────────────────────────────────────────────────

@@ -66,7 +66,7 @@ public partial class FoodNode : Node3D, IHandCarryable
     public void Drop(Vector3 worldPos)
     {
         IsHeld   = false;
-        Position = worldPos + new Vector3(0.4f, 0, 0);
+        GlobalPosition = worldPos + new Vector3(0.4f, 0, 0);
         if (_visual != null) _visual.Position = Vector3.Zero;
     }
 

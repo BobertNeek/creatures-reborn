@@ -83,7 +83,7 @@ public partial class GadgetNode : Node3D, IHandCarryable
 
     public void Drop(Vector3 worldPos)
     {
-        Position = worldPos;
+        GlobalPosition = worldPos;
         CanBeCarriedByHand = true;
     }
 

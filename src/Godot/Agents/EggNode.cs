@@ -92,7 +92,7 @@ public partial class EggNode : Node3D, IHandCarryable
 
     public void Drop(Vector3 worldPos)
     {
-        Position = worldPos;
+        GlobalPosition = worldPos;
     }
 
     private void Hatch()

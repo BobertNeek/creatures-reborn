@@ -117,6 +117,24 @@ public class GodotRuntimeSourceTests
     }
 
     [Fact]
+    public void PointerAgent_CarriesNestedObjectsInWorldCoordinates()
+    {
+        string pointerSource = File.ReadAllText(RepoPath("src", "Godot", "PointerAgent.cs"));
+        string foodSource = File.ReadAllText(RepoPath("src", "Godot", "FoodNode.cs"));
+        string gadgetSource = File.ReadAllText(RepoPath("src", "Godot", "Agents", "GadgetNode.cs"));
+        string eggSource = File.ReadAllText(RepoPath("src", "Godot", "Agents", "EggNode.cs"));
+
+        Assert.Contains("FindNearestCarryableIn", pointerSource);
+        Assert.Contains("carryable.CarryNode.GlobalPosition", pointerSource);
+        Assert.Contains("_carriedObject.CarryNode.GlobalPosition = GlobalPosition + _carriedObjectOffset", pointerSource);
+        Assert.Contains("Drop(new Vector3(dropX, dropY, 0))", pointerSource);
+
+        Assert.Contains("GlobalPosition = worldPos + new Vector3(0.4f, 0, 0)", foodSource);
+        Assert.Contains("GlobalPosition = worldPos", gadgetSource);
+        Assert.Contains("GlobalPosition = worldPos", eggSource);
+    }
+
+    [Fact]
     public void AgentSprites_UseGeneratedPngAssetsInsteadOfSvg()
     {
         string factory = File.ReadAllText(RepoPath("src", "Godot", "AgentSpriteFactory.cs"));
