@@ -289,6 +289,75 @@ public sealed class Tract : BrainComponent
         };
     }
 
+    public TractAcceleratorState CreateAcceleratorState()
+    {
+        Lobe srcLobe = _src.Lobe ?? throw new InvalidOperationException("Tract has no source lobe.");
+        Lobe dstLobe = _dst.Lobe ?? throw new InvalidOperationException("Tract has no destination lobe.");
+        var sourceIds = new int[_dendrites.Count];
+        var destinationIds = new int[_dendrites.Count];
+        var weights = new float[_dendrites.Count * BrainConst.NumSVRuleVariables];
+        for (int i = 0; i < _dendrites.Count; i++)
+        {
+            Dendrite dendrite = _dendrites[i];
+            sourceIds[i] = dendrite.SrcNeuron?.IdInList ?? 0;
+            destinationIds[i] = dendrite.DstNeuron?.IdInList ?? 0;
+            Array.Copy(
+                dendrite.Weights,
+                0,
+                weights,
+                i * BrainConst.NumSVRuleVariables,
+                BrainConst.NumSVRuleVariables);
+        }
+
+        return new TractAcceleratorState(
+            UpdateAtTime,
+            srcLobe.Token,
+            dstLobe.Token,
+            _runInitRuleAlways,
+            _randomConnectAndMigrate,
+            Reward.IsSupported(),
+            Punishment.IsSupported(),
+            STtoLTRate,
+            srcLobe.GetWhichNeuronWon(),
+            CopyLobeStates(srcLobe),
+            CopyLobeStates(dstLobe),
+            sourceIds,
+            destinationIds,
+            weights,
+            InitRule.DescribeEntries(),
+            UpdateRule.DescribeEntries());
+    }
+
+    public bool CanRunOnAccelerator(out string? reason)
+    {
+        TractAcceleratorState state = CreateAcceleratorState();
+        return state.CanRunDeterministically(out reason);
+    }
+
+    public void ApplyAcceleratorResult(
+        float[] sourceNeuronStates,
+        float[] destinationNeuronStates,
+        float[] dendriteWeights,
+        float stToLTRate)
+    {
+        TractAcceleratorState before = CreateAcceleratorState();
+        before.ValidateResult(sourceNeuronStates, destinationNeuronStates, dendriteWeights);
+
+        ApplyLobeStates(_src.Lobe!, sourceNeuronStates);
+        ApplyLobeStates(_dst.Lobe!, destinationNeuronStates);
+        for (int i = 0; i < _dendrites.Count; i++)
+        {
+            Array.Copy(
+                dendriteWeights,
+                i * BrainConst.NumSVRuleVariables,
+                _dendrites[i].Weights,
+                0,
+                BrainConst.NumSVRuleVariables);
+        }
+
+        STtoLTRate = stToLTRate;
+    }
+
     public void RestoreSaveState(SavedTractState state)
     {
         STtoLTRate = state.STtoLTRate;
@@ -304,6 +373,39 @@ public sealed class Tract : BrainComponent
                 saved.Weights,
                 _dendrites[saved.Index].Weights,
                 Math.Min(saved.Weights.Length, _dendrites[saved.Index].Weights.Length));
+        }
+    }
+
+    private static float[] CopyLobeStates(Lobe lobe)
+    {
+        var states = new float[lobe.GetNoOfNeurons() * BrainConst.NumSVRuleVariables];
+        for (int i = 0; i < lobe.GetNoOfNeurons(); i++)
+        {
+            Array.Copy(
+                lobe.GetNeuron(i).States,
+                0,
+                states,
+                i * BrainConst.NumSVRuleVariables,
+                BrainConst.NumSVRuleVariables);
+        }
+
+        return states;
+    }
+
+    private static void ApplyLobeStates(Lobe lobe, float[] states)
+    {
+        int expected = lobe.GetNoOfNeurons() * BrainConst.NumSVRuleVariables;
+        if (states.Length != expected)
+            throw new ArgumentException($"Expected {expected} neuron state values, got {states.Length}.", nameof(states));
+
+        for (int i = 0; i < lobe.GetNoOfNeurons(); i++)
+        {
+            Array.Copy(
+                states,
+                i * BrainConst.NumSVRuleVariables,
+                lobe.GetNeuron(i).States,
+                0,
+                BrainConst.NumSVRuleVariables);
         }
     }
 

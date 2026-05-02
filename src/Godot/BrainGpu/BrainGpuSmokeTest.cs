@@ -56,6 +56,8 @@ public partial class BrainGpuSmokeTest : Node
                 throw new InvalidOperationException($"Shadow tick {i} failed parity after accelerating {backend.AcceleratedLobeTokensLastTick}: {status.FallbackReason}");
             if (backend.AcceleratedLobesLastTick <= 0)
                 throw new InvalidOperationException($"Shadow tick {i} did not accelerate any deterministic lobes.");
+            if (backend.AcceleratedTractsLastTick <= 0)
+                throw new InvalidOperationException($"Shadow tick {i} did not accelerate any deterministic tracts.");
         }
 
         creature.Brain.ConfigureExecutionBackend(backend, BrainExecutionMode.GpuPreferred);
@@ -65,5 +67,7 @@ public partial class BrainGpuSmokeTest : Node
             throw new InvalidOperationException($"GPU preferred did not stay active: {preferred.FallbackReason}");
         if (backend.AcceleratedLobesLastTick <= 0)
             throw new InvalidOperationException("GPU preferred did not accelerate any deterministic lobes.");
+        if (backend.AcceleratedTractsLastTick <= 0)
+            throw new InvalidOperationException("GPU preferred did not accelerate any deterministic tracts.");
     }
 }

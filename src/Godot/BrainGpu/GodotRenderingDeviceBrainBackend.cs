@@ -14,26 +14,43 @@ public sealed class GodotRenderingDeviceBrainBackend : ICpuAuthoritativeShadowBr
     private const int IntBytes = sizeof(int);
     private const int RuleEntryBytes = 16;
     private const int ResultInts = 4;
-    private const int PushConstantInts = 4;
+    private const int LobePushConstantInts = 4;
+    private const int TractPushConstantInts = 8;
 
     private readonly RenderingDevice _device;
-    private readonly Rid _shader;
-    private readonly Rid _pipeline;
+    private readonly Rid _lobeShader;
+    private readonly Rid _lobePipeline;
+    private readonly Rid _tractShader;
+    private readonly Rid _tractPipeline;
     private bool _disposed;
 
-    private GodotRenderingDeviceBrainBackend(RenderingDevice device, Rid shader, Rid pipeline)
+    private GodotRenderingDeviceBrainBackend(
+        RenderingDevice device,
+        Rid lobeShader,
+        Rid lobePipeline,
+        Rid tractShader,
+        Rid tractPipeline)
     {
         _device = device;
-        _shader = shader;
-        _pipeline = pipeline;
+        _lobeShader = lobeShader;
+        _lobePipeline = lobePipeline;
+        _tractShader = tractShader;
+        _tractPipeline = tractPipeline;
     }
 
-    public string Name => "godot renderingdevice lobe gpu";
+    public string Name => "godot renderingdevice brain gpu";
     public BrainExecutionBackendKind Kind => BrainExecutionBackendKind.Gpu;
-    public bool IsAvailable => !_disposed && _pipeline.IsValid && _device.ComputePipelineIsValid(_pipeline);
+    public bool IsAvailable => !_disposed
+                               && _lobePipeline.IsValid
+                               && _tractPipeline.IsValid
+                               && _device.ComputePipelineIsValid(_lobePipeline)
+                               && _device.ComputePipelineIsValid(_tractPipeline);
     public int AcceleratedLobesLastTick { get; private set; }
+    public int AcceleratedTractsLastTick { get; private set; }
     public int CpuLobesLastTick { get; private set; }
+    public int CpuTractsLastTick { get; private set; }
     public string AcceleratedLobeTokensLastTick { get; private set; } = "";
+    public string AcceleratedTractsLastTickDescription { get; private set; } = "";
     public string? LastShadowValidationFailure { get; private set; }
 
     public static GodotRenderingDeviceBrainBackend? TryCreate(out string? reason)
@@ -54,38 +71,22 @@ public sealed class GodotRenderingDeviceBrainBackend : ICpuAuthoritativeShadowBr
                 return null;
             }
 
-            var source = new RDShaderSource
+            if (!CreateComputePipeline(device, LobeComputeShaderSource, "lobe", out Rid lobeShader, out Rid lobePipeline, out reason))
             {
-                Language = RenderingDevice.ShaderLanguage.Glsl,
-                SourceCompute = LobeComputeShaderSource,
-            };
-            RDShaderSpirV spirv = device.ShaderCompileSpirVFromSource(source, false);
-            if (!string.IsNullOrWhiteSpace(spirv.CompileErrorCompute))
-            {
-                reason = spirv.CompileErrorCompute;
                 device.Free();
                 return null;
             }
 
-            Rid shader = device.ShaderCreateFromSpirV(spirv);
-            if (!shader.IsValid)
+            if (!CreateComputePipeline(device, TractComputeShaderSource, "tract", out Rid tractShader, out Rid tractPipeline, out reason))
             {
-                reason = "RenderingDevice could not create the lobe compute shader.";
-                device.Free();
-                return null;
-            }
-
-            Rid pipeline = device.ComputePipelineCreate(shader, new global::Godot.Collections.Array<RDPipelineSpecializationConstant>());
-            if (!pipeline.IsValid || !device.ComputePipelineIsValid(pipeline))
-            {
-                reason = "RenderingDevice could not create the lobe compute pipeline.";
-                device.FreeRid(shader);
+                device.FreeRid(lobePipeline);
+                device.FreeRid(lobeShader);
                 device.Free();
                 return null;
             }
 
             reason = null;
-            return new GodotRenderingDeviceBrainBackend(device, shader, pipeline);
+            return new GodotRenderingDeviceBrainBackend(device, lobeShader, lobePipeline, tractShader, tractPipeline);
         }
         catch (Exception ex)
         {
@@ -93,6 +94,48 @@ public sealed class GodotRenderingDeviceBrainBackend : ICpuAuthoritativeShadowBr
             device?.Free();
             return null;
         }
+    }
+
+    private static bool CreateComputePipeline(
+        RenderingDevice device,
+        string sourceText,
+        string label,
+        out Rid shader,
+        out Rid pipeline,
+        out string? reason)
+    {
+        shader = default;
+        pipeline = default;
+        var source = new RDShaderSource
+        {
+            Language = RenderingDevice.ShaderLanguage.Glsl,
+            SourceCompute = sourceText,
+        };
+        RDShaderSpirV spirv = device.ShaderCompileSpirVFromSource(source, false);
+        if (!string.IsNullOrWhiteSpace(spirv.CompileErrorCompute))
+        {
+            reason = $"{label} shader compile failed: {spirv.CompileErrorCompute}";
+            return false;
+        }
+
+        shader = device.ShaderCreateFromSpirV(spirv);
+        if (!shader.IsValid)
+        {
+            reason = $"RenderingDevice could not create the {label} compute shader.";
+            return false;
+        }
+
+        pipeline = device.ComputePipelineCreate(shader, new global::Godot.Collections.Array<RDPipelineSpecializationConstant>());
+        if (!pipeline.IsValid || !device.ComputePipelineIsValid(pipeline))
+        {
+            reason = $"RenderingDevice could not create the {label} compute pipeline.";
+            device.FreeRid(shader);
+            shader = default;
+            return false;
+        }
+
+        reason = null;
+        return true;
     }
 
     public bool Supports(BrainExecutionContext context, out string? reason)
@@ -110,9 +153,12 @@ public sealed class GodotRenderingDeviceBrainBackend : ICpuAuthoritativeShadowBr
     public void Update(BrainExecutionContext context)
     {
         AcceleratedLobesLastTick = 0;
+        AcceleratedTractsLastTick = 0;
         CpuLobesLastTick = 0;
+        CpuTractsLastTick = 0;
         LastShadowValidationFailure = null;
         var acceleratedTokens = new List<string>();
+        var acceleratedTracts = new List<string>();
         float[] chemicals = context.Brain.CreateChemicalSnapshot();
         if (chemicals.Length == 0)
             chemicals = new float[1];
@@ -137,7 +183,18 @@ public sealed class GodotRenderingDeviceBrainBackend : ICpuAuthoritativeShadowBr
             }
             else if (component is Tract tract)
             {
-                tract.DoUpdate(context.Trace, context.Tick);
+                if (context.Trace == null && tract.CanRunOnAccelerator(out _))
+                {
+                    RunTract(tract, chemicals);
+                    AcceleratedTractsLastTick++;
+                    TractAcceleratorState state = tract.CreateAcceleratorState();
+                    acceleratedTracts.Add($"{Brain.TokenToString(state.SourceToken)}->{Brain.TokenToString(state.DestinationToken)}");
+                }
+                else
+                {
+                    tract.DoUpdate(context.Trace, context.Tick);
+                    CpuTractsLastTick++;
+                }
             }
             else
             {
@@ -149,14 +206,18 @@ public sealed class GodotRenderingDeviceBrainBackend : ICpuAuthoritativeShadowBr
             module.Update(context.Brain);
 
         AcceleratedLobeTokensLastTick = string.Join(",", acceleratedTokens.Distinct());
+        AcceleratedTractsLastTickDescription = string.Join(",", acceleratedTracts.Distinct());
     }
 
     public void UpdateCpuAuthoritativeShadow(BrainExecutionContext context)
     {
         AcceleratedLobesLastTick = 0;
+        AcceleratedTractsLastTick = 0;
         CpuLobesLastTick = 0;
+        CpuTractsLastTick = 0;
         LastShadowValidationFailure = null;
         var acceleratedTokens = new List<string>();
+        var acceleratedTracts = new List<string>();
         float[] chemicals = context.Brain.CreateChemicalSnapshot();
         if (chemicals.Length == 0)
             chemicals = new float[1];
@@ -178,7 +239,13 @@ public sealed class GodotRenderingDeviceBrainBackend : ICpuAuthoritativeShadowBr
             }
             else if (component is Tract tract)
             {
-                tract.DoUpdate(context.Trace, context.Tick);
+                if (context.Trace == null && tract.CanRunOnAccelerator(out _))
+                    ShadowValidateTract(tract, chemicals, context.Tick, acceleratedTracts);
+                else
+                {
+                    tract.DoUpdate(context.Trace, context.Tick);
+                    CpuTractsLastTick++;
+                }
             }
             else
             {
@@ -190,6 +257,7 @@ public sealed class GodotRenderingDeviceBrainBackend : ICpuAuthoritativeShadowBr
             module.Update(context.Brain);
 
         AcceleratedLobeTokensLastTick = string.Join(",", acceleratedTokens.Distinct());
+        AcceleratedTractsLastTickDescription = string.Join(",", acceleratedTracts.Distinct());
     }
 
     public void Dispose()
@@ -197,10 +265,14 @@ public sealed class GodotRenderingDeviceBrainBackend : ICpuAuthoritativeShadowBr
         if (_disposed)
             return;
 
-        if (_pipeline.IsValid)
-            _device.FreeRid(_pipeline);
-        if (_shader.IsValid)
-            _device.FreeRid(_shader);
+        if (_tractPipeline.IsValid)
+            _device.FreeRid(_tractPipeline);
+        if (_tractShader.IsValid)
+            _device.FreeRid(_tractShader);
+        if (_lobePipeline.IsValid)
+            _device.FreeRid(_lobePipeline);
+        if (_lobeShader.IsValid)
+            _device.FreeRid(_lobeShader);
         _device.Free();
         _disposed = true;
     }
@@ -247,7 +319,7 @@ public sealed class GodotRenderingDeviceBrainBackend : ICpuAuthoritativeShadowBr
                 StorageUniform(4, chemicalBuffer),
                 StorageUniform(5, resultBuffer),
                 StorageUniform(6, invalidBuffer),
-            }, _shader, 0);
+            }, _lobeShader, 0);
 
             if (!uniformSet.IsValid || !_device.UniformSetIsValid(uniformSet))
                 throw new InvalidOperationException("RenderingDevice could not create the lobe compute uniform set.");
@@ -261,9 +333,9 @@ public sealed class GodotRenderingDeviceBrainBackend : ICpuAuthoritativeShadowBr
             });
 
             long computeList = _device.ComputeListBegin();
-            _device.ComputeListBindComputePipeline(computeList, _pipeline);
+            _device.ComputeListBindComputePipeline(computeList, _lobePipeline);
             _device.ComputeListBindUniformSet(computeList, uniformSet, 0);
-            _device.ComputeListSetPushConstant(computeList, pushConstants, (uint)(PushConstantInts * IntBytes));
+            _device.ComputeListSetPushConstant(computeList, pushConstants, (uint)(LobePushConstantInts * IntBytes));
             _device.ComputeListDispatch(computeList, 1, 1, 1);
             _device.ComputeListEnd();
             _device.Submit();
@@ -289,6 +361,104 @@ public sealed class GodotRenderingDeviceBrainBackend : ICpuAuthoritativeShadowBr
             FreeRid(initRuleBuffer);
             FreeRid(inputBuffer);
             FreeRid(neuronBuffer);
+        }
+    }
+
+    private void RunTract(Tract tract, float[] chemicals)
+    {
+        TractAcceleratorState state = tract.CreateAcceleratorState();
+        state.ValidateResult(state.SourceNeuronStates, state.DestinationNeuronStates, state.DendriteWeights);
+
+        byte[] sourceBytes = FloatsToBytes(state.SourceNeuronStates);
+        byte[] destinationBytes = FloatsToBytes(state.DestinationNeuronStates);
+        byte[] weightBytes = FloatsToBytes(state.DendriteWeights);
+        byte[] sourceIdBytes = IntsToBytes(state.SourceNeuronIds);
+        byte[] destinationIdBytes = IntsToBytes(state.DestinationNeuronIds);
+        byte[] initRuleBytes = RuleEntriesToBytes(state.InitRule);
+        byte[] updateRuleBytes = RuleEntriesToBytes(state.UpdateRule);
+        byte[] chemicalBytes = FloatsToBytes(chemicals);
+        byte[] resultBytes = FloatsToBytes(new[] { state.STtoLTRate });
+
+        Rid sourceBuffer = default;
+        Rid destinationBuffer = default;
+        Rid weightBuffer = default;
+        Rid sourceIdBuffer = default;
+        Rid destinationIdBuffer = default;
+        Rid initRuleBuffer = default;
+        Rid updateRuleBuffer = default;
+        Rid chemicalBuffer = default;
+        Rid resultBuffer = default;
+        Rid uniformSet = default;
+
+        try
+        {
+            RenderingDevice.StorageBufferUsage storageUsage = (RenderingDevice.StorageBufferUsage)0;
+            sourceBuffer = _device.StorageBufferCreate((uint)sourceBytes.Length, sourceBytes, storageUsage);
+            destinationBuffer = _device.StorageBufferCreate((uint)destinationBytes.Length, destinationBytes, storageUsage);
+            weightBuffer = _device.StorageBufferCreate((uint)weightBytes.Length, weightBytes, storageUsage);
+            sourceIdBuffer = _device.StorageBufferCreate((uint)sourceIdBytes.Length, sourceIdBytes, storageUsage);
+            destinationIdBuffer = _device.StorageBufferCreate((uint)destinationIdBytes.Length, destinationIdBytes, storageUsage);
+            initRuleBuffer = _device.StorageBufferCreate((uint)initRuleBytes.Length, initRuleBytes, storageUsage);
+            updateRuleBuffer = _device.StorageBufferCreate((uint)updateRuleBytes.Length, updateRuleBytes, storageUsage);
+            chemicalBuffer = _device.StorageBufferCreate((uint)chemicalBytes.Length, chemicalBytes, storageUsage);
+            resultBuffer = _device.StorageBufferCreate((uint)resultBytes.Length, resultBytes, storageUsage);
+
+            uniformSet = _device.UniformSetCreate(new global::Godot.Collections.Array<RDUniform>
+            {
+                StorageUniform(0, sourceBuffer),
+                StorageUniform(1, destinationBuffer),
+                StorageUniform(2, weightBuffer),
+                StorageUniform(3, sourceIdBuffer),
+                StorageUniform(4, destinationIdBuffer),
+                StorageUniform(5, initRuleBuffer),
+                StorageUniform(6, updateRuleBuffer),
+                StorageUniform(7, chemicalBuffer),
+                StorageUniform(8, resultBuffer),
+            }, _tractShader, 0);
+
+            if (!uniformSet.IsValid || !_device.UniformSetIsValid(uniformSet))
+                throw new InvalidOperationException("RenderingDevice could not create the tract compute uniform set.");
+
+            byte[] pushConstants = IntsToBytes(new[]
+            {
+                state.DendriteCount,
+                state.SourceNeuronCount,
+                state.DestinationNeuronCount,
+                chemicals.Length,
+                state.RunInitRuleAlways ? 1 : 0,
+                state.SourceWinningNeuronId,
+                0,
+                0,
+            });
+
+            long computeList = _device.ComputeListBegin();
+            _device.ComputeListBindComputePipeline(computeList, _tractPipeline);
+            _device.ComputeListBindUniformSet(computeList, uniformSet, 0);
+            _device.ComputeListSetPushConstant(computeList, pushConstants, (uint)(TractPushConstantInts * IntBytes));
+            _device.ComputeListDispatch(computeList, 1, 1, 1);
+            _device.ComputeListEnd();
+            _device.Submit();
+            _device.Sync();
+
+            float[] updatedSource = BytesToFloats(_device.BufferGetData(sourceBuffer, 0, (uint)sourceBytes.Length));
+            float[] updatedDestination = BytesToFloats(_device.BufferGetData(destinationBuffer, 0, (uint)destinationBytes.Length));
+            float[] updatedWeights = BytesToFloats(_device.BufferGetData(weightBuffer, 0, (uint)weightBytes.Length));
+            float[] updatedResult = BytesToFloats(_device.BufferGetData(resultBuffer, 0, (uint)resultBytes.Length));
+
+            tract.ApplyAcceleratorResult(updatedSource, updatedDestination, updatedWeights, updatedResult.Length > 0 ? updatedResult[0] : state.STtoLTRate);
+        }
+        finally
+        {
+            FreeRid(uniformSet);
+            FreeRid(resultBuffer);
+            FreeRid(chemicalBuffer);
+            FreeRid(updateRuleBuffer);
+            FreeRid(initRuleBuffer);
+            FreeRid(destinationIdBuffer);
+            FreeRid(sourceIdBuffer);
+            FreeRid(weightBuffer);
+            FreeRid(destinationBuffer);
+            FreeRid(sourceBuffer);
         }
     }
 
@@ -326,9 +496,50 @@ public sealed class GodotRenderingDeviceBrainBackend : ICpuAuthoritativeShadowBr
         }
     }
 
+    private void ShadowValidateTract(Tract tract, float[] chemicals, int tick, List<string> acceleratedTracts)
+    {
+        TractAcceleratorState before = tract.CreateAcceleratorState();
+        float[] scratchBefore = (float[])SVRule.InvalidVariables.Clone();
+        string description = $"{Brain.TokenToString(before.SourceToken)}->{Brain.TokenToString(before.DestinationToken)}";
+
+        try
+        {
+            RunTract(tract, chemicals);
+            TractAcceleratorState gpu = tract.CreateAcceleratorState();
+            float[] gpuScratch = (float[])SVRule.InvalidVariables.Clone();
+
+            RestoreTract(tract, before, scratchBefore);
+            tract.DoUpdate(trace: null, tick);
+            TractAcceleratorState cpu = tract.CreateAcceleratorState();
+            float[] cpuScratch = (float[])SVRule.InvalidVariables.Clone();
+
+            if (TractStatesEquivalent(cpu, gpu)
+                && FloatArraysEquivalent(cpuScratch, gpuScratch))
+            {
+                AcceleratedTractsLastTick++;
+                acceleratedTracts.Add(description);
+                return;
+            }
+
+            LastShadowValidationFailure ??= $"{description} tract GPU output differed from CPU.";
+        }
+        catch (Exception ex)
+        {
+            RestoreTract(tract, before, scratchBefore);
+            tract.DoUpdate(trace: null, tick);
+            LastShadowValidationFailure ??= $"{description} tract GPU execution failed: {ex.Message}";
+        }
+    }
+
     private static bool LobeStatesEquivalent(LobeAcceleratorState expected, LobeAcceleratorState actual)
         => expected.WinningNeuronId == actual.WinningNeuronId
            && FloatArraysEquivalent(expected.NeuronStates, actual.NeuronStates);
+
+    private static bool TractStatesEquivalent(TractAcceleratorState expected, TractAcceleratorState actual)
+        => FloatArraysEquivalent(expected.SourceNeuronStates, actual.SourceNeuronStates)
+           && FloatArraysEquivalent(expected.DestinationNeuronStates, actual.DestinationNeuronStates)
+           && FloatArraysEquivalent(expected.DendriteWeights, actual.DendriteWeights)
+           && MathF.Abs(expected.STtoLTRate - actual.STtoLTRate) <= 0.00001f;
 
     private static bool FloatArraysEquivalent(float[] expected, float[] actual)
     {
@@ -344,6 +555,16 @@ public sealed class GodotRenderingDeviceBrainBackend : ICpuAuthoritativeShadowBr
     {
         lobe.ApplyAcceleratorResult(state.NeuronStates, state.WinningNeuronId);
         lobe.RestoreInputSnapshot(state.NeuronInputs);
+        Array.Copy(scratch, SVRule.InvalidVariables, Math.Min(scratch.Length, SVRule.InvalidVariables.Length));
+    }
+
+    private static void RestoreTract(Tract tract, TractAcceleratorState state, float[] scratch)
+    {
+        tract.ApplyAcceleratorResult(
+            state.SourceNeuronStates,
+            state.DestinationNeuronStates,
+            state.DendriteWeights,
+            state.STtoLTRate);
         Array.Copy(scratch, SVRule.InvalidVariables, Math.Min(scratch.Length, SVRule.InvalidVariables.Length));
     }
 
@@ -390,6 +611,295 @@ public sealed class GodotRenderingDeviceBrainBackend : ICpuAuthoritativeShadowBr
 
         return bytes;
     }
+
+    private const string TractComputeShaderSource = """
+#version 450
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+struct RuleEntry {
+    int op;
+    int operand;
+    int array_index;
+    float value;
+};
+
+layout(set = 0, binding = 0, std430) restrict buffer SourceBuffer {
+    float source_states[];
+};
+
+layout(set = 0, binding = 1, std430) restrict buffer DestinationBuffer {
+    float destination_states[];
+};
+
+layout(set = 0, binding = 2, std430) restrict buffer WeightBuffer {
+    float dendrite_weights[];
+};
+
+layout(set = 0, binding = 3, std430) restrict readonly buffer SourceIdBuffer {
+    int source_ids[];
+};
+
+layout(set = 0, binding = 4, std430) restrict readonly buffer DestinationIdBuffer {
+    int destination_ids[];
+};
+
+layout(set = 0, binding = 5, std430) restrict readonly buffer InitRuleBuffer {
+    RuleEntry init_rule[];
+};
+
+layout(set = 0, binding = 6, std430) restrict readonly buffer UpdateRuleBuffer {
+    RuleEntry update_rule[];
+};
+
+layout(set = 0, binding = 7, std430) restrict readonly buffer ChemicalBuffer {
+    float chemicals[];
+};
+
+layout(set = 0, binding = 8, std430) restrict buffer ResultBuffer {
+    float result[];
+};
+
+layout(push_constant, std430) uniform Params {
+    int dendrite_count;
+    int source_count;
+    int destination_count;
+    int chemical_count;
+    int run_init;
+    int spare_id;
+    int reserved0;
+    int reserved1;
+} params;
+
+float bound01(float v) {
+    return v < 0.0 ? 0.0 : (v > 1.0 ? 1.0 : v);
+}
+
+float bound_mp1(float v) {
+    return v < -1.0 ? -1.0 : (v > 1.0 ? 1.0 : v);
+}
+
+int to_int(float v) {
+    return int(v * 248.0);
+}
+
+int var_index(int i) {
+    int m = i % 8;
+    return m < 0 ? m + 8 : m;
+}
+
+float get_source(int neuron_id, int variable) {
+    int idx = neuron_id * 8 + var_index(variable);
+    return neuron_id >= 0 && neuron_id < params.source_count ? source_states[idx] : 0.0;
+}
+
+void set_source(int neuron_id, int variable, float value) {
+    if (neuron_id >= 0 && neuron_id < params.source_count) {
+        source_states[neuron_id * 8 + var_index(variable)] = value;
+    }
+}
+
+float get_destination(int neuron_id, int variable) {
+    int idx = neuron_id * 8 + var_index(variable);
+    return neuron_id >= 0 && neuron_id < params.destination_count ? destination_states[idx] : 0.0;
+}
+
+void set_destination(int neuron_id, int variable, float value) {
+    if (neuron_id >= 0 && neuron_id < params.destination_count) {
+        destination_states[neuron_id * 8 + var_index(variable)] = value;
+    }
+}
+
+float get_weight(int dendrite_id, int variable) {
+    return dendrite_weights[dendrite_id * 8 + var_index(variable)];
+}
+
+void set_weight(int dendrite_id, int variable, float value) {
+    dendrite_weights[dendrite_id * 8 + var_index(variable)] = value;
+}
+
+float get_spare(int variable) {
+    return get_source(params.spare_id, variable);
+}
+
+void set_spare(int variable, float value) {
+    set_source(params.spare_id, variable, value);
+}
+
+RuleEntry get_rule_entry(int rule_kind, int index) {
+    return rule_kind == 0 ? init_rule[index] : update_rule[index];
+}
+
+float read_operand(RuleEntry entry, float accumulator, int dendrite_id, int source_id, int destination_id) {
+    int ai = entry.array_index;
+    int idx = var_index(ai);
+    if (entry.operand == 0) return accumulator;
+    if (entry.operand == 1) return get_source(source_id, idx);
+    if (entry.operand == 2) return get_weight(dendrite_id, idx);
+    if (entry.operand == 3) return get_destination(destination_id, idx);
+    if (entry.operand == 4) return get_spare(idx);
+    if (entry.operand == 5) return 0.0;
+    if (entry.operand == 6) return chemicals[(ai + source_id) % params.chemical_count];
+    if (entry.operand == 7) return chemicals[ai % params.chemical_count];
+    if (entry.operand == 8) return chemicals[(ai + destination_id) % params.chemical_count];
+    if (entry.operand == 9) return 0.0;
+    if (entry.operand == 10) return 1.0;
+    if (entry.operand == 11) return entry.value;
+    if (entry.operand == 12) return -entry.value;
+    if (entry.operand == 13) return entry.value * 10.0;
+    if (entry.operand == 14) return entry.value / 10.0;
+    if (entry.operand == 15) return float(int(entry.value * 248.0));
+    return 0.0;
+}
+
+void write_dest(RuleEntry entry, float value, int dendrite_id, int source_id, int destination_id) {
+    int idx = var_index(entry.array_index);
+    if (entry.operand == 1) {
+        set_source(source_id, idx, value);
+    } else if (entry.operand == 2) {
+        set_weight(dendrite_id, idx, value);
+    } else if (entry.operand == 3) {
+        set_destination(destination_id, idx, value);
+    } else if (entry.operand == 4) {
+        set_spare(idx, value);
+    }
+}
+
+bool is_no_operand_op(int op) {
+    return op == 0 || op == 30 || op == 31 || op == 42;
+}
+
+bool is_write_op(int op) {
+    return op == 1 || op == 2 || op == 34 || op == 35 || op == 45;
+}
+
+void goto_forward(inout int i, float operand) {
+    int target = to_int(operand) - 1;
+    if (target > i && target <= 16) {
+        i = target - 1;
+    }
+}
+
+void process_rule(int rule_kind, int dendrite_id, int source_id, int destination_id, inout float st_to_lt_rate) {
+    float accumulator = get_source(source_id, 0);
+    float tend_rate = 0.0;
+
+    for (int i = 0; i < 16; i++) {
+        RuleEntry entry = get_rule_entry(rule_kind, i);
+        int op = entry.op;
+
+        if (is_no_operand_op(op)) {
+            if (op == 0) return;
+            if (op == 30) {
+            } else if (op == 31) {
+            } else if (op == 42) {
+                if (get_destination(destination_id, 0) >= get_spare(0)) {
+                    set_spare(2, 0.0);
+                    set_destination(destination_id, 2, get_destination(destination_id, 0));
+                }
+            }
+            continue;
+        }
+
+        if (is_write_op(op)) {
+            int idx = var_index(entry.array_index);
+            float current = 0.0;
+            if (entry.operand == 1) current = get_source(source_id, idx);
+            else if (entry.operand == 2) current = get_weight(dendrite_id, idx);
+            else if (entry.operand == 3) current = get_destination(destination_id, idx);
+            else if (entry.operand == 4) current = get_spare(idx);
+
+            if (op == 2) write_dest(entry, bound_mp1(accumulator), dendrite_id, source_id, destination_id);
+            else if (op == 34) write_dest(entry, bound_mp1(accumulator + current), dendrite_id, source_id, destination_id);
+            else if (op == 1) write_dest(entry, 0.0, dendrite_id, source_id, destination_id);
+            else if (op == 35) write_dest(entry, bound_mp1(accumulator * (1.0 - tend_rate) + current * tend_rate), dendrite_id, source_id, destination_id);
+            else if (op == 45) write_dest(entry, bound01(abs(accumulator)), dendrite_id, source_id, destination_id);
+            continue;
+        }
+
+        float operand = entry.operand == 0
+            ? accumulator
+            : read_operand(entry, accumulator, dendrite_id, source_id, destination_id);
+
+        if (op == 3) accumulator = operand;
+        else if (op == 4) { if (accumulator != operand) i++; }
+        else if (op == 5) { if (accumulator == operand) i++; }
+        else if (op == 6) { if (accumulator <= operand) i++; }
+        else if (op == 7) { if (accumulator >= operand) i++; }
+        else if (op == 8) { if (accumulator < operand) i++; }
+        else if (op == 9) { if (accumulator > operand) i++; }
+        else if (op == 10) { if (operand != 0.0) i++; }
+        else if (op == 11) { if (operand == 0.0) i++; }
+        else if (op == 12) { if (operand <= 0.0) i++; }
+        else if (op == 13) { if (operand >= 0.0) i++; }
+        else if (op == 14) { if (operand < 0.0) i++; }
+        else if (op == 15) { if (operand > 0.0) i++; }
+        else if (op == 46) { if (operand == 0.0) return; }
+        else if (op == 47) { if (operand != 0.0) return; }
+        else if (op == 53) { if (accumulator < operand) return; }
+        else if (op == 54) { if (accumulator > operand) return; }
+        else if (op == 55) { if (accumulator <= operand) return; }
+        else if (op == 56) { if (accumulator >= operand) return; }
+        else if (op == 48) { if (accumulator == 0.0) goto_forward(i, operand); }
+        else if (op == 49) { if (accumulator != 0.0) goto_forward(i, operand); }
+        else if (op == 67) { if (accumulator < 0.0) goto_forward(i, operand); }
+        else if (op == 68) { if (accumulator > 0.0) goto_forward(i, operand); }
+        else if (op == 52) { goto_forward(i, operand); }
+        else if (op == 16) accumulator += operand;
+        else if (op == 17) accumulator -= operand;
+        else if (op == 18) accumulator = operand - accumulator;
+        else if (op == 19) accumulator *= operand;
+        else if (op == 20) { if (operand != 0.0) accumulator /= operand; }
+        else if (op == 21) { if (accumulator != 0.0) accumulator = operand / accumulator; }
+        else if (op == 23) { if (operand > accumulator) accumulator = operand; }
+        else if (op == 22) { if (operand < accumulator) accumulator = operand; }
+        else if (op == 24) tend_rate = abs(operand);
+        else if (op == 25) accumulator = accumulator * (1.0 - tend_rate) + operand * tend_rate;
+        else if (op == 26) accumulator = -operand;
+        else if (op == 27) accumulator = abs(operand);
+        else if (op == 28) accumulator = abs(accumulator - operand);
+        else if (op == 29) accumulator = operand - accumulator;
+        else if (op == 32) accumulator = bound01(operand);
+        else if (op == 33) accumulator = bound_mp1(operand);
+        else if (op == 36) { if (get_destination(destination_id, 1) < operand) set_destination(destination_id, 1, 0.0); }
+        else if (op == 37) tend_rate = operand;
+        else if (op == 38) set_destination(destination_id, 1, get_destination(destination_id, 1) * (1.0 - tend_rate) + operand * tend_rate);
+        else if (op == 39) set_destination(destination_id, 1, get_destination(destination_id, 1) * operand);
+        else if (op == 40) set_destination(destination_id, 0, get_destination(destination_id, 1) * (1.0 - operand) + get_destination(destination_id, 0) * operand);
+        else if (op == 41) set_destination(destination_id, 0, get_destination(destination_id, 0));
+        else if (op == 43) st_to_lt_rate = abs(operand);
+        else if (op == 44) {
+            float old_stw = get_weight(dendrite_id, 0);
+            float old_ltw = get_weight(dendrite_id, 1);
+            set_weight(dendrite_id, 0, old_stw + (old_ltw - old_stw) * st_to_lt_rate);
+            set_weight(dendrite_id, 1, old_ltw + (old_stw - old_ltw) * operand);
+        }
+        else if (op == 50) { if (operand != 0.0) { accumulator /= operand; set_destination(destination_id, 1, bound_mp1(get_destination(destination_id, 1) + accumulator)); } }
+        else if (op == 51) { accumulator *= operand; set_destination(destination_id, 1, bound_mp1(get_destination(destination_id, 1) + accumulator)); }
+        else if (op == 63) set_destination(destination_id, 4, get_destination(destination_id, var_index(to_int(operand))));
+        else if (op == 64) set_destination(destination_id, var_index(to_int(operand)), get_destination(destination_id, 4));
+        else if (op == 65) set_spare(4, get_spare(var_index(to_int(operand))));
+        else if (op == 66) set_spare(var_index(to_int(operand)), get_spare(4));
+    }
+}
+
+void main() {
+    if (gl_GlobalInvocationID.x != 0) {
+        return;
+    }
+
+    float st_to_lt_rate = result[0];
+    for (int dendrite_id = 0; dendrite_id < params.dendrite_count; dendrite_id++) {
+        int source_id = source_ids[dendrite_id];
+        int destination_id = destination_ids[dendrite_id];
+        if (params.run_init != 0) {
+            process_rule(0, dendrite_id, source_id, destination_id, st_to_lt_rate);
+        }
+        process_rule(1, dendrite_id, source_id, destination_id, st_to_lt_rate);
+    }
+    result[0] = st_to_lt_rate;
+}
+""";
 
     private const string LobeComputeShaderSource = """
 #version 450

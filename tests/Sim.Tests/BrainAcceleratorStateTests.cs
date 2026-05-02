@@ -68,6 +68,60 @@ public sealed class BrainAcceleratorStateTests
         Assert.Contains("random", reason, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Tract_CreateAcceleratorState_CopiesEndpointStatesDendriteWeightsAndRules()
+    {
+        B brain = LoadBrain();
+        Tract tract = brain.GetTract(0)!;
+        TractSnapshot snapshot = brain.CreateSnapshot(new BrainSnapshotOptions(MaxNeuronsPerLobe: 0, MaxDendritesPerTract: 1)).Tracts[0];
+
+        TractAcceleratorState state = tract.CreateAcceleratorState();
+
+        Assert.Equal(snapshot.SourceToken, state.SourceToken);
+        Assert.Equal(snapshot.DestinationToken, state.DestinationToken);
+        Assert.Equal(tract.DendriteCount * BrainConst.NumSVRuleVariables, state.DendriteWeights.Length);
+        Assert.Equal(snapshot.Dendrites[0].Weights, state.DendriteWeights.Take(BrainConst.NumSVRuleVariables).ToArray());
+        Assert.Equal(BrainConst.SVRuleLength, state.InitRule.Count);
+        Assert.Equal(BrainConst.SVRuleLength, state.UpdateRule.Count);
+    }
+
+    [Fact]
+    public void Tract_ApplyAcceleratorResult_ReplacesEndpointStatesDendriteWeightsAndSTtoLTRate()
+    {
+        B brain = LoadBrain();
+        Tract tract = brain.GetTract(0)!;
+        TractAcceleratorState state = tract.CreateAcceleratorState();
+        state.SourceNeuronStates[NeuronVar.State] = 0.42f;
+        state.DestinationNeuronStates[NeuronVar.Output] = 0.37f;
+        state.DendriteWeights[DendriteVar.WeightST] = 0.66f;
+
+        tract.ApplyAcceleratorResult(
+            state.SourceNeuronStates,
+            state.DestinationNeuronStates,
+            state.DendriteWeights,
+            stToLTRate: 0.125f);
+        TractAcceleratorState after = tract.CreateAcceleratorState();
+
+        Assert.Equal(0.42f, after.SourceNeuronStates[NeuronVar.State], precision: 6);
+        Assert.Equal(0.37f, after.DestinationNeuronStates[NeuronVar.Output], precision: 6);
+        Assert.Equal(0.66f, after.DendriteWeights[DendriteVar.WeightST], precision: 6);
+        Assert.Equal(0.125f, after.STtoLTRate, precision: 6);
+    }
+
+    [Fact]
+    public void Tract_AcceleratorSupportRejectsMigratingTracts()
+    {
+        Assert.False(
+            TractAcceleratorState.CanRunDeterministically(
+                randomConnectAndMigrate: true,
+                sourceToken: 1,
+                destinationToken: 2,
+                Array.Empty<SVRuleEntrySnapshot>(),
+                Array.Empty<SVRuleEntrySnapshot>(),
+                out string? reason));
+        Assert.Contains("migration", reason, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static B LoadBrain()
     {
         var genome = GenomeReader.LoadNew(new Rng(1), Path.GetFullPath(StarterGenomePath));

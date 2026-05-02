@@ -52,12 +52,16 @@ public class GodotRuntimeSourceTests
 
         Assert.Contains("RenderingDevice", backendSource);
         Assert.Contains("ComputeListDispatch", backendSource);
+        Assert.Contains("AcceleratedTractsLastTick", backendSource);
+        Assert.Contains("RunTract", backendSource);
         Assert.Contains("GpuShadowValidate", controllerSource);
         Assert.Contains("GpuPreferred", controllerSource);
         Assert.Contains("BrainGpuAccelerationController.TryCreate", creatureSource);
         Assert.Contains("ObserveTick", creatureSource);
         Assert.True(File.Exists(RepoPath("src", "Godot", "BrainGpu", "BrainGpuSmokeTest.cs")));
-        Assert.Contains("--brain-gpu-smoke", File.ReadAllText(RepoPath("src", "Godot", "BrainGpu", "BrainGpuSmokeTest.cs")));
+        string smokeSource = File.ReadAllText(RepoPath("src", "Godot", "BrainGpu", "BrainGpuSmokeTest.cs"));
+        Assert.Contains("--brain-gpu-smoke", smokeSource);
+        Assert.Contains("AcceleratedTractsLastTick", smokeSource);
     }
 
     [Fact]
