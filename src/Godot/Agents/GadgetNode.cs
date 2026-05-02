@@ -388,7 +388,7 @@ public partial class GadgetNode : Node3D, IHandCarryable
         if (Type == GadgetType.RobotToy && _bodyNode != null)
         {
             float wobble = MathF.Sin(_animPhase * 1.5f) * 0.08f;
-            _bodyNode.Rotation = new Vector3(0, _animPhase * 0.3f, wobble);
+            _bodyNode.Rotation = new Vector3(0, 0, wobble);
         }
     }
 }

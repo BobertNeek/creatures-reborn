@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using Godot;
+using CreaturesReborn.Sim.Agent;
 using CreaturesReborn.Sim.Creature;
 using CreaturesReborn.Sim.Biochemistry;
 using CreaturesReborn.Sim.Save;
@@ -37,6 +38,8 @@ public partial class GameGui : Control
     private Label?       _populationLabel;
     private LineEdit?    _speechInput;
     private Label?       _speechLog;
+    private Label?       _hoverTooltip;
+    private Button?      _tooltipToggleButton;
     private Control?     _pauseOverlay;
     private VBoxContainer? _pauseContent;
     private SettingsOverlay? _settingsOverlay;
@@ -46,6 +49,7 @@ public partial class GameGui : Control
     private PointerAgent? _pointer;
     private WorldNode?    _world;
     private int _creatureIndex;
+    private bool _tooltipsEnabled = true;
 
     public override void _Ready()
     {
@@ -54,6 +58,7 @@ public partial class GameGui : Control
         BuildWorldInfoPanel();
         BuildCreaturePanel();
         BuildActionBar();
+        BuildHoverTooltip();
 
         if (ShouldOpenAdvancedToolsOnStartup())
             GetTree().CreateTimer(0.25).Timeout += ShowAdvancedToolsOverlay;
@@ -70,6 +75,7 @@ public partial class GameGui : Control
 
         UpdateWorldInfo();
         UpdateCreaturePanel();
+        UpdateHoverTooltip();
     }
 
     public override void _UnhandledInput(InputEvent @event)
@@ -239,12 +245,24 @@ public partial class GameGui : Control
         hbox.AddChild(MakeButton("Breed", () => DoBreed()));
         hbox.AddChild(MakeButton("Tools", ShowAdvancedToolsOverlay));
         hbox.AddChild(MakeButton("Save", ShowSaveOverlay));
+        _tooltipToggleButton = MakeButton("Tooltips On", ToggleTooltips);
+        hbox.AddChild(_tooltipToggleButton);
         hbox.AddChild(MakeButton("[Tab] Next", () => CycleCreature()));
         _speechInput = MakeSpeechInput();
         hbox.AddChild(_speechInput);
         _speechLog = MakeLabel("", 10);
         _speechLog.CustomMinimumSize = new Vector2(260, 32);
         hbox.AddChild(_speechLog);
+    }
+
+    private void BuildHoverTooltip()
+    {
+        _hoverTooltip = MakeLabel("", 11);
+        _hoverTooltip.Visible = false;
+        _hoverTooltip.ZIndex = 90;
+        _hoverTooltip.MouseFilter = MouseFilterEnum.Ignore;
+        _hoverTooltip.AddThemeStyleboxOverride("normal", TooltipStyle());
+        AddChild(_hoverTooltip);
     }
 
     // ── Actions ─────────────────────────────────────────────────────────────
@@ -365,6 +383,92 @@ public partial class GameGui : Control
         {
             _speechInput.Text = string.Empty;
             _speechInput.ReleaseFocus();
+        }
+    }
+
+    private void ToggleTooltips()
+    {
+        _tooltipsEnabled = !_tooltipsEnabled;
+        if (_tooltipToggleButton != null)
+            _tooltipToggleButton.Text = _tooltipsEnabled ? "Tooltips On" : "Tooltips Off";
+        if (!_tooltipsEnabled && _hoverTooltip != null)
+            _hoverTooltip.Visible = false;
+    }
+
+    private void UpdateHoverTooltip()
+    {
+        if (_hoverTooltip == null)
+            return;
+
+        if (!_tooltipsEnabled)
+        {
+            _hoverTooltip.Visible = false;
+            return;
+        }
+
+        _pointer ??= FindPointerAgent();
+        if (_pointer == null || FindTooltipTarget(_pointer.GlobalPosition) is not string text)
+        {
+            _hoverTooltip.Visible = false;
+            return;
+        }
+
+        Vector2 mouse = GetViewport().GetMousePosition();
+        Vector2 viewportSize = GetViewportRect().Size;
+        _hoverTooltip.Text = text;
+        _hoverTooltip.Position = mouse + new Vector2(18, 16);
+        Vector2 tooltipSize = _hoverTooltip.GetCombinedMinimumSize();
+        _hoverTooltip.Position = new Vector2(
+            Math.Clamp(_hoverTooltip.Position.X, 8, Math.Max(8, viewportSize.X - tooltipSize.X - 8)),
+            Math.Clamp(_hoverTooltip.Position.Y, 8, Math.Max(8, viewportSize.Y - tooltipSize.Y - 8)));
+        _hoverTooltip.Visible = true;
+    }
+
+    private string? FindTooltipTarget(Vector3 handPosition)
+    {
+        WorldNode? world = _world ?? FindWorldNode();
+        if (world == null)
+            return null;
+
+        Node3D? nearest = null;
+        AgentArchetype nearestArchetype = default;
+        float nearestDistance = 0.9f;
+        FindTooltipTargetIn(world, handPosition, ref nearest, ref nearestArchetype, ref nearestDistance);
+
+        if (nearest == null)
+            return null;
+
+        string displayName = nearest.Name.ToString();
+        if (string.IsNullOrWhiteSpace(displayName))
+            displayName = nearestArchetype.Noun;
+        return $"{displayName}  ({nearestArchetype.Noun})";
+    }
+
+    private static void FindTooltipTargetIn(
+        Node parent,
+        Vector3 handPosition,
+        ref Node3D? nearest,
+        ref AgentArchetype nearestArchetype,
+        ref float nearestDistance)
+    {
+        foreach (Node node in parent.GetChildren())
+        {
+            if (node is PointerAgent)
+                continue;
+
+            if (node is Node3D node3D && AgentObservation.TryGetArchetype(node, out AgentArchetype archetype))
+            {
+                float distance = node3D.GlobalPosition.DistanceTo(handPosition);
+                if (distance < nearestDistance)
+                {
+                    nearest = node3D;
+                    nearestArchetype = archetype;
+                    nearestDistance = distance;
+                }
+            }
+
+            if (node.GetChildCount() > 0)
+                FindTooltipTargetIn(node, handPosition, ref nearest, ref nearestArchetype, ref nearestDistance);
         }
     }
 
@@ -819,5 +923,24 @@ public partial class GameGui : Control
             ContentMarginRight = 12,
             ContentMarginTop = 12,
             ContentMarginBottom = 12,
+        };
+
+    private static StyleBoxFlat TooltipStyle()
+        => new()
+        {
+            BgColor = new Color(0.035f, 0.032f, 0.045f, 0.92f),
+            BorderColor = new Color(0.63f, 0.49f, 0.24f, 0.95f),
+            BorderWidthBottom = 1,
+            BorderWidthLeft = 1,
+            BorderWidthRight = 1,
+            BorderWidthTop = 1,
+            CornerRadiusBottomLeft = 4,
+            CornerRadiusBottomRight = 4,
+            CornerRadiusTopLeft = 4,
+            CornerRadiusTopRight = 4,
+            ContentMarginLeft = 8,
+            ContentMarginRight = 8,
+            ContentMarginTop = 5,
+            ContentMarginBottom = 5,
         };
 }

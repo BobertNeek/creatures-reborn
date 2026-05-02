@@ -33,6 +33,8 @@ public static class AgentSpriteFactory
             Name = $"{archetype.SpriteToken}_Sprite",
             Texture = texture,
             PixelSize = 0.0055f * size,
+            Billboard = BaseMaterial3D.BillboardModeEnum.Enabled,
+            TextureFilter = BaseMaterial3D.TextureFilterEnum.LinearWithMipmaps,
             NoDepthTest = false,
             Shaded = false,
             Position = new Vector3(0, 0.58f * size, -0.03f),

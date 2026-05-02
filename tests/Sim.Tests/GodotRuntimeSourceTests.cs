@@ -129,6 +129,37 @@ public class GodotRuntimeSourceTests
     }
 
     [Fact]
+    public void AgentSprites_BillboardAndDoNotSpinFlatSpriteParents()
+    {
+        string factory = File.ReadAllText(RepoPath("src", "Godot", "AgentSpriteFactory.cs"));
+        string food = File.ReadAllText(RepoPath("src", "Godot", "FoodNode.cs"));
+        string gadget = File.ReadAllText(RepoPath("src", "Godot", "Agents", "GadgetNode.cs"));
+
+        Assert.Contains("Billboard = BaseMaterial3D.BillboardModeEnum.Enabled", factory);
+        Assert.Contains("TextureFilter = BaseMaterial3D.TextureFilterEnum.LinearWithMipmaps", factory);
+        Assert.DoesNotContain("_visual.Rotation = new Vector3(0, spin, 0)", food);
+        Assert.DoesNotContain("_bodyNode.Rotation = new Vector3(0, _animPhase * 0.3f, wobble)", gadget);
+        Assert.True(File.Exists(RepoPath("art", "agents", "generated", "plant.png")));
+    }
+
+    [Fact]
+    public void GameGui_HasToggleableMouseOverTooltips()
+    {
+        string gameGui = File.ReadAllText(RepoPath("src", "Godot", "UI", "GameGui.cs"));
+
+        Assert.Contains("_tooltipsEnabled", gameGui);
+        Assert.Contains("Tooltips", gameGui);
+        Assert.Contains("UpdateHoverTooltip", gameGui);
+        Assert.Contains("FindTooltipTarget", gameGui);
+        Assert.Contains("FindTooltipTargetIn", gameGui);
+        Assert.Contains("AgentObservation.TryGetArchetype", gameGui);
+        Assert.Contains("node is PointerAgent", gameGui);
+
+        string observation = File.ReadAllText(RepoPath("src", "Godot", "AgentObservation.cs"));
+        Assert.Contains("case FoodPlantNode", observation);
+    }
+
+    [Fact]
     public void NornRuntime_ProjectsWalkStepsOntoWalkableTreehouseSurfaces()
     {
         string spriteSource = File.ReadAllText(RepoPath("src", "Godot", "NornBillboardSprite.cs"));

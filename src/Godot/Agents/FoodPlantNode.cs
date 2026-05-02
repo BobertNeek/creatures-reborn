@@ -163,6 +163,13 @@ public partial class FoodPlantNode : Node3D
     // ── Visuals ─────────────────────────────────────────────────────────────
     private void BuildVisual()
     {
+        var sprite = AgentSpriteFactory.Create(AgentArchetype, 1.05f);
+        if (sprite != null)
+        {
+            AddChild(sprite);
+            return;
+        }
+
         // Stem
         _stemNode = new Node3D();
         var stem = new MeshInstance3D();

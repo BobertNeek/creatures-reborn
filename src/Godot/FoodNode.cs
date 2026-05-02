@@ -48,9 +48,7 @@ public partial class FoodNode : Node3D, IHandCarryable
         {
             float t = (float)Time.GetTicksMsec() * 0.001f;
             float bob = MathF.Sin(t * 1.8f + Position.X) * 0.06f;
-            float spin = t * 0.5f;
             _visual.Position = new Vector3(0, bob, 0);
-            _visual.Rotation = new Vector3(0, spin, 0);
         }
     }
 

@@ -16,6 +16,9 @@ internal static class AgentObservation
             case GadgetNode gadget:
                 archetype = gadget.AgentArchetype;
                 return true;
+            case FoodPlantNode plant:
+                archetype = plant.AgentArchetype;
+                return true;
             case DoorNode door:
                 archetype = door.AgentArchetype;
                 return true;
